@@ -1,0 +1,87 @@
+# Logs and operating system files
+*.log
+.DS_Store
+Thumbs.db
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+!.env.dusk.*.example
+.env.backup
+.env.production
+
+# PHP tools and test caches
+.phpactor.json
+.phpunit.result.cache
+/.phpunit.cache
+/.phpunit.cache/
+/.phpunit-watcher.yml
+_ide_helper.php
+/auth.json
+
+# AI coding tools
+/.codex
+/.cursor/
+
+# IDE settings
+/.idea
+/.nova
+/.vscode
+/.zed
+
+# Dependencies
+/node_modules
+/vendor
+
+# Laravel frontend build files
+/public/build
+/public/fonts-manifest.dev.json
+/public/hot
+
+# Laravel generated storage files
+/public/storage
+/storage/*.key
+/storage/pail
+
+# Laravel runtime cache, sessions, and compiled views
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/testing/*
+/storage/logs/*
+
+# Laravel generated bootstrap cache files
+/bootstrap/cache/*.php
+
+# Composer and local development configuration
+Homestead.json
+Homestead.yaml
+
+#*.log
+#.DS_Store
+#.env
+#.env.backup
+#.env.production
+#.phpactor.json
+#.phpunit.result.cache
+#/.codex
+#/.cursor/
+#/.idea
+#/.nova
+#/.phpunit.cache
+#/.vscode
+#/.zed
+#/auth.json
+#/node_modules
+#/public/build
+#/public/fonts-manifest.dev.json
+#/public/hot
+#/public/storage
+#/storage/*.key
+#/storage/pail
+#/vendor
+#_ide_helper.php
+#Homestead.json
+#Homestead.yaml
+#Thumbs.db
