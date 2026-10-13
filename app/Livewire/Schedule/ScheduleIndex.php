@@ -1,0 +1,109 @@
+<?php
+
+namespace App\Livewire\Schedule;
+
+use App\Models\PaymentTerm;
+use App\Models\Project;
+use Carbon\Carbon;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
+use Livewire\Component;
+
+#[Layout('layouts.app')]
+class ScheduleIndex extends Component {
+    #[On('payment-saved')]
+    #[On('payment-deleted')]
+    public function refreshSchedule(): void {
+        // Re-renders the component and recalculates KPIs
+    }
+
+    public function exportCsv() {
+        $user = auth()->user();
+        $projectIds = Project::forUser($user)->pluck('id');
+
+        $terms = PaymentTerm::query()
+            ->whereIn('project_id', $projectIds)
+            ->with(['project.customer'])
+            ->orderByRaw('FIELD(status, "Overdue", "Pending", "Partial", "Paid", "Cancelled")')
+            ->orderBy('due_date')
+            ->get();
+
+        $filename = 'payment-schedule-' . now()->toDateString() . '.csv';
+
+        return response()->streamDownload(function () use ($terms) {
+            $handle = fopen('php://output', 'w');
+            fwrite($handle, "\xEF\xBB\xBF"); // BOM for Excel UTF-8
+            fputcsv($handle, ['Customer', 'Project Code', 'Project', '#', 'Installment', 'Trigger', 'Amount', 'Received', 'TDS', 'Balance', 'Due Date', 'Status']);
+
+            foreach ($terms as $t) {
+                $bal = max(0, (float)$t->amount - (float)$t->received - (float)$t->tds);
+                $triggerLabel = match ($t->trigger_type) {
+                    'milestone' => 'Milestone linked',
+                    'recurring' => 'Recurring monthly',
+                    default => 'Fixed date',
+                };
+
+                $dueDate = $t->due_date ? Carbon::parse($t->due_date)->format('Y-m-d') : '';
+
+                fputcsv($handle, [
+                    $t->project?->customer?->company ?? '',
+                    $t->project?->code ?? '',
+                    $t->project?->name ?? '',
+                    $t->seq,
+                    $t->label,
+                    $triggerLabel,
+                    $t->amount,
+                    $t->received,
+                    $t->tds,
+                    round($bal, 2),
+                    $dueDate,
+                    $t->status,
+                ]);
+            }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv; charset=utf-8']);
+    }
+
+    public function render() {
+        $user = auth()->user();
+        $today = Carbon::today()->toDateString();
+        $projectsQuery = Project::forUser($user);
+        $projectIds = (clone $projectsQuery)->pluck('id');
+        $totalProjectsCount = (clone $projectsQuery)->count();
+
+        $terms = PaymentTerm::query()
+            ->whereIn('project_id', $projectIds)
+            ->with(['project.customer'])
+            ->orderByRaw('FIELD(status, "Overdue", "Pending", "Partial", "Paid", "Cancelled")')
+            ->orderByRaw('due_date IS NULL, due_date ASC')
+            ->get();
+
+        // 4 KPI metrics
+        $upcomingTerms = $terms->whereIn('status', ['Pending', 'Partial']);
+        $upcomingSum = (float)$upcomingTerms->sum(fn($t) => max(0, (float)$t->amount - (float)$t->received - (float)$t->tds));
+
+        $overdueTerms = $terms->where('status', 'Overdue');
+        $overdueSum = (float)$overdueTerms->sum(fn($t) => max(0, (float)$t->amount - (float)$t->received - (float)$t->tds));
+
+        $paidTerms = $terms->where('status', 'Paid');
+        $collectedSum = (float)$terms->sum('received');
+
+        $totalScheduledSum = (float)$terms->where('status', '!=', 'Cancelled')->sum('amount');
+
+        return view('livewire.schedule.schedule-index', [
+            'terms' => $terms,
+            'totalProjectsCount' => $totalProjectsCount,
+            'upcomingSum' => $upcomingSum,
+            'upcomingCount' => $upcomingTerms->count(),
+            'overdueSum' => $overdueSum,
+            'overdueCount' => $overdueTerms->count(),
+            'collectedSum' => $collectedSum,
+            'paidCount' => $paidTerms->count(),
+            'totalScheduledSum' => $totalScheduledSum,
+            'today' => $today,
+        ])->layoutData([
+            'header' => 'Payment Schedule',
+            'subtitle' => 'Full installment timeline across all assigned projects',
+        ]);
+    }
+}

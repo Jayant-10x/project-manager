@@ -1,6 +1,6 @@
 # 10X Agency — Project Coordinator CRM (`PJT CRM`)
 
-**System Architecture, Database Specification, API Contracts & Implementation Guide**
+**System Architecture, Database Specification, Livewire 4 Component Matrix & Implementation Guide**
 
 ---
 
@@ -8,177 +8,188 @@
 
 ### 1.1 Platform Purpose & Scope
 
-**PJT CRM** is a purpose-built, single-tenant operations and financial management system designed specifically for
-digital agencies. It bridges the gap between sales handoff, delivery coordination, milestone execution, and receivables
-collection. The system provides role-based access for two user tiers:
+**PJT CRM** is an operations and financial management system designed specifically for digital agencies[cite: 43]. It
+bridges the gap between sales handoff, delivery coordination, milestone execution, and receivables collection[cite: 43].
+The system provides role-based access for two user tiers[cite: 43]:
 
 * **Administrators (`Admin`)**: Possess unrestricted governance over system settings, global alert thresholds, user
-  management, salesperson commission targets, and destructive entity cascades (customer/project deletion).
+  management, salesperson commission targets, and destructive entity cascades (customer and project deletion)[cite: 43].
 * **Project Coordinators (`Coordinator`)**: Manage day-to-day client onboarding, project health and delivery milestones,
-  multi-tier installment schedules, incoming payment receipts, document uploads, and scheduled follow-ups.
+  multi-tier installment schedules, incoming payment receipts, document uploads, personal task checklists, and scheduled
+  follow-ups[cite: 43]. Access is strictly scoped to assigned accounts via query scopes[cite: 1, 43].
 
 ### 1.2 System Architecture Diagram
 
-The platform is structured as a decoupled web application where a lightweight, reactive Vanilla JavaScript Single Page
-Application (SPA) communicates over asynchronous JSON protocols with a Laravel backend application service layer.
+The platform is built on **Laravel 13** and **Livewire 4**, providing a reactive full-stack single-page application (
+SPA) architecture powered by `wire:navigate`, Alpine.js stores, and Tailwind CSS alongside
+`crm-style.css`[cite: 3, 4, 43].
 
 ```mermaid
 graph TD
     subgraph Client Layer [Client Layer (Browser)]
-        UI[Vanilla JS Reactive SPA]
-        State[In-Memory Store: DB, DASH, ME]
-        Storage[LocalStorage: Session Token, Currency Preference]
-        UI --> State
-        State --> Storage
+        UI["Livewire 4 Reactive Views & Blade Components"]
+        AlpineStore["Alpine.js Stores ($store.currency, Sidebar State)"]
+        LocalStorage["LocalStorage (pjt_cur, pjt_sidebar_collapsed)"]
+        UI <--> AlpineStore
+        AlpineStore <--> LocalStorage
     end
 
     subgraph Entry Points [HTTP Routing & Middleware]
-        WebRoute["routes/web.php<br/>GET / (Serves app.blade.php)"]
-        LegacyRoute["routes/web.php<br/>POST /api.php (Legacy Action Gateway)"]
-        RestRoute["routes/api.php<br/>POST /api/v1/* (RESTful Resource Endpoints)"]
-        CsrfExempt["CSRF Whitelist Verification"]
-        AuthMiddleware["App\\Http\\Middleware\\CrmTokenAuth"]
+        WebRoute["routes/web.php<br/>(Livewire Full-Page Component Routing with wire:navigate)"]
+        AuthMiddleware["Middleware: auth, verified"]
+        RoleScope["Eloquent Query Scope: scopeForUser()"]
     end
 
-    subgraph Controller Dispatch Layer
-        AppViewCtrl["AppViewController"]
-        LegacyGateway["LegacyGatewayController"]
-        ApiControllers["Specialized Domain Controllers<br/>(Auth, Cust, Proj, Pay, Doc, etc.)"]
+    subgraph Livewire Component Layer
+        NavComponents["Navigation Components<br/>(GlobalSearch, NotificationBell)"]
+        OverviewModules["Overview Modules<br/>(DashboardIndex, TodayWorkIndex)"]
+        CustomerModules["Customer Modules<br/>(CustomerIndex, CustomerDetail, CustomerModal, CustomerImportModal)"]
+        ProjectModules["Project Modules<br/>(ProjectIndex, ProjectDetail, ProjectModal, ScheduleModal, RecurringModal, MilestoneModal)"]
+        MoneyModules["Money Modules<br/>(PaymentIndex, PaymentModal, ScheduleIndex, ReportIndex)"]
+        RecordModules["Record Modules<br/>(DocumentIndex, DocumentUploadModal, DocumentPreviewModal, FollowupIndex, SalesIndex, SalesModal)"]
+        SystemModules["System Modules<br/>(NotificationIndex, AuditIndex, SettingIndex, UserModal, ProfileController)"]
     end
 
     subgraph Domain Services Layer
         MoneyService["MoneyCalculationService<br/>(Financial Aggregations & Status Automations)"]
         CodeService["CodeGeneratorService<br/>(Atomic Row-Locking Sequence Engine)"]
-        DocService["DocumentService<br/>(Base64 Decoding, Sanitization & Storage)"]
-        AuditService["AuditNotificationService<br/>(Audit Trails & Coordinator Broadcasts)"]
-        ExportService["ReportExportService<br/>(UTF-8 BOM Streaming Engine)"]
+        CurrencyService["CurrencyRateService<br/>(USD / INR Conversion Rates)"]
     end
 
     subgraph Persistence Layer
-        Eloquent["Eloquent ORM Models"]
+        Eloquent["Eloquent ORM Models (Relationships & Scopes)"]
         MySQL[("MySQL 8.0+ Database")]
-        DiskStorage[("Local Disk / Symbolic Link Storage<br/>(storage/app/public)")]
+        DiskStorage[("Local Disk Storage (storage/app/public)")]
     end
 
-    UI -->|GET /| WebRoute
-    UI -->|POST /api.php payload: action, token| LegacyRoute
-    UI -->|RESTful Calls with X-CRM-Token| RestRoute
+    UI -->|User Interactions / Events| WebRoute
+    WebRoute --> AuthMiddleware --> RoleScope
+    RoleScope --> NavComponents & OverviewModules & CustomerModules & ProjectModules & MoneyModules & RecordModules & SystemModules
 
-    WebRoute --> AppViewCtrl
-    LegacyRoute --> CsrfExempt --> LegacyGateway
-    RestRoute --> AuthMiddleware --> ApiControllers
+    CustomerModules & ProjectModules & MoneyModules & OverviewModules --> MoneyService
+    CustomerModules & ProjectModules & MoneyModules --> CodeService
+    NavComponents --> CurrencyService
 
-    LegacyGateway --> ApiControllers
-    ApiControllers --> DomainServicesLayer
-    DomainServicesLayer --> Eloquent
-    DomainServicesLayer --> DiskStorage
+    MoneyService & CodeService --> Eloquent
+    RecordModules --> DiskStorage
     Eloquent --> MySQL
 ```
 
-### 1.3 Architectural Migration Context
+### 1.3 Architectural Migration & Modernization
 
-Originally authored as a procedural, flat-file Core PHP script (`index.php`, `api.php`, `config.php`), the platform was
-migrated to **Laravel 11+** without altering external API payload contracts, client JavaScript behavior, UI
-presentation, or database referential integrity.
+The platform was migrated from a procedural, flat-file script (`index.php`, `api.php`, `config.php`) to **Laravel 13
+with Livewire 4** while maintaining feature parity, visual design, and database relationships[cite: 5, 6, 43]:
 
-* **Dispatching Backward Compatibility**: The legacy procedural pattern `POST /api.php` with
-  `{ action: 'actionName', token: '...', ... }` is routed through `LegacyGatewayController@dispatch`, preserving 100%
-  interoperability with the frontend client.
-* **Modernized RESTful Availability**: Parallel `/api/v1/*` routes exist for direct standard HTTP integration.
-* **Decoupled Business Rules**: Complex financial math, atomic sequential numbering, and streaming exports reside
-  strictly inside isolated Service classes, preventing controller bloat and preventing drift across differing
-  presentation channels.
+* **Full-Stack Component Reactivity**: Livewire 4 full-page components manage lifecycle hooks, pagination (
+  `WithPagination`), file uploads (`WithFileUploads`), and event listeners (`#[On]`), replacing manual AJAX polling and
+  manual DOM updates with seamless server-driven updates[cite: 43].
+* **Real-Time Client Navigation**: Livewire 3/4 `wire:navigate` enables instant transitions without full browser
+  reloads, preserving client-side Alpine state[cite: 3].
+* **Isolated Business Rules**: Financial logic, sequential code generation, and currency rates reside in dedicated
+  domain service classes (`MoneyCalculationService`, `CodeGeneratorService`, `CurrencyRateService`), ensuring consistent
+  calculations across all modules[cite: 43].
+* **Strict Role Scoping**: Project Coordinators are restricted to their assigned accounts via `scopeForUser()`, ensuring
+  complete data isolation between coordinators[cite: 1, 43].
 
 ---
 
 ## 2. Directory Structure & File Map
 
-The codebase follows standard Laravel directory layout, isolating agency-specific CRM rules within dedicated domains:
-
 ```text
 pjt-crm/
 ├── app/
 │   ├── Http/
-│   │   ├── Controllers/
-│   │   │   ├── Api/
-│   │   │   │   ├── AuthController.php          # Authentication, session tokens, password resets
-│   │   │   │   ├── CustomerController.php      # Customer lifecycle, mutations, bulk CSV import
-│   │   │   │   ├── DashboardController.php     # System state hydration (load) & dashboard aggregation
-│   │   │   │   ├── DocumentController.php      # Base64 binary processing, MIME verification, deletion
-│   │   │   │   ├── ExportController.php        # CSV report generator streaming endpoints
-│   │   │   │   ├── FollowupController.php      # Client interaction records & proactive date tracking
-│   │   │   │   ├── LegacyGatewayController.php # Dispatches legacy action-based calls from /api.php
-│   │   │   │   ├── MilestoneController.php     # Project delivery milestones & sort ordering
-│   │   │   │   ├── NotificationController.php  # Mark read / clear notifications for coordinators
-│   │   │   │   ├── PaymentController.php       # Receipts, terms, installments, recurring schedules
-│   │   │   │   ├── ProjectController.php       # Project CRUD, health states, handover checklists
-│   │   │   │   ├── SalesPersonController.php   # Internal sales team registry & target monitoring
-│   │   │   │   ├── SettingController.php       # Global alert thresholds & persistent audit feed
-│   │   │   │   ├── TaskController.php          # Coordinator personal checklists & prioritization
-│   │   │   │   └── UserController.php          # Internal user administration (Admin only)
-│   │   │   └── Web/
-│   │   │       └── AppViewController.php       # Serves single-page Blade shell (app.blade.php)
-│   │   └── Middleware/
-│   │       └── CrmTokenAuth.php                # Validates tokens via header, body, or query
+│   │   └── Controllers/
+│   │       └── ProfileController.php           # User profile editing and password updates
+│   ├── Livewire/
+│   │   ├── Audit/
+│   │   │   └── AuditIndex.php                  # System audit log timeline viewer
+│   │   ├── Components/
+│   │   │   ├── GlobalSearch.php                # Universal debounced search dropdown
+│   │   │   └── NotificationBell.php            # Topbar unread count polling badge
+│   │   ├── Customers/
+│   │   │   ├── CustomerDetail.php              # Tabbed customer profile (Overview, Projects, Payments, Docs, Followups)
+│   │   │   ├── CustomerImportModal.php         # Bulk CSV upload and spreadsheet paste modal
+│   │   │   ├── CustomerIndex.php               # Customer directory, filtering, pagination, and CSV export
+│   │   │   └── CustomerModal.php               # Unified create and edit modal for customers
+│   │   ├── Dashboard/
+│   │   │   └── DashboardIndex.php              # Executive KPI cards, health breakdown, triage, and trend analytics
+│   │   ├── Documents/
+│   │   │   ├── DocumentIndex.php               # Global document repository with category filtering and deletion
+│   │   │   ├── DocumentPreviewModal.php        # Lightbox preview modal for PDFs and images
+│   │   │   └── DocumentUploadModal.php         # Multi-entity file upload modal with validation
+│   │   ├── Followups/
+│   │   │   └── FollowupIndex.php               # Touchpoint feed, overdue alert banner, and interaction logger
+│   │   ├── Notifications/
+│   │   │   └── NotificationIndex.php           # Notification inbox with deep linking and mark-as-read actions
+│   │   ├── Payments/
+│   │   │   ├── PaymentIndex.php                # Receipt ledger, mode filtering, balance tracking, and CSV export
+│   │   │   └── PaymentModal.php                # Receipt recorder with auto-balance calculation and term binding
+│   │   ├── Projects/
+│   │   │   ├── ProjectDetail.php               # Project delivery matrix, timeline, schedule, and document tabs
+│   │   │   ├── ProjectIndex.php                # Work orders directory, health filtering, and overdue rollups
+│   │   │   ├── ProjectMilestoneModal.php       # Dynamic milestone ordering and checklist manager
+│   │   │   ├── ProjectModal.php                # Project contract creator/editor with AMC and handover fields
+│   │   │   ├── ProjectRecurringModal.php       # Monthly retainer recurring installment generator
+│   │   │   └── ProjectScheduleModal.php        # Installment scheduler (fixed, milestone-linked, recurring)
+│   │   ├── Reports/
+│   │   │   └── ReportIndex.php                 # Collection rate, monthly sparkline, mode bars, aging, and variance
+│   │   ├── Sales/
+│   │   │   ├── SalesIndex.php                  # Salesperson revenue attribution, targets, and comparative table
+│   │   │   └── SalesModal.php                  # Sales representative registration and quota manager
+│   │   ├── Schedule/
+│   │   │   └── ScheduleIndex.php               # Master chronological installment timeline and CSV export
+│   │   ├── Settings/
+│   │   │   ├── SettingIndex.php                # Operational threshold configuration, password manager, and user list
+│   │   │   └── UserModal.php                   # Staff account creator/editor with temporary password generator
+│   │   ├── Tasks/
+│   │   │   └── TaskIndex.php                   # Coordinator checklist manager with priority flags and late indicators
+│   │   └── Today/
+│   │       └── TodayWorkIndex.php              # Daily operational triage for overdue payments, calls, and risks
 │   ├── Models/
-│   │   ├── AuditLog.php                        # Append-only activity logs table
-│   │   ├── Counter.php                         # Atomic sequence generation counters
-│   │   ├── Customer.php                        # Customer entity and relationship maps
-│   │   ├── Document.php                        # Uploaded document metadata records
-│   │   ├── Followup.php                        # Interaction logs and future conversation dates
+│   │   ├── AuditLog.php                        # Immutable system activity log
+│   │   ├── Counter.php                         # Atomic sequence counters for entity codes
+│   │   ├── Customer.php                        # Customer model with project, document, and sales relationships
+│   │   ├── Document.php                        # Document metadata records linked to storage
+│   │   ├── Followup.php                        # Client communication history and follow-up dates
 │   │   ├── Milestone.php                       # Project milestones and completion stamps
-│   │   ├── Notification.php                    # System notifications indexed by user email
-│   │   ├── Payment.php                         # Financial receipts with modes and bank references
-│   │   ├── PaymentTerm.php                     # Payment installment schedules & balance tracking
-│   │   ├── Project.php                         # Project entity with monetary and AMC fields
+│   │   ├── Notification.php                    # System notifications indexed by user ID
+│   │   ├── Payment.php                         # Payment receipts linked to projects and terms
+│   │   ├── PaymentTerm.php                     # Payment installment schedules and status tracking
+│   │   ├── Project.php                         # Project entity with monetary accessors and role scopes
 │   │   ├── SalesPerson.php                     # Sales registry for onboarding attribution
 │   │   ├── Setting.php                         # Key-value global configuration store
 │   │   ├── Task.php                            # Actionable checklist items
-│   │   └── User.php                            # Authenticated staff accounts & security flags
+│   │   └── User.php                            # Authenticatable staff accounts with role helpers
 │   └── Services/
-│       ├── AuditNotificationService.php        # Safe audit logging & coordinator broadcast triggers
 │       ├── CodeGeneratorService.php            # Transaction-safe sequential identifier generator
-│       ├── DocumentService.php                 # Filesystem base64 binary decoder & storage manager
-│       ├── MoneyCalculationService.php         # Arithmetic engine, aging calculations & overdue cron
-│       └── ReportExportService.php             # Streaming CSV exports equipped with UTF-8 BOM
-├── config/
-│   ├── crm.php                                 # System-wide operational constants & alert defaults
-│   └── filesystems.php                         # Public storage driver configurations
+│       ├── CurrencyRateService.php             # Exchange rate configuration and conversion service
+│       └── MoneyCalculationService.php         # Financial calculation engine and overdue status updater
 ├── database/
-│   ├── migrations/
-│   │   ├── 2026_01_01_000001_create_users_table.php
-│   │   ├── 2026_01_01_000002_create_counters_table.php
-│   │   ├── 2026_01_01_000003_create_settings_table.php
-│   │   ├── 2026_01_01_000004_create_sales_persons_table.php
-│   │   ├── 2026_01_01_000005_create_customers_table.php
-│   │   ├── 2026_01_01_000006_create_projects_table.php
-│   │   ├── 2026_01_01_000007_create_milestones_table.php
-│   │   ├── 2026_01_01_000008_create_payment_terms_table.php
-│   │   ├── 2026_01_01_000009_create_payments_table.php
-│   │   ├── 2026_01_01_000010_create_documents_table.php
-│   │   ├── 2026_01_01_000011_create_followups_table.php
-│   │   ├── 2026_01_01_000012_create_tasks_table.php
-│   │   ├── 2026_01_01_000013_create_notifications_table.php
-│   │   └── 2026_01_01_000014_create_audit_logs_table.php
+│   ├── migrations/                             # Database migrations defining tables and foreign keys
 │   └── seeders/
-│       ├── DatabaseSeeder.php
-│       └── UserSeeder.php                      # Seeds default Administrator and Coordinator
+│       ├── DatabaseSeeder.php                  # Master database seeder
+│       └── UserSeeder.php                      # Seeds default Administrator and Coordinator accounts
 ├── public/
 │   ├── assets/
 │   │   └── logo.png                            # Static brand identity asset
-│   ├── css/
-│   │   └── crm-style.css                       # Complete application design & responsive layout
-│   └── js/
-│       └── crm-app.js                          # SPA client architecture & reactive state manager
+│   └── css/
+│       └── crm-style.css                       # Complete application design and responsive layout rules
 ├── resources/
 │   └── views/
-│       └── app.blade.php                       # Single-page application mounting point
-├── routes/
-│   ├── api.php                                 # RESTful v1 endpoints
-│   └── web.php                                 # Root view route & legacy /api.php dispatcher
-└── storage/
-    └── app/
-        └── public/                             # Local disk storage linked to public/storage
+│       ├── components/
+│       │   ├── health-badge.blade.php          # Reusable project health indicator badge
+│       │   ├── kpi-card.blade.php              # Metric card with icons and trends
+│       │   ├── modal.blade.php                 # Alpine-driven modal dialog container
+│       │   └── money.blade.php                 # Reactive currency formatting component
+│       ├── layouts/
+│       │   ├── app.blade.php                   # Master layout with mini-sidebar toggle and global modals
+│       │   └── partials/
+│       │       └── sidebar.blade.php           # 14-module navigation sidebar with live count badges
+│       └── livewire/                           # Paired Blade templates for all Livewire components
+└── routes/
+    ├── auth.php                                # Laravel Breeze authentication routes
+    └── web.php                                 # Authenticated routes mapping all 14 Livewire modules
 ```
 
 ---
@@ -194,13 +205,15 @@ erDiagram
         string email UK
         string name
         string role
+        string password
         string pass_hash
-        string token
-        timestamp token_at
+        string designation
+        string city
+        string phone
         string status
         boolean must_change
-        smallint fail_count
-        timestamp locked_until
+        timestamp last_seen
+        date joined
     }
 
     COUNTERS {
@@ -229,12 +242,20 @@ erDiagram
         string contact_name
         string email
         string phone
+        string alt_phone
         string city
+        string state
+        text address
         string gstin
         string pan
-        string onboarded_by
+        string billing_name
+        text billing_addr
+        string source
+        string industry
+        bigint sales_person_id FK
         string status
         text internal_notes
+        bigint created_by_id FK
     }
 
     PROJECTS {
@@ -242,16 +263,26 @@ erDiagram
         string code UK
         bigint customer_id FK
         string name
+        text description
+        string project_type
+        bigint coordinator_id FK
         decimal value
         decimal cost
         date start_date
         date delivery_date
+        date actual_end
         string status
         string health
+        string delay_reason
         boolean amc_required
+        date amc_start
         date amc_end
         decimal amc_amount
+        smallint renew_alert_days
         boolean handover_done
+        text handover_notes
+        text notes
+        bigint created_by_id FK
     }
 
     MILESTONES {
@@ -263,6 +294,7 @@ erDiagram
         date done_on
         string status
         smallint sort_order
+        text notes
     }
 
     PAYMENT_TERMS {
@@ -279,6 +311,7 @@ erDiagram
         string status
         decimal received
         decimal tds
+        text notes
     }
 
     PAYMENTS {
@@ -293,7 +326,8 @@ erDiagram
         string mode
         string reference
         string bank
-        string entered_by
+        text note
+        bigint entered_by_id FK
     }
 
     DOCUMENTS {
@@ -306,7 +340,7 @@ erDiagram
         string stored_as
         string mime
         int size_kb
-        string uploaded_by
+        bigint uploaded_by_id FK
     }
 
     FOLLOWUPS {
@@ -319,6 +353,7 @@ erDiagram
         timestamp happened_on
         date next_date
         string next_note
+        bigint created_by_id FK
     }
 
     TASKS {
@@ -329,12 +364,13 @@ erDiagram
         date due_date
         boolean done
         string priority
-        string assigned_to
+        bigint assigned_to_id FK
+        bigint created_by_id FK
     }
 
     NOTIFICATIONS {
         bigint id PK
-        string user_email
+        bigint user_id FK
         string kind
         string title
         string body
@@ -345,7 +381,7 @@ erDiagram
 
     AUDIT_LOG {
         bigint id PK
-        string who
+        bigint user_id FK
         string action
         string entity
         bigint entity_id
@@ -354,296 +390,70 @@ erDiagram
         timestamp at_time
     }
 
-    CUSTOMERS ||--o{ PROJECTS : "has"
+    SALES_PERSONS ||--o{ CUSTOMERS : "attributes"
+    USERS ||--o{ CUSTOMERS : "onboards"
+    USERS ||--o{ PROJECTS : "coordinates"
+    USERS ||--o{ PAYMENTS : "enters"
+    USERS ||--o{ DOCUMENTS : "uploads"
+    USERS ||--o{ FOLLOWUPS : "logs"
+    USERS ||--o{ TASKS : "executes"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    USERS ||--o{ AUDIT_LOG : "triggers"
+
+    CUSTOMERS ||--o{ PROJECTS : "owns"
     CUSTOMERS ||--o{ PAYMENTS : "billed_to"
-    CUSTOMERS ||--o{ DOCUMENTS : "owns"
-    CUSTOMERS ||--o{ FOLLOWUPS : "logs"
+    CUSTOMERS ||--o{ DOCUMENTS : "attaches"
+    CUSTOMERS ||--o{ FOLLOWUPS : "records"
     CUSTOMERS ||--o{ TASKS : "targets"
+
     PROJECTS ||--o{ MILESTONES : "tracks"
     PROJECTS ||--o{ PAYMENT_TERMS : "schedules"
-    PROJECTS ||--o{ PAYMENTS : "receives"
-    PROJECTS ||--o{ DOCUMENTS : "attaches"
+    PROJECTS ||--o{ PAYMENTS : "settles"
+    PROJECTS ||--o{ DOCUMENTS : "stores"
     PROJECTS ||--o{ TASKS : "contains"
+
     MILESTONES ||--o{ PAYMENT_TERMS : "triggers"
-    PAYMENT_TERMS ||--o{ PAYMENTS : "settles"
+    PAYMENT_TERMS ||--o{ PAYMENTS : "credits"
 ```
 
-### 3.2 Comprehensive Data Dictionary
+### 3.2 Data Dictionary & Foreign Key Constraints
 
-#### 1. `users`
-
-Tracks authorized administrative and coordinator accounts, security locking states, and session tokens.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `name` | `VARCHAR(80)` | `NOT NULL` | Full name of the user. |
-| `email` | `VARCHAR(160)` | `NOT NULL, UNIQUE` | Unique sign-in email address. |
-| `phone` | `VARCHAR(30)` | `NULLABLE` | Contact telephone number. |
-| `role` | `ENUM('Admin','Coordinator')` | `NOT NULL, DEFAULT 'Coordinator'` | Permission tier. |
-| `designation` | `VARCHAR(60)` | `NULLABLE` | Corporate role title. |
-| `city` | `VARCHAR(60)` | `NULLABLE` | Operating base location. |
-| `status` | `ENUM('Active','Inactive')` | `NOT NULL, DEFAULT 'Active'` | Activity state. |
-| `online` | `TINYINT(1)` | `NOT NULL, DEFAULT 0` | Real-time presence indicator. |
-| `last_seen` | `TIMESTAMP` | `NULLABLE` | Last API request timestamp. |
-| `joined` | `DATE` | `NULLABLE` | Joining date. |
-| `pass_hash` | `VARCHAR(255)` | `NOT NULL` | Bcrypt hashed password. |
-| `must_change` | `TINYINT(1)` | `NOT NULL, DEFAULT 0` | Flag forcing password change upon next login. |
-| `token` | `VARCHAR(80)` | `NULLABLE, INDEX` | 48-character hex session token. |
-| `token_at` | `TIMESTAMP` | `NULLABLE` | Session issuance timestamp. |
-| `reset_hash` | `VARCHAR(128)` | `NULLABLE, INDEX` | SHA-256 hash of password reset token. |
-| `reset_expires`| `TIMESTAMP` | `NULLABLE` | Expiration timestamp of reset token (2 hours). |
-| `reset_used` | `TINYINT(1)` | `NOT NULL, DEFAULT 0` | Flag invalidating token post-consumption. |
-| `fail_count` | `SMALLINT UNSIGNED`| `NOT NULL, DEFAULT 0` | Consecutive failed login counter. |
-| `locked_until` | `TIMESTAMP` | `NULLABLE` | Expiration timestamp of account lockout. |
-| `created_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-| `updated_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-
-#### 2. `counters`
-
-Provides concurrency-safe, non-colliding sequential numbers for entities.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `name` | `VARCHAR(50)` | `PRIMARY KEY` | Counter identifier (e.g., `customer`, `project`, `payment`). |
-| `value` | `BIGINT UNSIGNED` | `NOT NULL, DEFAULT 0` | Monotonically increasing sequence value. |
-
-#### 3. `settings`
-
-Key-value store holding runtime configuration parameters.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `k` | `VARCHAR(60)` | `PRIMARY KEY` | Setting identifier (e.g., `payment_alert_days`, `company_name`). |
-| `v` | `TEXT` | `NULLABLE` | Serialized or string value. |
-
-#### 4. `sales_persons`
-
-Internal sales registry used for revenue attribution and commission monitoring.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `name` | `VARCHAR(80)` | `NOT NULL, UNIQUE` | Salesperson name. |
-| `phone` | `VARCHAR(30)` | `NULLABLE` | Contact telephone number. |
-| `email` | `VARCHAR(160)` | `NULLABLE` | Contact email address. |
-| `target` | `DECIMAL(14,2)` | `NOT NULL, DEFAULT 0.00` | Monthly collection quota target. |
-| `status` | `ENUM('Active','Inactive')` | `NOT NULL, DEFAULT 'Active'` | Activity state. |
-| `created_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-| `updated_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-
-#### 5. `customers`
-
-Core business entity representing onboarded client organizations.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `code` | `VARCHAR(20)` | `NOT NULL, UNIQUE` | System code (e.g., `CUS-0001`). |
-| `company` | `VARCHAR(160)` | `NOT NULL, UNIQUE` | Company/brand entity name. |
-| `contact_name`| `VARCHAR(80)` | `NULLABLE` | Primary client point of contact. |
-| `email` | `VARCHAR(160)` | `NULLABLE` | Primary contact email address. |
-| `phone` | `VARCHAR(30)` | `NULLABLE` | Primary contact telephone number. |
-| `alt_phone` | `VARCHAR(30)` | `NULLABLE` | Alternate telephone number. |
-| `city` | `VARCHAR(60)` | `NULLABLE` | City of operations. |
-| `state` | `VARCHAR(60)` | `NULLABLE` | State or province. |
-| `address` | `TEXT` | `NULLABLE` | Street address. |
-| `gstin` | `VARCHAR(20)` | `NULLABLE` | GST Identification Number (India). |
-| `pan` | `VARCHAR(15)` | `NULLABLE` | Permanent Account Number (India). |
-| `billing_name`| `VARCHAR(160)` | `NULLABLE` | Legal billing entity name. |
-| `billing_addr`| `TEXT` | `NULLABLE` | Registered billing address. |
-| `source` | `VARCHAR(60)` | `NULLABLE` | Inbound channel (e.g., `Referral`, `Inbound Ads`). |
-| `industry` | `VARCHAR(60)` | `NULLABLE` | Operating vertical. |
-| `onboarded_by`| `VARCHAR(80)` | `NULLABLE, INDEX` | Attribution link to `sales_persons.name`. |
-| `status` | `ENUM('Active','On Hold','Completed','Churned')` | `NOT NULL, DEFAULT 'Active'` | Lifecycle state. |
-| `internal_notes`| `TEXT` | `NULLABLE` | Coordinator-only confidential observations. |
-| `created_by` | `VARCHAR(80)` | `NULLABLE` | Name of user who created the record. |
-| `created_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-| `updated_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-
-#### 6. `projects`
-
-Work orders and contracts delivered for customers.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `code` | `VARCHAR(20)` | `NOT NULL, UNIQUE` | System code (e.g., `PJT-0001`). |
-| `customer_id` | `BIGINT UNSIGNED` | `NOT NULL, FOREIGN KEY` | References `customers.id` (`ON DELETE CASCADE`). |
-| `name` | `VARCHAR(160)` | `NOT NULL` | Project title. |
-| `description` | `TEXT` | `NULLABLE` | Scope of work details. |
-| `project_type`| `VARCHAR(60)` | `NULLABLE` | Domain classification (e.g., `Web`, `Mobile`, `SEO`). |
-| `coordinator` | `VARCHAR(80)` | `NULLABLE` | Staff coordinator managing delivery. |
-| `value` | `DECIMAL(14,2)` | `NOT NULL, DEFAULT 0.00` | Agreed contract value. |
-| `cost` | `DECIMAL(14,2)` | `NOT NULL, DEFAULT 0.00` | Estimated internal cost for margin calculations. |
-| `start_date` | `DATE` | `NULLABLE` | Contract commencement date. |
-| `delivery_date`| `DATE` | `NULLABLE` | Target delivery/launch deadline. |
-| `actual_end` | `DATE` | `NULLABLE` | Formal sign-off delivery date. |
-| `status` | `ENUM('Onboarding','In Progress','On Hold','Delivered','Cancelled')` | `NOT NULL, DEFAULT 'Onboarding'` |
-Delivery pipeline state. |
-| `health` | `ENUM('On Track','At Risk','Delayed','Completed')` | `NOT NULL, DEFAULT 'On Track'` | Execution confidence
-status. |
-| `delay_reason`| `VARCHAR(200)` | `NULLABLE` | Explanation required when `Delayed` or `At Risk`. |
-| `amc_required`| `TINYINT(1)` | `NOT NULL, DEFAULT 0` | Flags maintenance contract requirement. |
-| `amc_start` | `DATE` | `NULLABLE` | AMC operational start date. |
-| `amc_end` | `DATE` | `NULLABLE` | AMC expiration date. |
-| `amc_amount` | `DECIMAL(14,2)` | `NOT NULL, DEFAULT 0.00` | Periodic renewal fee. |
-| `renew_alert_days`| `SMALLINT UNSIGNED`| `NOT NULL, DEFAULT 7` | Lead time days before alert triggers. |
-| `handover_done`| `TINYINT(1)` | `NOT NULL, DEFAULT 0` | Sign-off verification checklist completed flag. |
-| `handover_notes`| `TEXT` | `NULLABLE` | Handover and sign-off remarks. |
-| `notes` | `TEXT` | `NULLABLE` | Operational log entries. |
-| `created_by` | `VARCHAR(80)` | `NULLABLE` | Creator username. |
-| `created_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-| `updated_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-
-#### 7. `milestones`
-
-Sequential delivery checkpoints for project progress tracking.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `project_id` | `BIGINT UNSIGNED` | `NOT NULL, FOREIGN KEY` | References `projects.id` (`ON DELETE CASCADE`). |
-| `name` | `VARCHAR(120)` | `NOT NULL` | Milestone label. |
-| `due_date` | `DATE` | `NULLABLE` | Scheduled milestone completion date. |
-| `done` | `TINYINT(1)` | `NOT NULL, DEFAULT 0` | Completion indicator flag. |
-| `done_on` | `DATE` | `NULLABLE` | Date marked completed. |
-| `status` | `ENUM('Pending','In Progress','Done','Blocked')` | `NOT NULL, DEFAULT 'Pending'` | Workflow state. |
-| `sort_order` | `SMALLINT UNSIGNED`| `NOT NULL, DEFAULT 0` | Manual display position sequence. |
-| `notes` | `TEXT` | `NULLABLE` | Checkpoint deliverables notes. |
-| `created_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-| `updated_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-
-#### 8. `payment_terms`
-
-Scheduled installments governing cash receivables.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `project_id` | `BIGINT UNSIGNED` | `NOT NULL, FOREIGN KEY` | References `projects.id` (`ON DELETE CASCADE`). |
-| `seq` | `SMALLINT UNSIGNED`| `NOT NULL, DEFAULT 1` | Installment serial sequence number. |
-| `label` | `VARCHAR(120)` | `NOT NULL` | Human-readable descriptor (e.g., `Advance 30%`). |
-| `amount` | `DECIMAL(14,2)` | `NOT NULL, DEFAULT 0.00` | Scheduled gross amount. |
-| `percent` | `DECIMAL(6,2)` | `NOT NULL, DEFAULT 0.00` | Percentage of overall project value. |
-| `trigger_type`| `ENUM('fixed','milestone','recurring')` | `NOT NULL, DEFAULT 'fixed'` | Due date condition trigger. |
-| `milestone_id`| `BIGINT UNSIGNED` | `NULLABLE, FOREIGN KEY` | References `milestones.id` (`ON DELETE SET NULL`). |
-| `due_date` | `DATE` | `NULLABLE` | Deadline for payment. |
-| `grace_days` | `SMALLINT UNSIGNED`| `NOT NULL, DEFAULT 0` | Tolerance window before marking overdue. |
-| `status` | `ENUM('Pending','Partial','Paid','Overdue','Cancelled')` | `NOT NULL, DEFAULT 'Pending'` | Auto-computed
-collection state. |
-| `received` | `DECIMAL(14,2)` | `NOT NULL, DEFAULT 0.00` | Aggregated cash received. |
-| `tds` | `DECIMAL(14,2)` | `NOT NULL, DEFAULT 0.00` | Aggregated tax withheld. |
-| `notes` | `TEXT` | `NULLABLE` | Installment-specific notes. |
-| `created_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-| `updated_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-
-#### 9. `payments`
-
-Immutable financial receipts verifying inbound cash.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `code` | `VARCHAR(20)` | `NOT NULL, UNIQUE` | Unique receipt number (e.g., `RCP-0001`). |
-| `project_id` | `BIGINT UNSIGNED` | `NOT NULL, FOREIGN KEY` | References `projects.id` (`ON DELETE CASCADE`). |
-| `customer_id`| `BIGINT UNSIGNED` | `NOT NULL, FOREIGN KEY` | References `customers.id` (`ON DELETE CASCADE`). |
-| `term_id` | `BIGINT UNSIGNED` | `NULLABLE, FOREIGN KEY` | References `payment_terms.id` (`ON DELETE SET NULL`). |
-| `amount` | `DECIMAL(14,2)` | `NOT NULL, DEFAULT 0.00` | Net cash credited. |
-| `tds` | `DECIMAL(14,2)` | `NOT NULL, DEFAULT 0.00` | Tax deducted at source on receipt. |
-| `paid_on` | `DATE` | `NOT NULL` | Bank transaction date. |
-| `mode` | `ENUM('Cash','UPI','NEFT','RTGS','Cheque','Card','Other')` | `NOT NULL, DEFAULT 'NEFT'` | Settlement
-mechanism. |
-| `reference` | `VARCHAR(80)` | `NULLABLE` | UTR, transaction hash, or cheque number. |
-| `bank` | `VARCHAR(80)` | `NULLABLE` | Settling bank name. |
-| `note` | `TEXT` | `NULLABLE` | Remarks or purchase order reference. |
-| `entered_by` | `VARCHAR(80)` | `NOT NULL` | Coordinator account identity. |
-| `created_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-| `updated_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-
-#### 10. `documents`
-
-Asset repository records tracking physical files stored on disk.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `customer_id`| `BIGINT UNSIGNED` | `NULLABLE, FOREIGN KEY` | References `customers.id` (`ON DELETE CASCADE`). |
-| `project_id` | `BIGINT UNSIGNED` | `NULLABLE, FOREIGN KEY` | References `projects.id` (`ON DELETE CASCADE`). |
-| `category` | `ENUM('Contract','KYC/GST','Invoice','Proposal','Quotation','Delivery Proof','AMC','Other')` |
-`NOT NULL, DEFAULT 'Other'` | Document classification. |
-| `title` | `VARCHAR(200)` | `NOT NULL` | Human-readable document name. |
-| `file_name` | `VARCHAR(200)` | `NOT NULL` | Original client filename. |
-| `stored_as` | `VARCHAR(255)` | `NOT NULL` | Local storage disk name (`d{id}_{random}.ext`). |
-| `mime` | `VARCHAR(120)` | `NOT NULL, DEFAULT 'application/octet-stream'` | MIME media identifier. |
-| `size_kb` | `INT UNSIGNED` | `NOT NULL, DEFAULT 0` | File weight in kilobytes. |
-| `uploaded_by`| `VARCHAR(80)` | `NOT NULL` | Coordinator responsible for upload. |
-| `created_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-| `updated_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-
-#### 11. `followups`
-
-Touchpoint logs tracking customer conversations and future touchpoints.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `customer_id`| `BIGINT UNSIGNED` | `NOT NULL, FOREIGN KEY` | References `customers.id` (`ON DELETE CASCADE`). |
-| `project_id` | `BIGINT UNSIGNED` | `NULLABLE, FOREIGN KEY` | References `projects.id` (`ON DELETE SET NULL`). |
-| `kind` | `ENUM('Call','Email','Meeting','WhatsApp','Note')` | `NOT NULL, DEFAULT 'Call'` | Communication channel. |
-| `summary` | `VARCHAR(300)` | `NOT NULL` | High-level takeaway synopsis. |
-| `detail` | `TEXT` | `NULLABLE` | Comprehensive conversation transcription. |
-| `happened_on`| `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Interaction time. |
-| `next_date` | `DATE` | `NULLABLE` | Scheduled next interaction date. |
-| `next_note` | `VARCHAR(200)` | `NULLABLE` | Action required on next touchpoint. |
-| `created_by` | `VARCHAR(80)` | `NULLABLE` | Username of logging coordinator. |
-| `created_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-| `updated_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-
-#### 12. `tasks`
-
-Coordinator checklist management items.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `project_id` | `BIGINT UNSIGNED` | `NULLABLE, FOREIGN KEY` | References `projects.id` (`ON DELETE CASCADE`). |
-| `customer_id`| `BIGINT UNSIGNED` | `NULLABLE, FOREIGN KEY` | References `customers.id` (`ON DELETE CASCADE`). |
-| `title` | `VARCHAR(200)` | `NOT NULL` | Description of actionable item. |
-| `due_date` | `DATE` | `NULLABLE` | Actionable completion deadline. |
-| `done` | `TINYINT(1)` | `NOT NULL, DEFAULT 0` | Completion boolean indicator. |
-| `priority` | `ENUM('Low','Medium','High','Urgent')` | `NOT NULL, DEFAULT 'Medium'` | Urgency ranking. |
-| `assigned_to`| `VARCHAR(80)` | `NULLABLE` | Coordinator assignee username. |
-| `created_by` | `VARCHAR(80)` | `NULLABLE` | Creator username. |
-| `created_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-| `updated_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-
-#### 13. `notifications`
-
-Internal inbox alerts dispatched to coordinators and administrators.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `user_email` | `VARCHAR(160)` | `NOT NULL, INDEX` | Recipient staff email address. |
-| `kind` | `VARCHAR(40)` | `NOT NULL` | Event classification (`payment`, `customer`, `followup`). |
-| `title` | `VARCHAR(200)` | `NOT NULL` | Alert title. |
-| `body` | `VARCHAR(300)` | `NOT NULL` | Alert description message. |
-| `link_type` | `VARCHAR(20)` | `NULLABLE` | Navigation target (`project`, `customer`). |
-| `link_id` | `BIGINT UNSIGNED` | `NULLABLE` | Target entity primary key ID. |
-| `is_read` | `TINYINT(1)` | `NOT NULL, DEFAULT 0` | Read status. |
-| `created_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-| `updated_at` | `TIMESTAMP` | `NULLABLE` | Standard Laravel timestamp. |
-
-#### 14. `audit_log`
-
-Immutable system audit feed tracking system modifications.
-| Column | Type | Attributes | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `BIGINT UNSIGNED` | `PRIMARY KEY, AUTO_INCREMENT` | Unique identifier. |
-| `who` | `VARCHAR(80)` | `NOT NULL` | Staff member username. |
-| `action` | `VARCHAR(60)` | `NOT NULL` | Verb (`create`, `update`, `delete`, `payment`, `upload`). |
-| `entity` | `VARCHAR(40)` | `NOT NULL` | Model (`customer`, `project`, `payment`, `term`, `user`). |
-| `entity_id` | `BIGINT UNSIGNED` | `NULLABLE` | Affected record ID. |
-| `entity_code`| `VARCHAR(20)` | `NULLABLE` | Code identifier (e.g., `CUS-0012`, `PJT-0004`). |
-| `detail` | `TEXT` | `NULLABLE` | Operational diff or contextual description. |
-| `at_time` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Occurrence timestamp. |
+| Table                     | Column                   | Type                                    | Constraints / Attributes                                                  | Description                                   |
+|:--------------------------|:-------------------------|:----------------------------------------|:--------------------------------------------------------------------------|:----------------------------------------------|
+| `users`[cite: 43]         | `id`[cite: 43]           | `BIGINT UNSIGNED`[cite: 43]             | `PRIMARY KEY, AUTO_INCREMENT`[cite: 43]                                   | Unique user identity[cite: 43].               |
+|                           | `email`[cite: 43]        | `VARCHAR(160)`[cite: 43]                | `NOT NULL, UNIQUE`[cite: 43]                                              | Sign-in email address[cite: 43].              |
+|                           | `role`[cite: 43]         | `ENUM('Admin','Coordinator')`[cite: 43] | `NOT NULL, DEFAULT 'Coordinator'`[cite: 43]                               | Role permission level[cite: 43].              |
+|                           | `pass_hash`[cite: 43]    | `VARCHAR(255)`[cite: 43]                | `NULLABLE`                                                                | Legacy password hash compatibility[cite: 43]. |
+|                           | `password`               | `VARCHAR(255)`                          | `NOT NULL`                                                                | Standard Bcrypt password hash.                |
+| `customers`[cite: 43]     | `sales_person_id`        | `BIGINT UNSIGNED`                       | `NULLABLE, FOREIGN KEY -> sales_persons(id) ON DELETE SET NULL`           | Linked sales representative.                  |
+|                           | `created_by_id`          | `BIGINT UNSIGNED`                       | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`                   | Creator user ID.                              |
+| `projects`[cite: 43]      | `customer_id`[cite: 43]  | `BIGINT UNSIGNED`[cite: 43]             | `NOT NULL, FOREIGN KEY -> customers(id) ON DELETE CASCADE`[cite: 43]      | Parent customer reference[cite: 43].          |
+|                           | `coordinator_id`         | `BIGINT UNSIGNED`                       | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`                   | Assigned project coordinator.                 |
+|                           | `created_by_id`          | `BIGINT UNSIGNED`                       | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`                   | Creator user ID.                              |
+| `milestones`[cite: 43]    | `project_id`[cite: 43]   | `BIGINT UNSIGNED`[cite: 43]             | `NOT NULL, FOREIGN KEY -> projects(id) ON DELETE CASCADE`[cite: 43]       | Target project reference[cite: 43].           |
+| `payment_terms`[cite: 43] | `project_id`[cite: 43]   | `BIGINT UNSIGNED`[cite: 43]             | `NOT NULL, FOREIGN KEY -> projects(id) ON DELETE CASCADE`[cite: 43]       | Associated project reference[cite: 43].       |
+|                           | `milestone_id`[cite: 43] | `BIGINT UNSIGNED`[cite: 43]             | `NULLABLE, FOREIGN KEY -> milestones(id) ON DELETE SET NULL`[cite: 43]    | Optional linked milestone trigger[cite: 43].  |
+| `payments`[cite: 43]      | `project_id`[cite: 43]   | `BIGINT UNSIGNED`[cite: 43]             | `NOT NULL, FOREIGN KEY -> projects(id) ON DELETE CASCADE`[cite: 43]       | Credited project reference[cite: 43].         |
+|                           | `term_id`[cite: 43]      | `BIGINT UNSIGNED`[cite: 43]             | `NULLABLE, FOREIGN KEY -> payment_terms(id) ON DELETE SET NULL`[cite: 43] | Optional credited installment[cite: 43].      |
+|                           | `entered_by_id`          | `BIGINT UNSIGNED`                       | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`                   | Recording coordinator ID.                     |
+| `documents`[cite: 43]     | `customer_id`[cite: 43]  | `BIGINT UNSIGNED`[cite: 43]             | `NOT NULL, FOREIGN KEY -> customers(id) ON DELETE CASCADE`[cite: 43]      | Parent customer reference[cite: 43].          |
+|                           | `project_id`[cite: 43]   | `BIGINT UNSIGNED`[cite: 43]             | `NULLABLE, FOREIGN KEY -> projects(id) ON DELETE CASCADE`[cite: 43]       | Optional project reference[cite: 43].         |
+|                           | `uploaded_by_id`         | `BIGINT UNSIGNED`                       | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`                   | Uploader user ID.                             |
+| `followups`[cite: 43]     | `customer_id`[cite: 43]  | `BIGINT UNSIGNED`[cite: 43]             | `NOT NULL, FOREIGN KEY -> customers(id) ON DELETE CASCADE`[cite: 43]      | Contacted customer reference[cite: 43].       |
+|                           | `created_by_id`          | `BIGINT UNSIGNED`                       | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`                   | Author user ID.                               |
+| `tasks`[cite: 43]         | `assigned_to_id`         | `BIGINT UNSIGNED`                       | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`                   | Responsible coordinator.                      |
+|                           | `created_by_id`          | `BIGINT UNSIGNED`                       | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`                   | Creator user ID.                              |
+| `notifications`[cite: 43] | `user_id`                | `BIGINT UNSIGNED`                       | `NOT NULL, FOREIGN KEY -> users(id) ON DELETE CASCADE`                    | Recipient staff account.                      |
+| `audit_log`[cite: 43]     | `user_id`                | `BIGINT UNSIGNED`                       | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`                   | Performing user identity.                     |
 
 ---
 
 ## 4. Domain Logic & Business Rules
 
-### 4.1 Financial Engine Formulations (`MoneyCalculationService`)
+### 4.1 Financial Calculation Formulations (`MoneyCalculationService`)
 
-Financial accounting logic is strictly centralized within `App\Services\MoneyCalculationService`. Controllers never
-calculate balances directly.
+Financial figures are centralized in `MoneyCalculationService` and accessible via the `getMoneyAttribute` accessor on
+the `Project` model[cite: 43]:
 
 $$\text{Scheduled Gross} = \sum_{t \in \text{Terms}, \, t.\text{status} \neq \text{'Cancelled'}} t.\text{amount}$$
 
@@ -651,24 +461,26 @@ $$\text{Cash Received} = \sum_{p \in \text{Payments}} p.\text{amount}$$
 
 $$\text{Withheld TDS} = \sum_{p \in \text{Payments}} p.\text{tds}$$
 
-$$\text{Project Balance Due} = \max\left(0.00, \; \text{Scheduled Gross} - \text{Cash Received} - \text{Withheld TDS}\right)$$
+$$\text{Balance Due} = \max\left(0.00, \; \text{Scheduled Gross} - \text{Cash Received} - \text{Withheld TDS}\right)$$
+
+$$\text{Overdue Amount} = \sum_{t \in \text{Terms}, \, t.\text{status} = \text{'Overdue'}} \max\left(0.00, \; t.\text{amount} - t.\text{received} - t.\text{tds}\right)$$
 
 $$\text{Collection Rate (\%)} = \begin{cases} \text{round}\left(\frac{\text{Cash Received}}{\text{Scheduled Gross}} \times 100, 1\right) & \text{if } \text{Scheduled Gross} > 0 \\ 0.0 & \text{otherwise} \end{cases}$$
 
-### 4.2 Installment State Transition Machine
+### 4.2 Installment State Transitions
 
-Installment settlement states (`payment_terms.status`) are evaluated whenever payments are booked, deleted, or when
-system-wide overdue checks run:
+Installment states (`payment_terms.status`) are calculated automatically based on payment amounts, tax deductions, due
+dates, and grace periods[cite: 43]:
 
 ```mermaid
 stateDiagram-v2
     [*] --> Pending: Term Created
     
-    Pending --> Overdue: CurDate > (DueDate + GraceDays)
+    Pending --> Overdue: Today > (DueDate + GraceDays)
     Overdue --> Pending: DueDate Extended into Future
     
-    Pending --> Partial: Payment Received (Amount + TDS < Total - 0.01)
-    Overdue --> Partial: Payment Received (Amount + TDS < Total - 0.01)
+    Pending --> Partial: Payment Logged (Received + TDS < Amount - 0.01)
+    Overdue --> Partial: Payment Logged (Received + TDS < Amount - 0.01)
     
     Partial --> Paid: (Received + TDS) >= (Amount - 0.01)
     Pending --> Paid: Full Payment (Received + TDS >= Amount - 0.01)
@@ -682,236 +494,276 @@ stateDiagram-v2
     Overdue --> Cancelled: Manual Cancellation
 ```
 
-* **Paid Condition**: Evaluated with a floating-point delta allowance ($0.01$) to handle rounding:
-  $$\text{Condition: } (t.\text{received} + t.\text{tds}) \ge (t.\text{amount} - 0.01)$$
-* **Overdue Condition**:
-  $$\text{Condition: } t.\text{status} \in \{\text{'Pending'}, \text{'Partial'}\} \land (t.\text{due\_date} + t.\text{grace\_days}) < \text{CURDATE}()$$
-* **Auto-Recalibration**: `refreshOverdueStatus()` dynamically promotes overdue terms to `'Overdue'` and demotes terms
-  back to `'Pending'`/`'Partial'` if the coordinator pushes the `due_date` forward.
+* **Paid Condition**: Evaluated with a floating-point tolerance of $0.01$ to prevent rounding discrepancies[cite: 43]:
+  $$(t.\text{received} + t.\text{tds}) \ge (t.\text{amount} - 0.01)$$
+* **Overdue Evaluation**: Executed automatically via SQL date arithmetic in `refreshOverdueStatus()` without loading
+  models into memory:
+  $$\text{DATE\_ADD}(t.\text{due\_date}, \, \text{INTERVAL } t.\text{grace\_days} \text{ DAY}) < \text{CURDATE}()$$
 
 ### 4.3 Aging Buckets Engine
 
-Receivables past their grace window are segmented into four aging buckets:
-$$\text{Days Overdue} = \left\lfloor \frac{\text{CurrentTimestamp} - \text{Timestamp}(t.\text{due\_date})}{86400} \right\rfloor$$
+Overdue receivables are segmented into four distinct aging intervals[cite: 43]:
+
+$$\text{Days Overdue} = \left\lfloor \frac{\text{CurrentDate} - \text{DueDate}}{86400} \right\rfloor$$
 
 $$\text{Bucket}(t) = \begin{cases} \text{'0-30 days'}, & \text{if } \text{Days Overdue} \le 30 \\ \text{'31-60 days'}, & \text{if } 31 \le \text{Days Overdue} \le 60 \\ \text{'61-90 days'}, & \text{if } 61 \le \text{Days Overdue} \le 90 \\ \text{'90+ days'}, & \text{if } \text{Days Overdue} > 90 \end{cases}$$
 
-### 4.4 Sequential Code Generation Engine (`CodeGeneratorService`)
+### 4.4 Concurrency-Safe Identifier Sequencing (`CodeGeneratorService`)
 
-Sequential identifiers are generated using MySQL row-level locking over the `counters` table to prevent race conditions
-during concurrent onboarding:
+Entity identifiers (`CUS-0001`, `PJT-0001`, `RCP-0001`) are generated sequentially using database-level row locking over
+the `counters` table inside a transaction[cite: 43]:
 
-```sql
-START TRANSACTION;
-INSERT
-IGNORE INTO counters (name, value) VALUES ('customer', 0);
-UPDATE counters
-SET value = value + 1
-WHERE name = 'customer';
-SELECT value
-FROM counters
-WHERE name = 'customer' FOR UPDATE;
-COMMIT;
+```php
+public function generate(string $name, string $prefix = ''): string
+{
+    return DB::transaction(function () use ($name, $prefix) {
+        $counter = DB::table('counters')->where('name', $name)->lockForUpdate()->first();
+        if (!$counter) {
+            DB::table('counters')->insert(['name' => $name, 'value' => 1]);
+            $val = 1;
+        } else {
+            $val = $counter->value + 1;
+            DB::table('counters')->where('name', $name)->update(['value' => $val]);
+        }
+        return $prefix . str_pad((string)$val, 4, '0', STR_PAD_LEFT);
+    });
+}
 ```
-
-The resulting value is left-padded to 4 digits: `CUS-` + `0042` = `CUS-0042`.
 
 ---
 
 ## 5. Security & Authentication Architecture
 
-### 5.1 Token-Based Stateful Authentication
+### 5.1 Dual-Column Password Authentication
 
-1. **Login Negotiation**: The user posts `{ email, password }` to the API.
-2. **Credential Verification**: Validates email existence, checks if `status == 'Active'`, verifies `pass_hash` using
-   `Hash::check()`.
-3. **Session Token Issuance**: On successful credential verification, an unguessable 48-character token is issued:
-   $$\text{Token} = \text{bin2hex}(\text{random\_bytes}(24))$$
-   The token is saved to `users.token`, and `users.token_at` is set to the current timestamp.
-4. **Middleware Inspection (`CrmTokenAuth`)**:
-   Every incoming request passes through the token inspection layer. The token is checked via:
-    * JSON Payload: `request()->input('token')`
-    * HTTP Header: `request()->header('X-CRM-Token')`
-    * Query String: `request()->query('token')`
-5. **Session Expiration**: Tokens expire after 7 days (`config('crm.session_ttl') = 604800` seconds).
-6. **Presence Verification**: Every authenticated request updates `users.online = 1` and `users.last_seen = NOW()`.
+To maintain backward compatibility with legacy password hashes while supporting standard Laravel authentication, the
+`User` model overrides `getAuthPassword()`[cite: 43]:
 
-### 5.2 Brute-Force Defense State
+```php
+public function getAuthPassword(): string
+{
+    return $this->pass_hash ?? $this->attributes['password'] ?? '';
+}
 
-* **Max Attempts**: 5 consecutive incorrect password submissions (`config('crm.max_login_fails')`).
-* **Lockout Window**: 30 minutes (`config('crm.lock_minutes')`).
-* **Lockout Logic**:
-  ```php
-  if ($user->locked_until && Carbon::parse($user->locked_until)->isFuture()) {
-      $remainingMinutes = ceil(now()->diffInMinutes($user->locked_until));
-      return response()->json([
-          'ok' => false, 
-          'error' => "Too many failed attempts. The account is locked for {$remainingMinutes} minute(s)."
-      ]);
-  }
-  ```
-
-### 5.3 Password Strength Invariants
-
-Passwords must satisfy four structural requirements:
-
-1. Minimum 8 characters in length: $\text{strlen}(p) \ge 8$.
-2. At least one uppercase letter: $\text{preg\_match}(/[A-Z]/, p)$.
-3. At least one lowercase letter: $\text{preg\_match}(/[a-z]/, p)$.
-4. At least one numerical digit: $\text{preg\_match}(/[0-9]/, p)$.
-
-### 5.4 Document Upload Validation & Storage
-
-Uploaded documents must comply with security checks inside `DocumentService`:
-
-* **Payload Verification**: Base64 data strings are decoded using strict byte validation: `base64_decode($data, true)`.
-* **File Size Ceiling**: Hard limit of 10 MB ($10,240 \text{ KB}$):
-  $$\text{Max Bytes} = 10240 \times 1024 = 10,485,760 \text{ bytes}$$
-* **Extension Whitelist**: Only approved file types are allowed:
-  `pdf, jpg, jpeg, png, gif, webp, doc, docx, xls, xlsx, csv, txt, ppt, pptx, zip`.
-* **Filename Sanitization**: Files are saved with randomized unique names:
-  $$\text{Disk Path} = \text{"d"} + \text{ProjectOrCustomerId} + \text{"\_"} + \text{bin2hex}(\text{random\_bytes}(8)) + \text{"."} + \text{Extension}$$
-* **Storage Location**: Files are saved to `storage/app/public/` and served via the `public/storage` symbolic link.
-
----
-
-## 6. API Contracts & Dispatching Catalog
-
-The platform supports two access routes pointing to the same service layer:
-
-* **Legacy Dispatch Gateway**: `POST /api.php`
-* **RESTful Version 1**: `POST /api/v1/*`
-
-### 6.1 Authentication Protocol Sequence
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as SPA Frontend
-    participant Gateway as LegacyGatewayController
-    participant Auth as AuthController
-    participant DB as MySQL Database
-
-    Client->>Gateway: POST /api.php { action: "login", email: "...", password: "..." }
-    Gateway->>Auth: login(Request)
-    Auth->>DB: SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1
-    DB-->>Auth: User record
-    Auth->>Auth: Hash::check(password, pass_hash)
-    alt Invalid Password
-        Auth->>DB: UPDATE users SET fail_count = fail_count + 1
-        Auth-->>Client: { ok: false, error: "Invalid email or password. X attempts left." }
-    else Valid Password
-        Auth->>Auth: Generate token bin2hex(random_bytes(24))
-        Auth->>DB: UPDATE users SET token = ?, token_at = NOW(), fail_count = 0
-        Auth-->>Client: { ok: true, token: "...", user: { ... }, mustChange: 0 }
-    end
-
-    Note over Client, Gateway: Subsequent Authenticated Request (e.g. Load State)
-    Client->>Gateway: POST /api.php { action: "load", token: "..." }
-    Gateway->>DB: SELECT * FROM users WHERE token = ? AND status = 'Active'
-    DB-->>Gateway: Authenticated User
-    Gateway->>Gateway: App::setUserResolver(user)
-    Gateway->>DB: UPDATE users SET online = 1, last_seen = NOW()
-    Gateway->>DashboardController: load(Request)
-    DashboardController-->>Client: { ok: true, data: { users, customers, projects, ... } }
+public function setPasswordAttribute($value): void
+{
+    $hashed = Hash::needsRehash($value) ? Hash::make($value) : $value;
+    $this->attributes['password'] = $hashed;
+    $this->attributes['pass_hash'] = $hashed;
+}
 ```
 
-### 6.2 Complete Action Catalog (`POST /api.php`)
+### 5.2 Role Scoping & Data Isolation
 
-All requests return standard JSON envelopes using either `{ ok: true, ... }` on success or
-`{ ok: false, error: "Reason" }` on failure.
+Data access for Project Coordinators is scoped to their assigned records using the `scopeForUser()` query
+scope[cite: 1, 43]:
 
-| Action Name         | Access Level  | Primary Inputs                                                                        | Expected Output Envelope                                                                 |
-|:--------------------|:--------------|:--------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------|
-| `ping`              | Public        | None                                                                                  | `{ ok: true, message: string, driver: string, time: ISO8601 }`                           |
-| `login`             | Public        | `email`, `password`                                                                   | `{ ok: true, token: string, mustChange: int, user: object }`                             |
-| `forgotPassword`    | Public        | `email`                                                                               | `{ ok: true, sent: bool, message: string }`                                              |
-| `checkReset`        | Public        | `reset` (raw token)                                                                   | `{ ok: true, name: string, email: string }`                                              |
-| `resetPassword`     | Public        | `reset`, `password`                                                                   | `{ ok: true, message: string }`                                                          |
-| `me`                | Authenticated | `token`                                                                               | `{ ok: true, user: { id, name, email, role, designation } }`                             |
-| `logout`            | Authenticated | `token`                                                                               | `{ ok: true }`                                                                           |
-| `changePassword`    | Authenticated | `oldPassword`, `newPassword`                                                          | `{ ok: true, message: string }`                                                          |
-| `load`              | Authenticated | `token`                                                                               | `{ ok: true, data: { users, sales, customers, projects, terms, payments, docs, ... } }`  |
-| `dashboard`         | Authenticated | `token`                                                                               | `{ ok: true, data: { money, projects, counts, upcoming, overdue, trend, ageing, ... } }` |
-| `search`            | Authenticated | `q` (min 2 chars)                                                                     | `{ ok: true, results: [ { type, id, title, sub, badge? } ] }`                            |
-| `audit`             | Authenticated | `token`                                                                               | `{ ok: true, data: [ { who, action, entity, entity_code, detail, at } ] }`               |
-| `saveCustomer`      | Coordinator   | `data: { id?, company, contactName, phone, email, city, gstin, ... }`                 | `{ ok: true, id: int, code: string, created: bool }`                                     |
-| `deleteCustomer`    | Admin         | `id`, `force: bool`                                                                   | `{ ok: true }` (or `{ ok: false, needForce: true, error: msg }`)                         |
-| `bulkImport`        | Coordinator   | `rows: [ { company, contactName, phone, email, ... } ]`, `salesPerson`                | `{ ok: true, made: int, skipped: int, errors: array }`                                   |
-| `saveProject`       | Coordinator   | `data: { id?, customerId, name, value, cost, status, health, deliveryDate, ... }`     | `{ ok: true, id: int, code: string, created: bool }`                                     |
-| `deleteProject`     | Admin         | `id`                                                                                  | `{ ok: true }`                                                                           |
-| `saveTerms`         | Coordinator   | `projectId`, `terms: [ { label, amount, trigger, milestoneId, dueDate, graceDays } ]` | `{ ok: true, count: int }`                                                               |
-| `generateRecurring` | Coordinator   | `projectId`, `amount`, `months`, `startDate`, `label`                                 | `{ ok: true, count: int }`                                                               |
-| `deleteTerm`        | Coordinator   | `id`                                                                                  | `{ ok: true }`                                                                           |
-| `savePayment`       | Coordinator   | `data: { projectId, termId?, amount, tds, paidOn, mode, reference, bank, note }`      | `{ ok: true, id: int, code: string, money: { scheduled, received, tds, due } }`          |
-| `deletePayment`     | Coordinator   | `id`                                                                                  | `{ ok: true }`                                                                           |
-| `saveMilestones`    | Coordinator   | `projectId`, `milestones: [ { id?, name, dueDate, done, status, notes } ]`            | `{ ok: true, count: int, linkedWarn: bool }`                                             |
-| `uploadDocument`    | Coordinator   | `customerId?, projectId?, category, title, name, mime, data (base64)`                 | `{ ok: true, id: int, url: string }`                                                     |
-| `deleteDocument`    | Coordinator   | `id`                                                                                  | `{ ok: true }`                                                                           |
-| `saveFollowup`      | Coordinator   | `data: { customerId, projectId?, kind, summary, detail, nextDate, nextNote }`         | `{ ok: true, id: int }`                                                                  |
-| `deleteFollowup`    | Coordinator   | `id`                                                                                  | `{ ok: true }`                                                                           |
-| `saveTask`          | Coordinator   | `data: { id?, projectId?, customerId?, title, dueDate, priority, assignedTo }`        | `{ ok: true, id: int, created: bool }`                                                   |
-| `toggleTask`        | Coordinator   | `id`                                                                                  | `{ ok: true }`                                                                           |
-| `deleteTask`        | Coordinator   | `id`                                                                                  | `{ ok: true }`                                                                           |
-| `saveSales`         | Coordinator   | `data: { id?, name, phone, email, target, status }`                                   | `{ ok: true, id: int, created: bool }`                                                   |
-| `deleteSales`       | Admin         | `id`                                                                                  | `{ ok: true }`                                                                           |
-| `saveUser`          | Admin         | `data: { id?, name, email, phone, role, designation, city, status, password? }`       | `{ ok: true, id: int, created: bool, tempPassword?: string }`                            |
-| `deleteUser`        | Admin         | `id`                                                                                  | `{ ok: true }`                                                                           |
-| `notifRead`         | Authenticated | `id?` (0 for all)                                                                     | `{ ok: true }`                                                                           |
-| `saveSettings`      | Admin         | `paymentAlertDays`, `amcAlertDays`, `followupAlertDays`, `companyName`                | `{ ok: true }`                                                                           |
-| `export`            | Coordinator   | `kind` (`customers`, `payments`, `overdue`, `schedule`, `sales`)                      | Binary stream (`text/csv` with UTF-8 BOM attachment)                                     |
+```php
+public function scopeForUser(Builder $query, ?User $user = null): Builder
+{
+    $user = $user ?? auth()->user();
+    if ($user && $user->role !== 'Admin') {
+        return $query->where('coordinator_id', $user->id);
+    }
+    return $query;
+}
+```
+
+### 5.3 Password Strength Validation Invariants
+
+New passwords must satisfy four complexity rules[cite: 43]:
+
+1. Minimum length of 8 characters[cite: 43]: $\text{strlen}(p) \ge 8$.
+2. At least one uppercase character[cite: 43]: `regex:/[A-Z]/`.
+3. At least one lowercase character[cite: 43]: `regex:/[a-z]/`.
+4. At least one numerical digit[cite: 43]: `regex:/[0-9]/`.
 
 ---
 
-## 7. Frontend Client Architecture (`public/js/crm-app.js`)
+## 6. Complete Module Catalog & Livewire 4 Component Architecture
 
-The user interface operates as a high-performance Vanilla JavaScript SPA with zero external framework dependencies (No
-React, Vue, or Angular).
+The CRM consists of 14 integrated modules grouped across 5 navigation sections[cite: 3]:
 
-### 7.1 Client Lifecycle & Bootstrapping
+### 6.1 Module 1: Dashboard (`/dashboard`)
 
-1. **Entry Check**: Evaluates `location.search` for password reset parameters (`?reset=...`). If found, displays
-   `renderReset()`.
-2. **Session Verification**: Reads token credentials from `localStorage.getItem("pjt_session_v1")`.
-3. **Hydration (`refresh(true)`)**: Dispatches `action=load` to retrieve the entire state model (`DB`) in a single
-   network round-trip.
-4. **DOM Painting**: Invokes `renderShell()` to mount sidebar and topbar navigation, followed by `render()` to mount the
-   active view (`VIEW`).
-5. **Background Polling**: Initializes an active interval timer (`CONFIG.POLL_MS = 60000`) checking for data updates,
-   unread notifications, and presence states.
+* **Component**: `App\Livewire\Dashboard\DashboardIndex`
+* **Features**:
+    * 5 KPI cards: Total Receivable, Received (with collection rate %), Due, Overdue (with late installment count), and
+      Current Month Collections[cite: 3].
+    * Today's Work Mini-Triage: Highlights the top 3 overdue payments, top 3 follow-ups, and top 2 delayed/at-risk
+      projects with direct navigation links[cite: 3].
+    * Project Health: Visual breakdown across `On Track`, `At Risk`, `Delayed`, and `Completed` with proportional
+      percentage bars[cite: 3].
+    * 6-Month Collection Trend: Historical monthly collection chart with month labels[cite: 3].
+    * Secondary Grids: Upcoming payments, overdue payments, sales attribution table, AMC renewal alerts, and pending
+      handover checklists[cite: 3].
+    * Horizontal Aging Buckets: Receivables segmented into `0-30`, `31-60`, `61-90`, and `90+` days[cite: 3].
 
-### 7.2 Real-Time Dual Currency System
+### 6.2 Module 2: Today's Work (`/today`)
 
-Amounts are stored natively in Indian Rupees (INR, `₹`). The client supports live display conversion to US Dollars (USD,
-`$`) using an in-memory exchange divisor:
+* **Component**: `App\Livewire\Today\TodayWorkIndex`
+* **Features**:
+    * Actionable daily queue showing pending touchpoints, upcoming collections, and urgent recovery tasks[cite: 3].
+    * Summary KPIs: Overdue amount, Due Soon amount, Follow-ups count, and Open Tasks count[cite: 3].
+    * Overdue Payments: Installment cards showing days overdue and inline `+ Payment` buttons[cite: 3].
+    * Upcoming Payments & Follow-up Calls: Grouped cards with color-coded due dates[cite: 3].
+    * Projects Needing Attention: Table displaying delayed and at-risk deliverables with delay reasons and amounts
+      due[cite: 3].
 
-* **Default Exchange Constant**: $1 \text{ USD} = 83 \text{ INR}$.
-* **Conversion Logic**:
-  ```javascript
-  function money(value, isShort = false) {
-      let n = Number(value || 0);
-      if (CUR === "USD") {
-          n = n / 83.0;
-          if (isShort && Math.abs(n) >= 1000) return "$" + (n / 1000).toFixed(1) + "K";
-          return "$" + n.toLocaleString("en-US", { maximumFractionDigits: n < 100 ? 2 : 0 });
-      }
-      if (isShort && Math.abs(n) >= 100000) return "₹" + (n / 100000).toFixed(1) + "L";
-      return "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
-  }
-  ```
-* **Immutability Guarantee**: Toggling currency re-renders the DOM view without altering database values or mutation
-  payloads.
+### 6.3 Module 3: Customers (`/customers`)
 
-### 7.3 Centralized DOM Event Delegation
+* **Components**:
+    * `App\Livewire\Customers\CustomerIndex`: Customer directory with multi-field search, sales representative filter,
+      city filter, payment status filter (`due`, `over`, `clear`), and CSV export[cite: 3].
+    * `App\Livewire\Customers\CustomerDetail`: Tabbed client view containing Overview, Projects, Payments, Documents,
+      and Follow-ups[cite: 3].
+    * `App\Livewire\Customers\CustomerModal`: Full modal supporting creation and editing across 16 fields (GSTIN, PAN,
+      tax details, internal notes)[cite: 3].
+    * `App\Livewire\Customers\CustomerImportModal`: Bulk CSV parser supporting spreadsheet pasting and file
+      uploads[cite: 3].
 
-To avoid memory leaks during dynamic DOM view destruction and re-rendering, `public/js/crm-app.js` registers single
-event listeners at the `#content` container level using data-attribute selectors:
+### 6.4 Module 4: Projects (`/projects`)
 
-* `data-customer="id"`: Navigates to Customer Detail view.
-* `data-project="id"`: Navigates to Project Detail view.
-* `data-pay="projectId" data-term="termId"`: Opens Payment Receipt modal.
-* `data-preview="docId"`: Opens Document Viewer modal (with auto-detecting `<iframe>` or `<img>`).
-* `data-toggletask="taskId"`: Toggles task completion state.
+* **Components**:
+    * `App\Livewire\Projects\ProjectIndex`: Project directory with health filtering, status filtering, and contract vs.
+      balance rollups[cite: 3].
+    * `App\Livewire\Projects\ProjectDetail`: Project management workspace with health banners, milestone timelines,
+      financial summaries, AMC terms, and handover sign-offs[cite: 3].
+    * `App\Livewire\Projects\ProjectModal`: Contract creation and editing modal with internal margin cost
+      tracking[cite: 3].
+    * `App\Livewire\Projects\ProjectMilestoneModal`: Milestone ordering and checklist management modal[cite: 3].
+    * `App\Livewire\Projects\ProjectScheduleModal`: Installment scheduler supporting Fixed Date, Milestone Linked, and
+      Recurring modes[cite: 3].
+    * `App\Livewire\Projects\ProjectRecurringModal`: Single-click monthly retainer schedule generator[cite: 3].
+
+### 6.5 Module 5: My Tasks (`/tasks`)
+
+* **Component**: `App\Livewire\Tasks\TaskIndex`
+* **Features**:
+    * Personal checklist execution with priority levels (`Low`, `Medium`, `High`, `Urgent`)[cite: 3].
+    * Live status summary (`N pending · N done`)[cite: 5].
+    * Task creation form supporting project linking and assignee selection.
+    * Overdue deadline tracking with prominent red late-day indicators[cite: 5].
+    * Instant task completion toggling and deletion controls[cite: 5].
+
+### 6.6 Module 6: Payments (`/payments`)
+
+* **Components**:
+    * `App\Livewire\Payments\PaymentIndex`: Inward payment ledger with payment mode filtering (`Cash`, `UPI`, `NEFT`,
+      `RTGS`, `Cheque`, `Card`, `Other`), reference tracking, and CSV export[cite: 3, 5].
+    * `App\Livewire\Payments\PaymentModal`: Receipt modal that automatically calculates installment balances upon
+      selection[cite: 3, 5].
+
+### 6.7 Module 7: Payment Schedule (`/schedule`)
+
+* **Component**: `App\Livewire\Schedule\ScheduleIndex`
+* **Features**:
+    * Master chronological schedule tracking all upcoming and overdue installments[cite: 3].
+    * Summary KPIs: Upcoming, Overdue, Collected, and Total Scheduled[cite: 3, 5].
+    * Urgency-ranked table with late-day badges and trigger indicators[cite: 5].
+    * Inline payment button pre-populating project and installment parameters[cite: 5].
+    * UTF-8 BOM CSV export for spreadsheet compatibility[cite: 5, 43].
+
+### 6.8 Module 8: Reports (`/reports`)
+
+* **Component**: `App\Livewire\Reports\ReportIndex`
+* **Features**:
+    * Financial KPIs: Collection Rate, Total Overdue, TDS Deductions, and Average Project Value[cite: 3, 5].
+    * Visual Analytics: 6-month historical sparkline, payment mode breakdown bars, overdue aging bars, and project
+      health distribution[cite: 3, 5].
+    * Milestone vs. Collection Gap Analysis: Table identifying projects where delivery progress outpaces cash
+      collections[cite: 3, 5].
+
+### 6.9 Module 9: Documents (`/documents`)
+
+* **Components**:
+    * `App\Livewire\Documents\DocumentIndex`: File repository with search, category filtering (`Contract`, `KYC/GST`,
+      `Invoice`, `Proposal`, `Quotation`, `Delivery Proof`, `AMC`, `Other`), and deletion permissions[cite: 3, 5].
+    * `App\Livewire\Documents\DocumentUploadModal`: File upload modal supporting attachments up to 10 MB[cite: 4, 5].
+    * `App\Livewire\Documents\DocumentPreviewModal`: Lightbox viewer for previewing images and PDFs[cite: 3, 5].
+
+### 6.10 Module 10: Follow-ups (`/followups`)
+
+* **Component**: `App\Livewire\Followups\FollowupIndex`
+* **Features**:
+    * Client communication logs tracking 5 channels (`Call`, `Email`, `Meeting`, `WhatsApp`, `Note`)[cite: 3, 5].
+    * Prominent warning banner listing overdue touchpoints[cite: 5].
+    * Channel-specific color-coded icons and conversation detail notes[cite: 5].
+    * Direct customer navigation and record deletion controls[cite: 5].
+
+### 6.11 Module 11: Sales Team (`/sales`)
+
+* **Components**:
+    * `App\Livewire\Sales\SalesIndex`: Commercial team registry tracking customer volume, total contracted value,
+      collections, and quota targets[cite: 3, 5].
+    * `App\Livewire\Sales\SalesModal`: Modal for managing sales representatives and monthly targets[cite: 5].
+
+### 6.12 Module 12: Notifications (`/notifications`)
+
+* **Components**:
+    * `App\Livewire\Notifications\NotificationIndex`: System alert feed with category icons, unread indicators, and
+      mark-as-read actions[cite: 3, 5].
+    * `App\Livewire\Components\NotificationBell`: Real-time navigation bell displaying unread alert counts[cite: 3].
+    * Deep Linking: Clicking an alert navigates directly to the target project or customer[cite: 3, 5].
+
+### 6.13 Module 13: Activity Log (`/audit`)
+
+* **Component**: `App\Livewire\Audit\AuditIndex`
+* **Features**:
+    * Append-only system audit log tracking logins, creations, updates, deletions, and uploads[cite: 3, 5].
+    * Action-specific timeline indicator dots (Green for payments, Red for deletions, Navy for creates, Amber for
+      updates)[cite: 5].
+    * Full user attribution, entity code badges, and detailed diff notes[cite: 5].
+
+### 6.14 Module 14: Settings & Users (`/settings`)
+
+* **Components**:
+    * `App\Livewire\Settings\SettingIndex`: Operational alert thresholds (`payment_alert_days`, `amc_alert_days`,
+      `followup_alert_days`), display currency configuration, password updates, and user management[cite: 3, 5].
+    * `App\Livewire\Settings\UserModal`: Staff user creation and editing modal with temporary password
+      generation[cite: 5].
+
+---
+
+## 7. Frontend Layout, UI Components & Responsive State
+
+### 7.1 Responsive Shell & Mini-Sidebar Architecture
+
+The application layout in `resources/views/layouts/app.blade.php` supports responsive collapsing with persistent
+state[cite: 4]:
+
+* **Desktop Collapse**: Toggling the `#burger` button applies the `.collapsed` CSS class, collapsing the sidebar to a
+  70px icon-only rail[cite: 4]. State is persisted in `localStorage` under `pjt_sidebar_collapsed`[cite: 4].
+* **Mobile Drawer**: On screens $\le 860\text{px}$, the sidebar functions as an off-canvas slide-out drawer (
+  `.sidebar.open`) that closes upon outside clicks[cite: 4].
+* **Native CSS Layout**: Built with custom variables in `public/css/crm-style.css` using brand colors (Navy `#0b3d91`,
+  Green `#5aa236`)[cite: 4].
+
+### 7.2 In-Memory Currency Conversion (`Alpine.store('currency')`)
+
+Amounts are stored natively in Indian Rupees (INR, `₹`) with client-side conversion to US Dollars (USD, `$`) via
+Alpine.js[cite: 4]:
+
+```javascript
+Alpine.store('currency', {
+    cur: localStorage.getItem('pjt_cur') || 'INR',
+    rate: 83.0,
+    toggle() {
+        this.cur = this.cur === 'INR' ? 'USD' : 'INR';
+        localStorage.setItem('pjt_cur', this.cur);
+    },
+    format(val, short = false) {
+        let n = Number(val || 0);
+        if (this.cur === 'USD') {
+            n = n / this.rate;
+            if (short && Math.abs(n) >= 1000) return '$' + (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'K';
+            return '$' + n.toLocaleString('en-US', {maximumFractionDigits: n < 100 ? 2 : 0});
+        }
+        if (short && Math.abs(n) >= 100000) return '₹' + (n / 100000).toFixed(n % 100000 === 0 ? 0 : 1) + 'L';
+        return '₹' + n.toLocaleString('en-IN', {maximumFractionDigits: 0});
+    }
+});
+```
 
 ---
 
@@ -919,47 +771,44 @@ event listeners at the `#content` container level using data-attribute selectors
 
 ### 8.1 System Prerequisites
 
-* **Runtime**: PHP 8.2 or later with extensions: `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`,
-  `fileinfo`.
-* **Database**: MySQL 8.0+ or MariaDB 10.4+.
-* **Web Server**: Nginx or Apache HTTP Server with `mod_rewrite` enabled.
-* **Package Manager**: Composer 2.x.
+* **PHP**: `^8.2` or later with extensions: `pdo_mysql`, `mbstring`, `fileinfo`, `openssl`, `tokenizer`, `xml`, `ctype`.
+* **Database**: MySQL `8.0+` or MariaDB `10.4+`.
+* **Web Server**: Nginx or Apache with `mod_rewrite` enabled.
+* **Build Tools**: Composer `2.x` and Node.js `18+` (NPM).
 
 ### 8.2 Production Deployment Setup
 
 ```bash
-# 1. Clone repository to web root
-cd /var/www
-git clone <repository_url> pjt-crm
-cd pjt-crm
+# 1. Clone repository to server root
+git clone <repository_url> /var/www/pjt-crm
+cd /var/www/pjt-crm
 
-# 2. Install backend dependencies strictly without dev packages
+# 2. Install production dependencies
 composer install --no-dev --optimize-autoloader
+npm install && npm run build
 
-# 3. Establish environmental configurations
+# 3. Environment configuration
 cp .env.example .env
 php artisan key:generate
 
-# 4. Configure database connectivity in .env:
+# 4. Configure database connection inside .env:
 # DB_HOST=127.0.0.1
-# DB_DATABASE=dfbskukq_pjt_crm
-# DB_USERNAME=dfbskukq_pjt_crm
-# DB_PASSWORD=your_secure_password
+# DB_DATABASE=project_manager
+# DB_USERNAME=project_user
+# DB_PASSWORD=secure_password
 
-# 5. Run database migrations
+# 5. Run database migrations and seed default users
 php artisan migrate --force
-
-# 6. Seed default system users
 php artisan db:seed --class=UserSeeder --force
 
-# 7. Symlink storage for document asset downloads
+# 6. Establish storage symlink
 php artisan storage:link
 
-# 8. Set filesystem write permissions for web server
+# 7. Set correct storage permissions
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
-# 9. Warm up production route and config caches
+# 8. Optimize application caches
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -970,37 +819,28 @@ php artisan view:cache
 ```nginx
 server {
     listen 80;
-    listen [::]:80;
     server_name project.the10xagency.in;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    listen [::]:443 ssl http2;
     server_name project.the10xagency.in;
     root /var/www/pjt-crm/public;
 
     ssl_certificate /etc/letsencrypt/live/project.the10xagency.in/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/project.the10xagency.in/privkey.pem;
 
-    client_max_body_size 12M;
-
-    index index.php app.blade.php;
+    client_max_body_size 15M;
+    index index.php;
     charset utf-8;
 
-    # Security Headers
     add_header X-Frame-Options "SAMEORIGIN";
     add_header X-Content-Type-Options "nosniff";
     add_header Referrer-Policy "same-origin";
 
     location / {
         try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    # Direct resolution of legacy API calls
-    location = /api.php {
-        try_files $uri /index.php?$query_string;
     }
 
     location = /favicon.ico { access_log off; log_not_found off; }
@@ -1024,43 +864,26 @@ server {
 
 ## 9. AI Development & Maintenance Protocols
 
-To preserve stability and avoid regressions when updating or extending this codebase, adhere to these operational rules:
+Adhere to the following rules when maintaining or extending this codebase:
 
-1. **Preserve API Response Envelopes**:
-   Do not modify JSON response root signatures. The frontend client explicitly expects:
-   ```json
-   { "ok": true, "data": { ... } }
-   ```
-   or:
-   ```json
-   { "ok": false, "error": "Human-readable failure message" }
-   ```
-   Returning uncaught exceptions or Laravel's default error pages (`{ "message": "...", "exception": "..." }`) will
-   crash the frontend JavaScript state machine.
+1. **Centralize Financial Calculations in `MoneyCalculationService`**:
+   Never calculate installment balances, receivables, or overdue states directly inside Blade views or controllers.
+   Always invoke `MoneyCalculationService` or the `getMoneyAttribute` accessor on models to ensure consistency across
+   views, dashboards, and CSV exports[cite: 43].
 
-2. **Centralize Financial Calculations in `MoneyCalculationService`**:
-   Never calculate project balances, installment terms, received totals, or aging buckets directly inside controllers.
-   Always use `MoneyCalculationService` to ensure calculations match across dashboards, customer views, project screens,
-   and CSV exports.
+2. **Maintain Atomic Sequencing Invariants**:
+   Never generate sequential entity codes using `Model::max('id') + 1`, which creates race conditions under concurrent
+   requests. Always generate codes using `CodeGeneratorService::generate('entity', 'PREFIX-')` inside database
+   transactions with row-level locking[cite: 43].
 
-3. **Wrap Audit and Notification Calls in Safe Exception Handlers**:
-   Audit log writes and coordinator notifications must be non-blocking. Database transactions must never roll back
-   simply because an audit log insert failed:
-   ```php
-   try {
-       $this->auditService->log(...);
-   } catch (\Throwable $e) {
-       // Log to Laravel logger, never rethrow
-       \Log::warning("Failed writing audit record: " . $e->getMessage());
-   }
-   ```
+3. **Enforce Role-Based Query Scoping**:
+   Always scope queries for coordinators using `Project::forUser(auth()->user())`. Coordinators must never access or
+   manipulate projects, payments, or documents belonging to other coordinators[cite: 1, 43].
 
-4. **Maintain Atomic Sequencing Invariants**:
-   Never generate entity codes by reading `Model::max('id') + 1`. This creates race conditions under concurrent
-   requests. Always use `CodeGeneratorService::generate('entity', 'PREFIX-')` to ensure atomic incrementing with
-   row-level database locks.
+4. **Separate Livewire PHP Classes from Blade Views**:
+   Never include PHP class definitions or namespace declarations inside `.blade.php` view files. Keep PHP classes in
+   `app/Livewire/` and views in `resources/views/livewire/` to avoid fatal class re-declaration errors.
 
-5. **Keep `/api.php` Excluded from CSRF**:
-   The Vanilla JS SPA communicates directly with `/api.php` without an initial CSRF token exchange. Any modifications to
-   Laravel's CSRF middleware configuration must keep `api.php` in the exception list to prevent `419 Page Expired`
-   errors during login or data operations.
+5. **Clean Up Files on Disk During Deletions**:
+   When deleting document records or cascading customer deletions, always delete the corresponding file from disk using
+   `Storage::disk('public')->delete(\$doc->stored_as)` to prevent orphaned files[cite: 43].

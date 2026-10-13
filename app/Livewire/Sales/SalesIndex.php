@@ -1,0 +1,101 @@
+<?php
+
+namespace App\Livewire\Sales;
+
+use App\Models\Customer;
+use App\Models\SalesPerson;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
+use Livewire\Component;
+
+#[Layout('layouts.app')]
+class SalesIndex extends Component {
+    #[On('sales-saved')]
+    public function refreshList(): void {
+        // Re-renders the component
+    }
+
+    public function exportCsv() {
+        $user = auth()->user();
+        $sales = SalesPerson::with([
+            'customers.projects' => fn($q) => $q->forUser($user)->with(['terms', 'payments'])
+        ])->orderBy('name')->get();
+
+        $filename = 'sales-report-' . now()->toDateString() . '.csv';
+
+        return response()->streamDownload(function () use ($sales) {
+            $handle = fopen('php://output', 'w');
+            fwrite($handle, "\xEF\xBB\xBF"); // BOM for Excel
+            fputcsv($handle, ['Sales Person', 'Customers', 'Projects', 'Total Value', 'Received', 'Overdue']);
+
+            foreach ($sales as $s) {
+                $projs = $s->customers->flatMap->projects;
+                $val = (float)$projs->sum('value');
+                $rec = (float)$projs->flatMap->payments->sum('amount');
+                $over = (float)$projs->flatMap->terms->where('status', 'Overdue')->sum(fn($t) => max(0, $t->amount - $t->received - $t->tds));
+
+                fputcsv($handle, [
+                    $s->name,
+                    $s->customers->count(),
+                    $projs->count(),
+                    $val,
+                    $rec,
+                    $over,
+                ]);
+            }
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv; charset=utf-8']);
+    }
+
+    public function deleteSales(int $id): void {
+        if (auth()->user()->role !== 'Admin') {
+            $this->dispatch('toast', ['msg' => 'Only an Admin can remove a salesperson.', 'kind' => 'err']);
+            return;
+        }
+
+        $sp = SalesPerson::findOrFail($id);
+        $sp->delete();
+
+        $this->dispatch('toast', ['msg' => 'Salesperson removed', 'kind' => 'ok']);
+    }
+
+    public function render() {
+        $user = auth()->user();
+
+        $salesPeople = SalesPerson::with([
+            'customers.projects' => fn($q) => $q->forUser($user)->with(['terms', 'payments'])
+        ])->orderBy('name')->get();
+
+        $rows = [];
+        foreach ($salesPeople as $sp) {
+            $projs = $sp->customers->flatMap->projects;
+            $val = (float)$projs->sum('value');
+            $rec = (float)$projs->flatMap->payments->sum('amount');
+            $over = (float)$projs->flatMap->terms->where('status', 'Overdue')->sum(fn($t) => max(0, $t->amount - $t->received - $t->tds));
+            $rate = $val > 0 ? min(100, round(($rec / $val) * 100)) : 0;
+
+            $rows[] = [
+                'salesPerson' => $sp,
+                'customers' => $sp->customers->count(),
+                'projects' => $projs->count(),
+                'value' => $val,
+                'received' => $rec,
+                'overdue' => $over,
+                'rate' => $rate,
+            ];
+        }
+
+        usort($rows, fn($a, $b) => $b['value'] <=> $a['value']);
+
+        $totalOnboarded = Customer::whereNotNull('sales_person_id')->count();
+
+        return view('livewire.sales.sales-index', [
+            'rows' => $rows,
+            'salesCount' => count($rows),
+            'totalOnboarded' => $totalOnboarded,
+        ])->layoutData([
+            'header' => 'Sales Team',
+            'subtitle' => 'Who onboarded how many customers, and how much was collected',
+        ]);
+    }
+}

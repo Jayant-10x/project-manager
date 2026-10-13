@@ -1,0 +1,227 @@
+<div>
+    <!-- Page Header Summary & Log Action -->
+    <div class="page-head mb-4">
+        <span class="info text-sm text-[#8894ac]">
+            {{ $totalCount }} follow-ups
+            @if($dueList->count() > 0)
+                · <b style="color:#d94b4b">{{ $dueList->count() }} pending</b>
+            @endif
+        </span>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-primary btn-sm" @click="$dispatch('open-modal', 'followup-modal')">
+            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Log Follow-up
+        </button>
+    </div>
+
+    <!-- Pending / Overdue Follow-ups Notice Banner -->
+    @if($dueList->isNotEmpty())
+        <div class="notice warn mb-4">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0 mt-0.5">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M12 8v5M12 16.5v.5"/>
+            </svg>
+            <div class="text-xs">
+                <b>{{ $dueList->count() }} follow-ups are pending.</b><br>
+                @foreach($dueList->take(4) as $d)
+                    <div>{{ $d->customer?->company }} — {{ $d->next_note ?: $d->summary }}
+                        ({{ $d->next_date?->format('d M') }})
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    <!-- Follow-ups History Card -->
+    <div class="card">
+        <div class="card-body p-0">
+            @forelse($followups as $f)
+                @php
+                    $kindColors = [
+                        'Call'     => '#0b3d91',
+                        'Email'    => '#2e75b6',
+                        'Meeting'  => '#7a5af8',
+                        'WhatsApp' => '#5aa236',
+                        'Note'     => '#8894ac',
+                    ];
+                    $c = $kindColors[$f->kind] ?? '#8894ac';
+                    $isOverdue = $f->next_date && $f->next_date->toDateString() < $today;
+                @endphp
+                <div
+                    class="fu flex items-start gap-3 p-3.5 border-b last:border-b-0 border-[#eef2f9] hover:bg-slate-50 transition">
+                    <span class="fu-ico flex-shrink-0" style="background: {{ $c }}1a; color: {{ $c }}">
+                        @if($f->kind === 'Meeting')
+                            <svg viewBox="0 0 24 24" class="w-4 h-4"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle
+                                    cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>
+                        @elseif($f->kind === 'Email')
+                            <svg viewBox="0 0 24 24" class="w-4 h-4"><rect x="2" y="4" width="20" height="16" rx="2"/><path
+                                    d="M22 6l-10 7L2 6"/></svg>
+                        @elseif($f->kind === 'WhatsApp')
+                            <svg viewBox="0 0 24 24" class="w-4 h-4"><path
+                                    d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                        @elseif($f->kind === 'Note')
+                            <svg viewBox="0 0 24 24" class="w-4 h-4"><path
+                                    d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path
+                                    d="M14 2v6h6"/></svg>
+                        @else
+                            <svg viewBox="0 0 24 24" class="w-4 h-4"><path
+                                    d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
+                        @endif
+                    </span>
+
+                    <div style="flex:1;min-width:0">
+                        <div class="fu-s font-semibold text-sm text-[#0d1b34]">{{ $f->summary }}</div>
+                        @if($f->detail)
+                            <div class="fu-t text-xs text-gray-600 mt-1 leading-relaxed">{{ $f->detail }}</div>
+                        @endif
+                        <div class="fu-t text-xs text-[#8894ac] mt-1">
+                            @if($f->customer)
+                                <a href="{{ route('customers.show', $f->customer_id) }}" wire:navigate class="link">
+                                    {{ $f->customer->company }}
+                                </a>
+                            @endif
+                            @if($f->project)
+                                · {{ $f->project->code }}
+                            @endif
+                            · {{ $f->kind }} · {{ $f->happened_on->format('d M H:i') }}
+                            @if($f->createdBy)
+                                · {{ $f->createdBy->name }}
+                            @endif
+                        </div>
+
+                        @if($f->next_date)
+                            <div class="mt-2">
+                                <span class="badge {{ $isOverdue ? 'b-red' : 'b-navy' }}">
+                                    Next: {{ $f->next_date->format('d M Y') }}
+                                    @if($f->next_note)
+                                        — {{ $f->next_note }}
+                                    @endif
+                                </span>
+                            </div>
+                        @endif
+                    </div>
+
+                    <button type="button"
+                            class="mini-btn danger flex-shrink-0"
+                            wire:confirm="Remove this follow-up entry?"
+                            wire:click="deleteFollowup({{ $f->id }})"
+                            title="Remove follow-up">
+                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                            <path
+                                d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                        </svg>
+                    </button>
+                </div>
+            @empty
+                <div class="empty">
+                     <span class="flex items-center justify-center">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                    </svg>
+                     </span>
+                    <p>No follow-ups yet</p>
+                    <div class="sm">Talk to a customer and log it</div>
+                </div>
+            @endforelse
+        </div>
+        <div class="p-4 border-t border-[#e2e8f3]">{{ $followups->links() }}</div>
+    </div>
+
+    <!-- Follow-up Logging Modal -->
+    <x-modal name="followup-modal" title="Log Follow-up" sub="What was discussed and what comes next">
+        <form wire:submit="save" novalidate>
+            <div class="form-grid">
+                <label class="f full">
+                    <span>Customer *</span>
+                    <select wire:model.live="customer_id"
+                            class="i @error('customer_id') !border-red-500 !bg-red-50/20 @enderror">
+                        <option value="">— Select Customer —</option>
+                        @foreach($customers as $c)
+                            <option value="{{ $c->id }}">{{ $c->company }}</option>
+                        @endforeach
+                    </select>
+                    @error('customer_id')
+                    <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                <label class="f">
+                    <span>Channel *</span>
+                    <select wire:model.blur="kind"
+                            class="i @error('kind') !border-red-500 !bg-red-50/20 @enderror">
+                        <option value="Call">Call</option>
+                        <option value="Email">Email</option>
+                        <option value="Meeting">Meeting</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                        <option value="Note">Note</option>
+                    </select>
+                    @error('kind')
+                    <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                <label class="f">
+                    <span>Project (optional)</span>
+                    <select wire:model.blur="project_id"
+                            class="i @error('project_id') !border-red-500 !bg-red-50/20 @enderror">
+                        <option value="">— none —</option>
+                        @foreach($availableProjects as $p)
+                            <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('project_id')
+                    <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                <label class="f full">
+                    <span>Summary *</span>
+                    <input wire:model.blur="summary"
+                           class="i @error('summary') !border-red-500 !bg-red-50/20 @enderror"
+                           placeholder="e.g. Discussed payment clearance and deliverables">
+                    @error('summary')
+                    <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                <label class="f full">
+                    <span>Detail</span>
+                    <textarea wire:model.blur="detail"
+                              class="i @error('detail') !border-red-500 !bg-red-50/20 @enderror"
+                              style="min-height:70px"
+                              placeholder="Additional conversation details..."></textarea>
+                    @error('detail')
+                    <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                <label class="f">
+                    <span>Next follow-up date</span>
+                    <input wire:model.blur="next_date"
+                           type="date"
+                           class="i @error('next_date') !border-red-500 !bg-red-50/20 @enderror">
+                    @error('next_date')
+                    <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                    @enderror
+                </label>
+
+                <label class="f">
+                    <span>What to do next</span>
+                    <input wire:model.blur="next_note"
+                           class="i @error('next_note') !border-red-500 !bg-red-50/20 @enderror"
+                           placeholder="e.g. Send revised contract draft">
+                    @error('next_note')
+                    <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                    @enderror
+                </label>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
+                <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save follow-up</button>
+            </div>
+        </form>
+    </x-modal>
+</div>

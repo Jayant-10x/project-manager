@@ -6,9 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Document extends Model {
-    protected $fillable = [
-        'customer_id', 'project_id', 'category', 'title', 'file_name',
-        'stored_as', 'mime', 'size_kb', 'uploaded_by'
+    protected $guarded = ['id'];
+
+    protected $casts = [
+        'size_kb' => 'integer',
     ];
 
     public function customer(): BelongsTo {
@@ -17,5 +18,9 @@ class Document extends Model {
 
     public function project(): BelongsTo {
         return $this->belongsTo(Project::class);
+    }
+
+    public function uploadedBy(): BelongsTo {
+        return $this->belongsTo(User::class, 'uploaded_by_id');
     }
 }

@@ -1,12 +1,57 @@
 <?php
 
-// routes/web.php
-use App\Http\Controllers\Api\LegacyGatewayController;
-use App\Http\Controllers\Web\AppViewController;
+use App\Http\Controllers\ProfileController;
+use App\Livewire\Audit\AuditIndex;
+use App\Livewire\Customers\CustomerDetail;
+use App\Livewire\Customers\CustomerIndex;
+use App\Livewire\Dashboard\DashboardIndex;
+use App\Livewire\Documents\DocumentIndex;
+use App\Livewire\Followups\FollowupIndex;
+use App\Livewire\Notifications\NotificationIndex;
+use App\Livewire\Payments\PaymentIndex;
+use App\Livewire\Projects\ProjectDetail;
+use App\Livewire\Projects\ProjectIndex;
+use App\Livewire\Reports\ReportIndex;
+use App\Livewire\Sales\SalesIndex;
+use App\Livewire\Schedule\ScheduleIndex;
+use App\Livewire\Settings\SettingIndex;
+use App\Livewire\Tasks\TaskIndex;
+use App\Livewire\Today\TodayWorkIndex;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [AppViewController::class, 'index'])->name('home');
+Route::redirect('/', '/dashboard');
 
-// Handle legacy root-level API dispatch without CSRF verification
-Route::match(['GET', 'POST'], '/api.php', [LegacyGatewayController::class, 'dispatch'])
-    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+Route::middleware(['auth', 'verified'])->group(function () {
+    // 1. Overview
+    Route::get('/dashboard', DashboardIndex::class)->name('dashboard');
+    Route::get('/today', TodayWorkIndex::class)->name('today.index');
+
+    // 2. Customers
+    Route::get('/customers', CustomerIndex::class)->name('customers.index');
+    Route::get('/customers/{customer}', CustomerDetail::class)->name('customers.show');
+    Route::get('/projects', ProjectIndex::class)->name('projects.index');
+    Route::get('/projects/{project}', ProjectDetail::class)->name('projects.show');
+    Route::get('/tasks', TaskIndex::class)->name('tasks.index');
+
+    // 3. Money
+    Route::get('/payments', PaymentIndex::class)->name('payments.index');
+    Route::get('/schedule', ScheduleIndex::class)->name('schedule.index');
+    Route::get('/reports', ReportIndex::class)->name('reports.index');
+
+    // 4. Records
+    Route::get('/documents', DocumentIndex::class)->name('documents.index');
+    Route::get('/followups', FollowupIndex::class)->name('followups.index');
+    Route::get('/sales', SalesIndex::class)->name('sales.index');
+
+    // 5. System
+    Route::get('/notifications', NotificationIndex::class)->name('notifications.index');
+    Route::get('/audit', AuditIndex::class)->name('audit.index');
+    Route::get('/settings', SettingIndex::class)->name('settings.index');
+
+    // User Profile
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+require __DIR__ . '/auth.php';

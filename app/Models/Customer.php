@@ -3,18 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model {
-    protected $fillable = [
-        'code', 'company', 'contact_name', 'email', 'phone', 'alt_phone',
-        'city', 'state', 'address', 'gstin', 'pan', 'billing_name',
-        'billing_addr', 'source', 'industry', 'onboarded_by', 'status',
-        'internal_notes', 'created_by'
-    ];
+    protected $guarded = ['id'];
 
     public function projects(): HasMany {
         return $this->hasMany(Project::class);
+    }
+
+    public function salesPerson(): BelongsTo {
+        return $this->belongsTo(SalesPerson::class, 'sales_person_id');
+    }
+
+    public function createdBy(): BelongsTo {
+        return $this->belongsTo(User::class, 'created_by_id');
     }
 
     public function payments(): HasMany {
@@ -26,7 +30,7 @@ class Customer extends Model {
     }
 
     public function followups(): HasMany {
-        return $this->hasMany(Followup::class);
+        return $this->hasMany(Followup::class)->orderByDesc('happened_on');
     }
 
     public function tasks(): HasMany {

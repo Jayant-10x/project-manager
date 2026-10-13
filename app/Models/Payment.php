@@ -6,26 +6,27 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model {
-    protected $fillable = [
-        'code', 'project_id', 'customer_id', 'term_id', 'amount', 'tds',
-        'paid_on', 'mode', 'reference', 'bank', 'note', 'entered_by'
-    ];
+    protected $guarded = ['id'];
 
     protected $casts = [
+        'paid_on' => 'date',
         'amount' => 'float',
         'tds' => 'float',
-        'paid_on' => 'date',
     ];
-
-    public function project(): BelongsTo {
-        return $this->belongsTo(Project::class);
-    }
 
     public function customer(): BelongsTo {
         return $this->belongsTo(Customer::class);
     }
 
-    public function paymentTerm(): BelongsTo {
+    public function project(): BelongsTo {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function term(): BelongsTo {
         return $this->belongsTo(PaymentTerm::class, 'term_id');
+    }
+
+    public function enteredBy(): BelongsTo {
+        return $this->belongsTo(User::class, 'entered_by_id');
     }
 }

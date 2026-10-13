@@ -3,42 +3,56 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class User extends Authenticatable {
-    use HasFactory;
+    use HasFactory, Notifiable;
 
-    protected $fillable = [
-        'name', 'email', 'phone', 'role', 'designation', 'city', 'status',
-        'online', 'last_seen', 'joined', 'pass_hash', 'must_change',
-        'token', 'token_at', 'reset_hash', 'reset_expires', 'reset_used',
-        'fail_count', 'locked_until'
-    ];
+    protected $guarded = ['id'];
 
     protected $hidden = [
-        'pass_hash', 'token', 'reset_hash'
+        'password',
+        'pass_hash',
+        'token',
+        'remember_token',
     ];
 
     protected $casts = [
+        'email_verified_at' => 'datetime',
+        'token_at' => 'datetime',
+        'locked_until' => 'datetime',
+        'last_seen' => 'datetime',
+        'joined' => 'date',
         'online' => 'boolean',
         'must_change' => 'boolean',
-        'reset_used' => 'boolean',
-        'last_seen' => 'datetime',
-        'token_at' => 'datetime',
-        'reset_expires' => 'datetime',
-        'locked_until' => 'datetime',
-        'joined' => 'date',
     ];
 
+    /**
+     * Accommodates both standard 'password' and legacy 'pass_hash' columns.
+     */
     public function getAuthPassword(): string {
-        return $this->pass_hash;
+        return $this->pass_hash ?? $this->attributes['password'] ?? '';
+    }
+
+    public function setPasswordAttribute($value): void {
+        $hashed = Hash::needsRehash($value) ? Hash::make($value) : $value;
+        $this->attributes['password'] = $hashed;
+        $this->attributes['pass_hash'] = $hashed;
     }
 
     public function isAdmin(): bool {
-        return $this->role === 'Admin';
+        return ($this->role ?? '') === 'Admin';
     }
 
-    public function isCoordinator(): bool {
-        return in_array($this->role, ['Admin', 'Coordinator'], true);
+    public function projects(): HasMany {
+        return $this->hasMany(Project::class, 'coordinator_id');
+    }
+
+    public function tasks(): HasMany {
+        return $this->hasMany(Task::class, 'assigned_to_id');
     }
 }
