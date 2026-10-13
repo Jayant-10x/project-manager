@@ -217,6 +217,8 @@ a {
     height: 26px;
     width: auto;
     display: block;
+    object-fit: cover;
+    object-position: 9%;
 }
 
 .sb-name {
