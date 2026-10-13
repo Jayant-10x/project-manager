@@ -196,7 +196,7 @@ engineering standards are strictly enforced across the application:
    `confirm('You have unsaved changes...')`)[cite: 10].
 5. **Real-Time Blur Validation**:
    Inputs utilize `wire:model.blur` combined with `$this->validateOnly($propertyName)` inside the `updated()` lifecycle
-   hook. Invalid inputs display an active red border (`!border-red-500 !bg-red-50/20`) and inline error labels beneath
+   hook. Invalid inputs display an active red border (`border-red-500! bg-red-50/20!`) and inline error labels beneath
    the field without rendering disruptive alert banners.
 6. **Schema Null vs. Default Synchronization**:
    For database columns defined as `NOT NULL DEFAULT 0.00` (e.g., `projects.cost`, `projects.amc_amount`,

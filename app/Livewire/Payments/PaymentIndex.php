@@ -119,15 +119,10 @@ class PaymentIndex extends Component {
         $query = Payment::query()
             ->whereHas('project', fn($q) => $q->forUser($user))
             ->with(['project.customer', 'customer', 'term', 'enteredBy'])
-            ->when($this->search, function ($q) {
-                $term = '%' . trim($this->search) . '%';
-                $q->where(function ($sub) use ($term) {
-                    $sub->where('code', 'like', $term)
-                        ->orWhere('reference', 'like', $term)
-                        ->orWhere('bank', 'like', $term)
-                        ->orWhere('mode', 'like', $term)
-                        ->orWhereHas('customer', fn($c) => $c->where('company', 'like', $term))
-                        ->orWhereHas('project', fn($p) => $p->where('code', 'like', $term)->orWhere('name', 'like', $term));
+            ->when($user->role === 'Coordinator', function ($q) {
+                // Coordinators only see payments with active due balances
+                $q->whereHas('project.terms', function ($t) {
+                    $t->whereIn('status', ['Pending', 'Partial', 'Overdue']);
                 });
             })
             ->when($this->mode, fn($q) => $q->where('mode', $this->mode))

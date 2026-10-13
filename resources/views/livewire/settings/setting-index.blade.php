@@ -1,64 +1,89 @@
 <div>
-    <!-- 1. Change Password Card -->
-    <div class="card mb-4">
-        <div class="card-head">
+    <!-- My Profile Card -->
+    <div class="card">
+        <div class="card-head justify-between">
             <div>
-                <h3 class="font-bold text-sm text-[#0d1b34]">Change my password</h3>
-                <div class="text-xs text-[#8894ac]">At least 8 characters, one capital letter, one number</div>
+                <h3 class="font-bold text-sm text-[#0d1b34]">My Profile</h3>
+                <div class="text-xs text-[#8894ac]">How you appear in the workspace</div>
             </div>
+            <button type="button" wire:click="logout" wire:confirm="Are you sure want to logout?" class="btn btn-danger btn-sm">
+                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+                </svg>
+                Sign out
+            </button>
         </div>
         <div class="card-body">
-            <form wire:submit="updatePassword" novalidate>
-                <div class="form-grid">
-                    <label class="f">
-                        <span>Current password *</span>
-                        <input wire:model.blur="current_password"
-                               type="password"
-                               class="i @error('current_password') !border-red-500 !bg-red-50/20 @enderror"
-                               placeholder="Current password">
-                        @error('current_password')
-                        <span class="text-xs text-red-500 mt-1 block font-medium">{{ $message }}</span>
-                        @enderror
-                    </label>
-
-                    <label class="f">
-                        <span>New password *</span>
-                        <input wire:model.blur="new_password"
-                               type="password"
-                               class="i @error('new_password') !border-red-500 !bg-red-50/20 @enderror"
-                               placeholder="New password">
-                        @error('new_password')
-                        <span class="text-xs text-red-500 mt-1 block font-medium">{{ $message }}</span>
-                        @enderror
-                    </label>
-
-                    <label class="f full">
-                        <span>Confirm new password *</span>
-                        <input wire:model.blur="new_password_confirmation"
-                               type="password"
-                               class="i @error('new_password_confirmation') !border-red-500 !bg-red-50/20 @enderror"
-                               placeholder="Repeat the new password">
-                        @error('new_password_confirmation')
-                        <span class="text-xs text-red-500 mt-1 block font-medium">{{ $message }}</span>
-                        @enderror
-                    </label>
+            <div class="grid-2e">
+                <div class="flex items-center gap-3 mb-4 border-e border-black">
+                    <div class="avatar lg" style="background:#0b3d91">
+                        {{ strtoupper(substr($me->name, 0, 2)) }}
+                    </div>
+                    <div>
+                        <div class="font-bold text-base text-[#0d1b34]">{{ $me->name }}</div>
+                        <div class="font-semibold text-sm text-gray-600">{{ $me->email }}</div>
+                        <div class="text-xs text-[#8894ac]">{{ $me->designation ?? $me->role }}</div>
+                        <div class="mt-1">
+                                <span class="badge {{ $me->role === 'Admin' ? 'b-navy' : 'b-green' }}">
+                                    {{ $me->role }}
+                                </span>
+                        </div>
+                    </div>
                 </div>
+                <!-- 1. Change Password Card -->
+                <form wire:submit="updatePassword" novalidate>
+                    <div class="form-grid">
+                        <label class="f">
+                            <span>Current password *</span>
+                            <input wire:model.blur="current_password"
+                                   type="password"
+                                   class="i @error('current_password') border-red-500! bg-red-50/20! @enderror"
+                                   placeholder="Current password">
+                            @error('current_password')
+                            <span class="text-xs text-red-500! mt-1 block font-medium">{{ $message }}</span>
+                            @enderror
+                        </label>
 
-                <div class="flex justify-end mt-4">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <circle cx="8" cy="15" r="4"/>
-                            <path d="M10.8 12.2L20 3M17 6l3 3M14 9l2 2"/>
-                        </svg>
-                        Update password
-                    </button>
-                </div>
-            </form>
+                        <label class="f">
+                            <span>New password *</span>
+                            <input wire:model.blur="new_password"
+                                   type="password"
+                                   class="i @error('new_password') border-red-500! bg-red-50/20! @enderror"
+                                   placeholder="New password">
+                            @error('new_password')
+                            <span class="text-xs text-red-500! mt-1 block font-medium">{{ $message }}</span>
+                            @enderror
+                        </label>
+
+                        <label class="f">
+                            <span>Confirm new password *</span>
+                            <input wire:model.blur="new_password_confirmation"
+                                   type="password"
+                                   class="i @error('new_password_confirmation') border-red-500! bg-red-50/20! @enderror"
+                                   placeholder="Repeat the new password">
+                            @error('new_password_confirmation')
+                            <span class="text-xs text-red-500! mt-1 block font-medium">{{ $message }}</span>
+                            @enderror
+                        </label>
+
+                        <div class="flex justify-end mt-4 pt-4 @error('new_password_confirmation') my-8 py-8 @enderror">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                    <circle cx="8" cy="15" r="4"/>
+                                    <path d="M10.8 12.2L20 3M17 6l3 3M14 9l2 2"/>
+                                </svg>
+                                Update password
+                            </button>
+                        </div>
+                    </div>
+
+
+                </form>
+            </div>
         </div>
     </div>
-
     <!-- 2. Split Grid: Alert Settings & Profile vs Users -->
-    <div class="grid-2e">
+    <div class="grid-2e mt-3">
         <div>
             <!-- Operational Alert Settings (Admin Only) -->
             @if(auth()->user()->role === 'Admin')
@@ -76,9 +101,9 @@
                                     <span>Payment due alert (days)</span>
                                     <input wire:model.blur="paymentAlertDays"
                                            type="number" min="1" max="180"
-                                           class="i @error('paymentAlertDays') !border-red-500 !bg-red-50/20 @enderror">
+                                           class="i @error('paymentAlertDays') border-red-500! bg-red-50/20! @enderror">
                                     @error('paymentAlertDays')
-                                    <span class="text-xs text-red-500 mt-1 block font-medium">{{ $message }}</span>
+                                    <span class="text-xs text-red-500! mt-1 block font-medium">{{ $message }}</span>
                                     @enderror
                                 </label>
 
@@ -86,9 +111,9 @@
                                     <span>AMC / renewal alert (days)</span>
                                     <input wire:model.blur="amcAlertDays"
                                            type="number" min="1" max="180"
-                                           class="i @error('amcAlertDays') !border-red-500 !bg-red-50/20 @enderror">
+                                           class="i @error('amcAlertDays') border-red-500! bg-red-50/20! @enderror">
                                     @error('amcAlertDays')
-                                    <span class="text-xs text-red-500 mt-1 block font-medium">{{ $message }}</span>
+                                    <span class="text-xs text-red-500! mt-1 block font-medium">{{ $message }}</span>
                                     @enderror
                                 </label>
 
@@ -96,30 +121,30 @@
                                     <span>Follow-up alert (days)</span>
                                     <input wire:model.blur="followupAlertDays"
                                            type="number" min="1" max="180"
-                                           class="i @error('followupAlertDays') !border-red-500 !bg-red-50/20 @enderror">
+                                           class="i @error('followupAlertDays') border-red-500! bg-red-50/20! @enderror">
                                     @error('followupAlertDays')
-                                    <span class="text-xs text-red-500 mt-1 block font-medium">{{ $message }}</span>
+                                    <span class="text-xs text-red-500! mt-1 block font-medium">{{ $message }}</span>
                                     @enderror
                                 </label>
 
                                 <label class="f">
                                     <span>Company name</span>
                                     <input wire:model.blur="companyName"
-                                           class="i @error('companyName') !border-red-500 !bg-red-50/20 @enderror">
+                                           class="i @error('companyName') border-red-500! bg-red-50/20! @enderror">
                                     @error('companyName')
-                                    <span class="text-xs text-red-500 mt-1 block font-medium">{{ $message }}</span>
+                                    <span class="text-xs text-red-500! mt-1 block font-medium">{{ $message }}</span>
                                     @enderror
                                 </label>
 
                                 <label class="f full">
                                     <span>Display currency</span>
                                     <select wire:model.blur="displayCurrency"
-                                            class="i @error('displayCurrency') !border-red-500 !bg-red-50/20 @enderror">
+                                            class="i @error('displayCurrency') border-red-500! bg-red-50/20! @enderror">
                                         <option value="INR">INR (₹)</option>
                                         <option value="USD">USD ($)</option>
                                     </select>
                                     @error('displayCurrency')
-                                    <span class="text-xs text-red-500 mt-1 block font-medium">{{ $message }}</span>
+                                    <span class="text-xs text-red-500! mt-1 block font-medium">{{ $message }}</span>
                                     @enderror
                                     <div class="hint text-xs text-[#8894ac] mt-1">
                                         Amounts are stored in INR. USD is only a display conversion.
@@ -139,44 +164,6 @@
                     </div>
                 </div>
             @endif
-
-            <!-- My Profile Card -->
-            <div class="card">
-                <div class="card-head">
-                    <div>
-                        <h3 class="font-bold text-sm text-[#0d1b34]">My Profile</h3>
-                        <div class="text-xs text-[#8894ac]">How you appear in the workspace</div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="avatar lg" style="background:#0b3d91">
-                            {{ strtoupper(substr($me->name, 0, 2)) }}
-                        </div>
-                        <div>
-                            <div class="font-bold text-base text-[#0d1b34]">{{ $me->name }}</div>
-                            <div class="text-xs text-[#8894ac]">{{ $me->designation ?? $me->role }}</div>
-                            <div class="mt-1">
-                                <span class="badge {{ $me->role === 'Admin' ? 'b-navy' : 'b-green' }}">
-                                    {{ $me->role }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="field mb-4">
-                        <div class="text-xs font-bold text-gray-400 uppercase">Email</div>
-                        <div class="font-semibold text-sm text-[#0d1b34]">{{ $me->email }}</div>
-                    </div>
-
-                    <button type="button" wire:click="logout" class="btn btn-danger btn-sm">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
-                        </svg>
-                        Sign out
-                    </button>
-                </div>
-            </div>
         </div>
 
         <!-- 3. User Accounts Management List (Right Column) -->
@@ -201,8 +188,22 @@
             <div class="card-body p-0">
                 @foreach($users as $u)
                     <div
-                        class="mini-item flex items-center gap-3 p-3.5 border-b last:border-b-0 border-[#eef2f9] hover:bg-slate-50 transition">
-                        <div class="avatar" style="background: {{ $u->role === 'Admin' ? '#0b3d91' : '#5aa236' }}">
+                        class="mini-item flex items-center gap-3 p-3.5 last:border-b-0 border-[#eef2f9] hover:bg-slate-50 transition">
+                        @php
+                            $roleBadge = match($u->role) {
+                                'Admin' => 'b-navy',
+                                'Manager' => 'b-purple',
+                                'Sales' => 'b-amber',
+                                default => 'b-green',
+                            };
+                            $avatarBg = match($u->role) {
+                                'Admin' => '#0b3d91',
+                                'Manager' => '#7a5af8',
+                                'Sales' => '#e0a13a',
+                                default => '#5aa236',
+                            };
+                        @endphp
+                        <div class="avatar" style="background: {{ $avatarBg }}">
                             {{ strtoupper(substr($u->name, 0, 2)) }}
                         </div>
 
@@ -217,12 +218,12 @@
                             {{ $u->status }}
                         </span>
 
-                        <span class="badge {{ $u->role === 'Admin' ? 'b-navy' : 'b-grey' }} text-xs">
+                        <span class="badge {{ $roleBadge }} text-xs">
                             {{ $u->role }}
                         </span>
 
                         @if(auth()->user()->role === 'Admin')
-                            <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <div class="flex items-center gap-1.5 shrink-0">
                                 <button type="button" class="mini-btn"
                                         @click="Livewire.dispatch('open-user-modal', { id: {{ $u->id }} })"
                                         title="Edit user">

@@ -13,7 +13,6 @@ return new class extends Migration {
             $table->string('name', 160);
             $table->text('description')->nullable();
             $table->string('project_type', 60)->nullable();
-            $table->string('coordinator', 80)->nullable();
             $table->decimal('value', 14, 2)->default(0.00);
             $table->decimal('cost', 14, 2)->default(0.00);
             $table->date('start_date')->nullable();
@@ -30,7 +29,9 @@ return new class extends Migration {
             $table->boolean('handover_done')->default(false);
             $table->text('handover_notes')->nullable();
             $table->text('notes')->nullable();
-            $table->string('created_by', 80)->nullable();
+            $table->foreignId('coordinator_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('sales_id')->constrained('users');
             $table->timestamps();
         });
     }

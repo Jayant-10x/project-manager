@@ -2,7 +2,7 @@
          :title="$title ?: 'Document Preview'"
          :sub="$name ? ($name . ' · ' . $sizeKb . ' KB · ' . $category) : null"
          :wide="true">
-    <div class="preview rounded-xl overflow-hidden bg-[#0d1b34] flex items-center justify-center min-h-[340px]">
+    <div class="preview rounded-xl overflow-hidden bg-[#0d1b34] flex items-center justify-center min-h-85">
         @if($isImage)
             <img src="{{ $url }}" alt="{{ $name }}" class="max-h-[70vh] w-auto object-contain">
         @elseif($isPdf)

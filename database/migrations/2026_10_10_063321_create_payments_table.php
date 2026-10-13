@@ -19,7 +19,7 @@ return new class extends Migration {
             $table->string('reference', 80)->nullable();
             $table->string('bank', 80)->nullable();
             $table->text('note')->nullable();
-            $table->string('entered_by', 80);
+            $table->foreignId('entered_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

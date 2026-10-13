@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->string('stored_as', 255);
             $table->string('mime', 120)->default('application/octet-stream');
             $table->unsignedInteger('size_kb')->default(0);
-            $table->string('uploaded_by', 80);
+            $table->foreignId('uploaded_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

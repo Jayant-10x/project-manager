@@ -8,7 +8,7 @@ return new class extends Migration {
     public function up(): void {
         Schema::create('audit_log', function (Blueprint $table) {
             $table->id();
-            $table->string('who', 80);
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('action', 60);
             $table->string('entity', 40);
             $table->unsignedBigInteger('entity_id')->nullable();

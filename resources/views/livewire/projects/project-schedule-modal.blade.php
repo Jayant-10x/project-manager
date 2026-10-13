@@ -36,7 +36,7 @@
                             <div>
                                 <label class="text-[10px] font-bold text-gray-400 uppercase block mb-1">Label *</label>
                                 <input wire:model.blur="terms.{{ $i }}.label"
-                                       class="i text-sm @error('terms.'.$i.'.label') !border-red-500 !bg-red-50/20 @enderror"
+                                       class="i text-sm @error('terms.'.$i.'.label') border-red-500! bg-red-50/20! @enderror"
                                        placeholder="e.g. Advance"
                                     {{ $t['locked'] ? 'disabled' : '' }}>
                                 @error('terms.'.$i.'.label')
@@ -49,7 +49,7 @@
                                     *</label>
                                 <input type="number" step="0.01" min="0.01"
                                        wire:model.live.debounce.400ms="terms.{{ $i }}.amount"
-                                       class="i text-sm @error('terms.'.$i.'.amount') !border-red-500 !bg-red-50/20 @enderror"
+                                       class="i text-sm @error('terms.'.$i.'.amount') border-red-500! bg-red-50/20! @enderror"
                                        placeholder="0.00"
                                     {{ $t['locked'] ? 'disabled' : '' }}>
                                 @error('terms.'.$i.'.amount')
@@ -61,7 +61,7 @@
                                 <label class="text-[10px] font-bold text-gray-400 uppercase block mb-1">Trigger Mode
                                     *</label>
                                 <select wire:model.live="terms.{{ $i }}.trigger"
-                                        class="i text-sm @error('terms.'.$i.'.trigger') !border-red-500 !bg-red-50/20 @enderror"
+                                        class="i text-sm @error('terms.'.$i.'.trigger') border-red-500! bg-red-50/20! @enderror"
                                     {{ $t['locked'] ? 'disabled' : '' }}>
                                     <option value="fixed">Fixed date</option>
                                     <option value="milestone">Milestone linked</option>
@@ -78,7 +78,7 @@
                                 </label>
                                 <input type="date"
                                        wire:model.blur="terms.{{ $i }}.dueDate"
-                                       class="i text-sm @error('terms.'.$i.'.dueDate') !border-red-500 !bg-red-50/20 @enderror"
+                                       class="i text-sm @error('terms.'.$i.'.dueDate') border-red-500! bg-red-50/20! @enderror"
                                     {{ $t['locked'] ? 'disabled' : '' }}>
                                 @error('terms.'.$i.'.dueDate')
                                 <span class="text-[11px] text-red-500 font-medium mt-0.5 block">{{ $message }}</span>
@@ -90,7 +90,7 @@
                                     <label class="text-[10px] font-bold text-gray-400 uppercase block mb-1">Milestone
                                         *</label>
                                     <select wire:model.blur="terms.{{ $i }}.milestoneId"
-                                            class="i text-sm @error('terms.'.$i.'.milestoneId') !border-red-500 !bg-red-50/20 @enderror"
+                                            class="i text-sm @error('terms.'.$i.'.milestoneId') border-red-500! bg-red-50/20! @enderror"
                                         {{ $t['locked'] ? 'disabled' : '' }}>
                                         <option value="">— Select Milestone —</option>
                                         @foreach($availableMilestones as $avm)
@@ -106,7 +106,7 @@
                                         Days</label>
                                     <input type="number" min="0" max="180"
                                            wire:model.blur="terms.{{ $i }}.graceDays"
-                                           class="i text-sm @error('terms.'.$i.'.graceDays') !border-red-500 !bg-red-50/20 @enderror"
+                                           class="i text-sm @error('terms.'.$i.'.graceDays') border-red-500! bg-red-50/20! @enderror"
                                         {{ $t['locked'] ? 'disabled' : '' }}>
                                     @error('terms.'.$i.'.graceDays')
                                     <span

@@ -23,7 +23,8 @@ return new class extends Migration {
             $table->text('billing_addr')->nullable();
             $table->string('source', 60)->nullable();
             $table->string('industry', 60)->nullable();
-            $table->string('onboarded_by', 80)->nullable()->index();
+            $table->foreignId('sales_person_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->enum('status', ['Active', 'On Hold', 'Completed', 'Churned'])->default('Active');
             $table->text('internal_notes')->nullable();
             $table->string('created_by', 80)->nullable();

@@ -15,6 +15,7 @@ class ReportIndex extends Component {
     public function render() {
         $user = auth()->user();
         $today = Carbon::today()->toDateString();
+        // Automatically aggregates downline projects via updated scopeForUser()
         $projectsQuery = Project::query()->forUser($user)->with(['milestones', 'terms', 'payments', 'customer']);
         $projects = $projectsQuery->get();
         $projectIds = $projects->pluck('id');

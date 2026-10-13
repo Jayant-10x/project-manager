@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->timestamp('happened_on')->useCurrent();
             $table->date('next_date')->nullable();
             $table->string('next_note', 200)->nullable();
-            $table->string('created_by', 80)->nullable();
+            $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

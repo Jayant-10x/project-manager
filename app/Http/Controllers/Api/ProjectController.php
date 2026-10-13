@@ -61,10 +61,20 @@ class Project extends Model {
      */
     public function scopeForUser(Builder $query, ?User $user = null): Builder {
         $user = $user ?? auth()->user();
-        if ($user && $user->role !== 'Admin') {
-            return $query->where('coordinator_id', $user->id);
+        if (!$user || $user->role === 'Admin') {
+            return $query;
         }
-        return $query;
+
+        $downlineIds = $user->getDownlineUserIds();
+
+        return $query->where(function (Builder $q) use ($user, $downlineIds) {
+            if ($user->role === 'Sales') {
+                $q->where('sales_id', $user->id);
+            } else {
+                $q->whereIn('coordinator_id', $downlineIds)
+                    ->orWhereIn('sales_id', $downlineIds);
+            }
+        });
     }
 
     /**
@@ -83,5 +93,9 @@ class Project extends Model {
             'due' => round(max(0, $scheduled - $received - $tds), 2),
             'overdue' => $overdue,
         ];
+    }
+
+    public function salesPerson(): BelongsTo {
+        return $this->belongsTo(User::class, 'sales_id');
     }
 }

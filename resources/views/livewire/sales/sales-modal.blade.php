@@ -6,7 +6,7 @@
             <label class="f full">
                 <span>Name *</span>
                 <input wire:model.blur="name"
-                       class="i @error('name') !border-red-500 !bg-red-50/20 @enderror"
+                       class="i @error('name') !order-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Rahul Sharma"
                        maxlength="80">
                 @error('name')
@@ -17,7 +17,7 @@
             <label class="f">
                 <span>Phone</span>
                 <input wire:model.blur="phone"
-                       class="i @error('phone') !border-red-500 !bg-red-50/20 @enderror"
+                       class="i @error('phone') border-red-500! bg-red-50/20! @enderror"
                        placeholder="+91 ..."
                        maxlength="30">
                 @error('phone')
@@ -29,7 +29,7 @@
                 <span>Email</span>
                 <input wire:model.blur="email"
                        type="email"
-                       class="i @error('email') !border-red-500 !bg-red-50/20 @enderror"
+                       class="i @error('email') border-red-500! bg-red-50/20! @enderror"
                        placeholder="rahul@the10xagency.in"
                        maxlength="160">
                 @error('email')
@@ -43,7 +43,7 @@
                        type="number"
                        step="0.01"
                        min="0"
-                       class="i @error('target') !border-red-500 !bg-red-50/20 @enderror"
+                       class="i @error('target') border-red-500! bg-red-50/20! @enderror"
                        placeholder="0.00">
                 @error('target')
                 <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
@@ -53,7 +53,7 @@
             <label class="f">
                 <span>Status *</span>
                 <select wire:model.blur="status"
-                        class="i @error('status') !border-red-500 !bg-red-50/20 @enderror">
+                        class="i @error('status') border-red-500! bg-red-50/20! @enderror">
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                 </select>

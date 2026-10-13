@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void {
         Schema::create('settings', function (Blueprint $table) {
-            $table->string('k', 60)->primary();
-            $table->text('v')->nullable();
+            $table->string('key', 60)->primary();
+            $table->text('value')->nullable();
         });
     }
 

@@ -148,7 +148,7 @@
             </div>
             <form method="POST" action="{{ route('logout') }}" class="inline">
                 @csrf
-                <button type="submit" class="sb-btn" title="Sign out">
+                <button type="submit" class="sb-btn" title="Sign out" onclick="return confirm('Are you sure want to logout?')">
                     <svg viewBox="0 0 24 24">
                         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
                         <path d="M16 17l5-5-5-5"/>

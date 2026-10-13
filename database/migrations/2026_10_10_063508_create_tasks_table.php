@@ -14,8 +14,8 @@ return new class extends Migration {
             $table->date('due_date')->nullable();
             $table->boolean('done')->default(false);
             $table->enum('priority', ['Low', 'Medium', 'High', 'Urgent'])->default('Medium');
-            $table->string('assigned_to', 80)->nullable();
-            $table->string('created_by', 80)->nullable();
+            $table->foreignId('assigned_to_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

@@ -6,7 +6,7 @@
             <label class="f full">
                 <span>Customer *</span>
                 <select wire:model.live="customer_id"
-                        class="i @error('customer_id') !border-red-500 !bg-red-50/20 @enderror">
+                        class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— Select Customer —</option>
                     @foreach($customers as $c)
                         <option value="{{ $c->id }}">{{ $c->company }}</option>
@@ -20,7 +20,7 @@
             <label class="f full">
                 <span>Project (optional)</span>
                 <select wire:model.live="project_id"
-                        class="i @error('project_id') !border-red-500 !bg-red-50/20 @enderror">
+                        class="i @error('project_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— no project —</option>
                     @foreach($projects as $p)
                         <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }}</option>
@@ -34,7 +34,7 @@
             <label class="f">
                 <span>Category *</span>
                 <select wire:model.blur="category"
-                        class="i @error('category') !border-red-500 !bg-red-50/20 @enderror">
+                        class="i @error('category') border-red-500! bg-red-50/20! @enderror">
                     @foreach($categories as $cat)
                         <option value="{{ $cat }}">{{ $cat }}</option>
                     @endforeach
@@ -47,7 +47,7 @@
             <label class="f">
                 <span>Title *</span>
                 <input wire:model.blur="title"
-                       class="i @error('title') !border-red-500 !bg-red-50/20 @enderror"
+                       class="i @error('title') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Signed agreement">
                 @error('title')
                 <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
@@ -60,7 +60,7 @@
                 *</label>
             <input type="file"
                    wire:model="file"
-                   class="i text-sm @error('file') !border-red-500 !bg-red-50/20 @enderror">
+                   class="i text-sm @error('file') border-red-500! bg-red-50/20! @enderror">
             @error('file')
             <span class="text-xs text-red-500 font-medium block mt-1">{{ $message }}</span>
             @enderror

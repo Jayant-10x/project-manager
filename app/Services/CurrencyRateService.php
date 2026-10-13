@@ -13,7 +13,7 @@ class CurrencyRateService {
                 $response = Http::timeout(4)->get('https://open.er-api.com/v6/latest/USD');
                 if ($response->successful() && isset($response['rates']['INR'])) {
                     $rate = (float)$response['rates']['INR'];
-                    Setting::query()->updateOrCreate(['k' => 'usd_inr_rate'], ['v' => $rate]);
+                    Setting::query()->updateOrCreate(['key' => 'usd_inr_rate'], ['value' => $rate]);
                     return $rate;
                 }
             } catch (\Throwable $e) {

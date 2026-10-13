@@ -4,96 +4,113 @@
     <form wire:submit="save" novalidate>
         <div class="form-grid">
             <label class="f full">
-                <span>Full name *</span>
+                <span>Full name <span class="text-red-500">*</span>
                 <input wire:model.blur="name"
-                       class="i @error('name') !border-red-500 !bg-red-50/20 @enderror"
+                       class="i @error('name') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Imran Khan"
                        maxlength="160">
                 @error('name')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
 
             <label class="f">
-                <span>Email (login ID) *</span>
+                <span>Email (login ID) <span class="text-red-500">*</span>
                 <input wire:model.blur="email"
                        type="email"
-                       class="i @error('email') !border-red-500 !bg-red-50/20 @enderror"
+                       class="i @error('email') border-red-500! bg-red-50/20! @enderror"
                        placeholder="imran@the10xagency.in"
                        maxlength="160">
                 @error('email')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
 
             <label class="f">
                 <span>Phone</span>
                 <input wire:model.blur="phone"
-                       class="i @error('phone') !border-red-500 !bg-red-50/20 @enderror"
+                       class="i @error('phone') border-red-500! bg-red-50/20! @enderror"
                        placeholder="+91 ..."
                        maxlength="30">
                 @error('phone')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
 
             <label class="f">
-                <span>Role *</span>
+                <span>Role <span class="text-red-500">*</span> </span>
                 <select wire:model.blur="role"
-                        class="i @error('role') !border-red-500 !bg-red-50/20 @enderror">
-                    <option value="Coordinator">Coordinator</option>
+                        class="i @error('role') border-red-500! bg-red-50/20! @enderror">
                     <option value="Admin">Admin</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Coordinator">Coordinator</option>
+                    <option value="Sales">Sales</option>
                 </select>
                 @error('role')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
-                <div class="hint text-xs text-[#8894ac] mt-1">
-                    Coordinator manages operations · Admin manages users and settings
-                </div>
+                {{--<div class="hint text-xs text-[#8894ac] mt-1">
+                    Admin: System & users · Manager: Delivery governance · Coordinator: Project ops · Sales: Client
+                    acquisition
+                </div>--}}
+            </label>
+
+            <label class="f">
+                <span>Reports To <span class="text-red-500">*</span></span>
+                <select wire:model.blur="reporting_to_id"
+                        class="i @error('reporting_to_id') border-red-500! bg-red-50/20! @enderror">
+                    <option value="">— No Supervisor (Top Level) —</option>
+                    @foreach($supervisors as $s)
+                        <option value="{{ $s->id }}">{{ $s->name }} ({{ $s->role }})</option>
+                    @endforeach
+                </select>
+                @error('reporting_to_id')
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
+                @enderror
             </label>
 
             <label class="f">
                 <span>Designation</span>
                 <input wire:model.blur="designation"
-                       class="i @error('designation') !border-red-500 !bg-red-50/20 @enderror"
+                       class="i @error('designation') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Project Coordinator"
                        maxlength="80">
                 @error('designation')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
 
             <label class="f">
                 <span>City</span>
                 <input wire:model.blur="city"
-                       class="i @error('city') !border-red-500 !bg-red-50/20 @enderror"
+                       class="i @error('city') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Mumbai"
                        maxlength="60">
                 @error('city')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
 
             <label class="f">
-                <span>Status *</span>
+                <span>Status <span class="text-red-500">*</span>
                 <select wire:model.blur="status"
-                        class="i @error('status') !border-red-500 !bg-red-50/20 @enderror">
+                        class="i @error('status') border-red-500! bg-red-50/20! @enderror">
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                 </select>
                 @error('status')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
 
-            <label class="f full">
-                <span>{{ $userId ? 'New password (optional)' : 'Temporary password *' }}</span>
+            <label class="f">
+                <span>{{ $userId ? 'New password (optional)' : str('Temporary password'." <span class='text-red-500'>*</span>")->toHtmlString() }}</span>
                 <input wire:model.blur="password"
                        type="password"
-                       class="i @error('password') !border-red-500 !bg-red-50/20 @enderror"
+                       class="i @error('password') border-red-500! bg-red-50/20! @enderror"
                        placeholder="{{ $userId ? 'Leave blank to preserve existing password' : 'Min 8 chars, 1 uppercase, 1 lowercase, 1 number' }}">
                 @error('password')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
         </div>

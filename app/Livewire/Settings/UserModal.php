@@ -12,11 +12,12 @@ class UserModal extends Component {
     public string $name = '';
     public string $email = '';
     public string $phone = '';
-    public string $role = 'Coordinator';
-    public string $designation = 'Project Coordinator';
+    public string $role = '';
+    public string $designation = '';
     public string $city = '';
-    public string $status = 'Active';
+    public string $status = '';
     public string $password = '';
+    public ?int $reporting_to_id = null;
 
     #[On('open-user-modal')]
     public function openModal(?int $id = null): void {
@@ -28,15 +29,17 @@ class UserModal extends Component {
             $user = User::findOrFail($id);
             $this->name = $user->name;
             $this->email = $user->email;
-            $this->phone = $user->phone ?? '';
-            $this->role = $user->role ?? 'Coordinator';
-            $this->designation = $user->designation ?? 'Project Coordinator';
-            $this->city = $user->city ?? '';
-            $this->status = $user->status ?? 'Active';
+            $this->phone = $user->phone ?? null;
+            $this->role = $user->role ?? 'Sales';
+            $this->designation = $user->designation ?? 'Sales Person';
+            $this->city = $user->city ?? null;
+            $this->status = $user->status ?? 'Inactive';
+            $this->reporting_to_id = $user->reporting_to_id;
         } else {
-            $this->role = 'Coordinator';
-            $this->designation = 'Project Coordinator';
-            $this->status = 'Active';
+            $this->role = 'Sales';
+            $this->designation = 'Sales Person';
+            $this->status = 'Inactive';
+            $this->reporting_to_id = null;
         }
 
         $this->dispatch('open-modal', 'user-modal');
@@ -47,14 +50,12 @@ class UserModal extends Component {
 
         return [
             'name' => 'required|string|max:80',
-            'email' => [
-                'required',
-                'email',
-                'max:160',
+            'email' => ['required', 'email', 'max:160',
                 Rule::unique('users', 'email')->ignore($this->userId),
             ],
-            'phone' => 'nullable|string|max:30',
-            'role' => 'required|in:Coordinator,Admin',
+            'phone' => 'nullable|numeric|max:30',
+            'role' => 'required|in:Admin,Manager,Coordinator,Sales',
+            'reporting_to_id' => 'nullable|exists:users,id',
             'designation' => 'nullable|string|max:60',
             'city' => 'nullable|string|max:60',
             'status' => 'required|in:Active,Inactive',
@@ -110,7 +111,7 @@ class UserModal extends Component {
             $tempPass = !empty($validated['password']) ? $validated['password'] : 'Welcome@10x';
             $validated['password'] = $tempPass;
             $validated['must_change'] = true;
-            $validated['joined'] = now()->toDateString();
+            $validated['created_by_id'] = auth()->id();
             User::create($validated);
         }
 
@@ -122,6 +123,12 @@ class UserModal extends Component {
     }
 
     public function render() {
-        return view('livewire.settings.user-modal');
+        return view('livewire.settings.user-modal', [
+            'supervisors' => User::where('status', 'Active')
+                ->when($this->userId, fn($q) => $q->where('id', '!=', $this->userId))
+                ->whereIn('role', ['Admin', 'Manager', 'Coordinator'])
+                ->orderBy('name')
+                ->get(),
+        ]);
     }
 }

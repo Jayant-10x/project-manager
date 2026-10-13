@@ -67,11 +67,11 @@ class SettingIndex extends Component {
 
         $validated = $this->validate();
 
-        Setting::query()->updateOrCreate(['k' => 'payment_alert_days'], ['v' => $validated['paymentAlertDays']]);
-        Setting::query()->updateOrCreate(['k' => 'amc_alert_days'], ['v' => $validated['amcAlertDays']]);
-        Setting::query()->updateOrCreate(['k' => 'followup_alert_days'], ['v' => $validated['followupAlertDays']]);
-        Setting::query()->updateOrCreate(['k' => 'company_name'], ['v' => trim($validated['companyName'])]);
-        Setting::query()->updateOrCreate(['k' => 'display_currency'], ['v' => $validated['displayCurrency']]);
+        Setting::query()->updateOrCreate(['key' => 'payment_alert_days'], ['value' => $validated['paymentAlertDays']]);
+        Setting::query()->updateOrCreate(['key' => 'amc_alert_days'], ['value' => $validated['amcAlertDays']]);
+        Setting::query()->updateOrCreate(['key' => 'followup_alert_days'], ['value' => $validated['followupAlertDays']]);
+        Setting::query()->updateOrCreate(['key' => 'company_name'], ['value' => trim($validated['companyName'])]);
+        Setting::query()->updateOrCreate(['key' => 'display_currency'], ['value' => $validated['displayCurrency']]);
 
         $this->dispatch('toast', ['msg' => 'Settings saved successfully', 'kind' => 'ok']);
     }
@@ -148,7 +148,7 @@ class SettingIndex extends Component {
     }
 
     public function render() {
-        $users = User::orderByRaw('FIELD(role, "Admin", "Coordinator")')->orderBy('name')->get();
+        $users = User::orderByRaw('FIELD(role, "Admin", "Manager", "Coordinator", "Sales")')->orderBy('name')->get();
 
         return view('livewire.settings.setting-index', [
             'users' => $users,

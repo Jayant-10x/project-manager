@@ -4,7 +4,7 @@
         <div class="space-y-3">
             @foreach($items as $i => $m)
                 <div class="ms-row flex items-center gap-3 p-2.5 border border-[#eef2f9] rounded-xl bg-slate-50/50">
-                    <span class="ms-dot {{ $m['done'] ? 'done' : '' }} flex-shrink-0">
+                    <span class="ms-dot {{ $m['done'] ? 'done' : '' }} shrink-0">
                         {{ $m['done'] ? '✓' : ($i + 1) }}
                     </span>
                     <div class="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
@@ -28,7 +28,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <div class="flex items-center gap-1.5 shrink-0">
                         <button type="button" class="mini-btn danger" wire:click="removeRow({{ $i }})">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path

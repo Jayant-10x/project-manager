@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -16,19 +17,16 @@ class User extends Authenticatable {
 
     protected $hidden = [
         'password',
-        'pass_hash',
-        'token',
         'remember_token',
     ];
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'token_at' => 'datetime',
         'locked_until' => 'datetime',
         'last_seen' => 'datetime',
-        'joined' => 'date',
-        'online' => 'boolean',
+        'is_online' => 'boolean',
         'must_change' => 'boolean',
+        'fail_count' => 'integer',
     ];
 
     /**
@@ -39,9 +37,7 @@ class User extends Authenticatable {
     }
 
     public function setPasswordAttribute($value): void {
-        $hashed = Hash::needsRehash($value) ? Hash::make($value) : $value;
-        $this->attributes['password'] = $hashed;
-        $this->attributes['pass_hash'] = $hashed;
+        $this->attributes['password'] = Hash::needsRehash($value) ? Hash::make($value) : $value;
     }
 
     public function isAdmin(): bool {
@@ -54,5 +50,38 @@ class User extends Authenticatable {
 
     public function tasks(): HasMany {
         return $this->hasMany(Task::class, 'assigned_to_id');
+    }
+
+    public function createdBy(): BelongsTo {
+        return $this->belongsTo(User::class, 'created_by_id');
+    }
+
+    public function reportingTo(): BelongsTo {
+        return $this->belongsTo(User::class, 'reporting_to_id');
+    }
+
+    public function subordinates(): HasMany {
+        return $this->hasMany(User::class, 'reporting_to_id');
+    }
+
+    public function salesProjects(): HasMany {
+        return $this->hasMany(Project::class, 'sales_id');
+    }
+
+    /**
+     * Resolves all subordinate user IDs recursively (including self).
+     */
+    public function getDownlineUserIds(): array {
+        $ids = [$this->id];
+        $directSubs = self::where('reporting_to_id', $this->id)->pluck('id')->toArray();
+
+        foreach ($directSubs as $subId) {
+            $subUser = self::find($subId);
+            if ($subUser) {
+                $ids = array_merge($ids, $subUser->getDownlineUserIds());
+            }
+        }
+
+        return array_values(array_unique($ids));
     }
 }

@@ -4,6 +4,7 @@ namespace App\Livewire\Sales;
 
 use App\Models\Customer;
 use App\Models\SalesPerson;
+use App\Models\User;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -62,13 +63,15 @@ class SalesIndex extends Component {
     public function render() {
         $user = auth()->user();
 
-        $salesPeople = SalesPerson::with([
-            'customers.projects' => fn($q) => $q->forUser($user)->with(['terms', 'payments'])
-        ])->orderBy('name')->get();
+        $salesPeople = User::where('role', 'Sales')
+            ->whereIn('id', $user->role === 'Admin' ? User::where('role', 'Sales')->pluck('id') : $user->getDownlineUserIds())
+            ->with([
+                'salesProjects' => fn($q) => $q->forUser($user)->with(['terms', 'payments', 'customer'])
+            ])->orderBy('name')->get();
 
         $rows = [];
         foreach ($salesPeople as $sp) {
-            $projs = $sp->customers->flatMap->projects;
+            $projs = $sp->salesProjects;
             $val = (float)$projs->sum('value');
             $rec = (float)$projs->flatMap->payments->sum('amount');
             $over = (float)$projs->flatMap->terms->where('status', 'Overdue')->sum(fn($t) => max(0, $t->amount - $t->received - $t->tds));
@@ -76,7 +79,7 @@ class SalesIndex extends Component {
 
             $rows[] = [
                 'salesPerson' => $sp,
-                'customers' => $sp->customers->count(),
+                'customers' => $projs->pluck('customer_id')->unique()->count(),
                 'projects' => $projs->count(),
                 'value' => $val,
                 'received' => $rec,

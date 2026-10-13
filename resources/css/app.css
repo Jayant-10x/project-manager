@@ -1,3 +1,5 @@
-@tailwind base;
-@tailwind components;
+@import "tailwindcss";
+/*@import "tailwindcss/preflight";*/
+
+@plugin "@tailwindcss/forms";
 @tailwind utilities;

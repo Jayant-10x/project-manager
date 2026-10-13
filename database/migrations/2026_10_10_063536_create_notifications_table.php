@@ -8,7 +8,7 @@ return new class extends Migration {
     public function up(): void {
         Schema::create('notifications', function (Blueprint $table) {
             $table->id();
-            $table->string('user_email', 160)->index();
+            $table->foreignId('user_id')->nullable()->constrained('users')->cascadeOnDelete();
             $table->string('kind', 40);
             $table->string('title', 200);
             $table->string('body', 300);

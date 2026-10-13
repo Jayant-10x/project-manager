@@ -13,7 +13,7 @@
                 <div class="md:col-span-4">
                     <label class="text-xs font-bold text-gray-500 uppercase block mb-1">What needs to be done *</label>
                     <input wire:model.blur="title"
-                           class="i text-sm @error('title') !border-red-500 !bg-red-50/20 @enderror"
+                           class="i text-sm @error('title') border-red-500! bg-red-50/20! @enderror"
                            placeholder="e.g. Send payment reminder to Blueleaf">
                     @error('title')
                     <span class="text-[11px] text-red-500 font-medium mt-1 block">{{ $message }}</span>
@@ -23,7 +23,7 @@
                 <div class="md:col-span-3">
                     <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Project (optional)</label>
                     <select wire:model.live="project_id"
-                            class="i text-sm @error('project_id') !border-red-500 !bg-red-50/20 @enderror">
+                            class="i text-sm @error('project_id') border-red-500! bg-red-50/20! @enderror">
                         <option value="">— none —</option>
                         @foreach($projects as $p)
                             <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }}</option>
@@ -37,7 +37,7 @@
                 <div class="md:col-span-2">
                     <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Priority *</label>
                     <select wire:model.live="priority"
-                            class="i text-sm @error('priority') !border-red-500 !bg-red-50/20 @enderror">
+                            class="i text-sm @error('priority') border-red-500! bg-red-50/20! @enderror">
                         <option value="Low">Low</option>
                         <option value="Medium">Medium</option>
                         <option value="High">High</option>
@@ -52,7 +52,7 @@
                     <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Due Date</label>
                     <input wire:model.blur="due_date"
                            type="date"
-                           class="i text-sm @error('due_date') !border-red-500 !bg-red-50/20 @enderror">
+                           class="i text-sm @error('due_date') border-red-500! bg-red-50/20! @enderror">
                     @error('due_date')
                     <span class="text-[11px] text-red-500 font-medium mt-1 block">{{ $message }}</span>
                     @enderror
@@ -62,7 +62,7 @@
                     <div class="md:col-span-3">
                         <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Assign to</label>
                         <select wire:model.live="assigned_to_id"
-                                class="i text-sm @error('assigned_to_id') !border-red-500 !bg-red-50/20 @enderror">
+                                class="i text-sm @error('assigned_to_id') border-red-500! bg-red-50/20! @enderror">
                             @foreach($users as $u)
                                 <option value="{{ $u->id }}">{{ $u->name }}</option>
                             @endforeach

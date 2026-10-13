@@ -21,7 +21,7 @@
             <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Paste CSV Data</label>
             <textarea wire:model="pastedData" class="i text-sm font-mono" style="min-height:140px"
                       placeholder="company,contact,phone,email,city,state,gstin,source&#10;Acme Pvt Ltd,Rajesh,9876543210,raj@acme.in,Mumbai,Maharashtra,27AAAAA0000A1Z5,Referral"></textarea>
-            @error('pastedData') <span class="text-xs text-red-500">{{ $message }}</span> @enderror
+            @error('pastedData') <span class="text-xs text-red-500!">{{ $message }}</span> @enderror
         </div>
 
         <div class="mb-4">

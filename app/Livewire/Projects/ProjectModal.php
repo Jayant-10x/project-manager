@@ -36,6 +36,7 @@ class ProjectModal extends Component {
     public bool $handover_done = false;
     public string $handover_notes = '';
     public string $notes = '';
+    public ?int $sales_id = null;
 
     public function mount(): void {
         $this->start_date = now()->toDateString();
@@ -69,12 +70,14 @@ class ProjectModal extends Component {
             $this->handover_done = (bool)$p->handover_done;
             $this->handover_notes = $p->handover_notes ?? '';
             $this->notes = $p->notes ?? '';
+            $this->sales_id = $p->sales_id;
         } else {
             $this->start_date = now()->toDateString();
             $this->cost = 0.0;
             $this->amc_amount = 0.0;
             $this->renew_alert_days = 7;
-            if (auth()->check() && auth()->user()->role !== 'Admin') {
+            $this->sales_id = auth()->user()->role === 'Sales' ? auth()->id() : null;
+            if (auth()->check() && auth()->user()->role === 'Coordinator') {
                 $this->coordinator_id = auth()->id();
             }
         }
@@ -104,6 +107,7 @@ class ProjectModal extends Component {
             'handover_done' => 'boolean',
             'handover_notes' => 'nullable|string',
             'notes' => 'nullable|string',
+            'sales_id' => 'required|integer|exists:users,id',
         ];
     }
 
@@ -154,6 +158,7 @@ class ProjectModal extends Component {
     public function render() {
         return view('livewire.projects.project-modal', [
             'customers' => Customer::orderBy('company')->get(),
+            'salesUsers' => User::where('role', 'Sales')->where('status', 'Active')->orderBy('name')->get(),
             'coordinators' => User::where('status', 'Active')->orderBy('name')->get()
         ]);
     }
