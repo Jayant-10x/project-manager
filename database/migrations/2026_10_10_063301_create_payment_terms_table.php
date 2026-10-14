@@ -14,13 +14,13 @@ return new class extends Migration {
             $table->decimal('amount', 14, 2)->default(0.00);
             $table->decimal('percent', 6, 2)->default(0.00);
             $table->enum('trigger_type', ['fixed', 'milestone', 'recurring'])->default('fixed');
-            $table->foreignId('milestone_id')->nullable()->constrained('milestones')->nullOnDelete();
-            $table->date('due_date')->nullable();
+            $table->foreignId('milestone_id')->nullable()->default(null)->constrained('milestones')->nullOnDelete();
+            $table->date('due_date')->nullable()->default(null);
             $table->unsignedSmallInteger('grace_days')->default(0);
             $table->enum('status', ['Pending', 'Partial', 'Paid', 'Overdue', 'Cancelled'])->default('Pending');
             $table->decimal('received', 14, 2)->default(0.00);
             $table->decimal('tds', 14, 2)->default(0.00);
-            $table->text('notes')->nullable();
+            $table->text('notes')->nullable()->default(null);
             $table->timestamps();
         });
     }

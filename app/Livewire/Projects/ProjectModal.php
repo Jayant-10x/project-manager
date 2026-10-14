@@ -70,13 +70,13 @@ class ProjectModal extends Component {
             $this->handover_done = (bool)$p->handover_done;
             $this->handover_notes = $p->handover_notes ?? '';
             $this->notes = $p->notes ?? '';
-            $this->sales_id = $p->sales_id;
+            $this->sales_person_id = $p->sales_person_id;
         } else {
             $this->start_date = now()->toDateString();
             $this->cost = 0.0;
             $this->amc_amount = 0.0;
             $this->renew_alert_days = 7;
-            $this->sales_id = auth()->user()->role === 'Sales' ? auth()->id() : null;
+            $this->sales_person_id = auth()->user()->role === 'Sales' ? auth()->id() : null;
             if (auth()->check() && auth()->user()->role === 'Coordinator') {
                 $this->coordinator_id = auth()->id();
             }
@@ -107,7 +107,7 @@ class ProjectModal extends Component {
             'handover_done' => 'boolean',
             'handover_notes' => 'nullable|string',
             'notes' => 'nullable|string',
-            'sales_id' => 'required|integer|exists:users,id',
+            'sales_person_id' => 'required|integer|exists:users,id',
         ];
     }
 
@@ -142,7 +142,7 @@ class ProjectModal extends Component {
             $project->update($validated);
         } else {
             $validated['code'] = $codeService->generate('project', 'PJT-');
-            $validated['created_by_id'] = auth()->id();
+            $validated['created_by'] = auth()->id();
             if (auth()->check() && auth()->user()->role !== 'Admin' && empty($validated['coordinator_id'])) {
                 $validated['coordinator_id'] = auth()->id();
             }

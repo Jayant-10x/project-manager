@@ -3,7 +3,7 @@
     <form wire:submit="import">
         <div class="notice mb-4 p-3 bg-blue-50 text-blue-900 border border-blue-200 rounded-xl text-xs">
             Format (with header):<br>
-            <code>company,contact,phone,email,city,state,gstin,source</code><br>
+            <code>company,contact,phone,email,city,state,gst_number,source</code><br>
             One customer per line. Duplicate company names are automatically skipped.
         </div>
 
@@ -20,7 +20,7 @@
         <div class="mb-3">
             <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Paste CSV Data</label>
             <textarea wire:model="pastedData" class="i text-sm font-mono" style="min-height:140px"
-                      placeholder="company,contact,phone,email,city,state,gstin,source&#10;Acme Pvt Ltd,Rajesh,9876543210,raj@acme.in,Mumbai,Maharashtra,27AAAAA0000A1Z5,Referral"></textarea>
+                      placeholder="company,contact,phone,email,city,state,gst_number,source&#10;Acme Pvt Ltd,Rajesh,9876543210,raj@acme.in,Mumbai,Maharashtra,27AAAAA0000A1Z5,Referral"></textarea>
             @error('pastedData') <span class="text-xs text-red-500!">{{ $message }}</span> @enderror
         </div>
 

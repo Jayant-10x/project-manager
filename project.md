@@ -162,7 +162,7 @@ pjt-crm/
 │   │   └── Today/
 │   │       └── TodayWorkIndex.php              # Daily operational triage for overdue payments, calls, and risks
 │   ├── Models/
-│   │   ├── AuditLog.php                        # Immutable system activity log
+│   │   ├── ActivityLog.php                        # Immutable system activity log
 │   │   ├── Counter.php                         # Atomic sequence counters for entity codes
 │   │   ├── Customer.php                        # Customer model with project, document, and sales relationships
 │   │   ├── Document.php                        # Document metadata records linked to storage
@@ -256,7 +256,7 @@ erDiagram
 
     CUSTOMERS {
         bigint id PK
-        string code UK
+        string customer_code UK
         string company UK
         string contact_name
         string email
@@ -265,21 +265,21 @@ erDiagram
         string city
         string state
         text address
-        string gstin
-        string pan
+        string gst_number
+        string pan_number
         string billing_name
-        text billing_addr
+        text billing_address
         string source
         string industry
         bigint sales_person_id FK
         string status
         text internal_notes
-        bigint created_by_id FK
+        bigint created_by FK
     }
 
     PROJECTS {
         bigint id PK
-        string code UK
+        string project_code UK
         bigint customer_id FK
         string name
         text description
@@ -301,7 +301,7 @@ erDiagram
         boolean handover_done
         text handover_notes
         text notes
-        bigint created_by_id FK
+        bigint created_by FK
     }
 
     MILESTONES {
@@ -346,7 +346,7 @@ erDiagram
         string reference
         string bank
         text note
-        bigint entered_by_id FK
+        bigint created_by FK
     }
 
     DOCUMENTS {
@@ -359,20 +359,20 @@ erDiagram
         string stored_as
         string mime
         int size_kb
-        bigint uploaded_by_id FK
+        bigint uploaded_by FK
     }
 
     FOLLOWUPS {
         bigint id PK
         bigint customer_id FK
         bigint project_id FK
-        string kind
+        string type
         string summary
         text detail
         timestamp happened_on
         date next_date
         string next_note
-        bigint created_by_id FK
+        bigint created_by FK
     }
 
     TASKS {
@@ -383,14 +383,14 @@ erDiagram
         date due_date
         boolean done
         string priority
-        bigint assigned_to_id FK
-        bigint created_by_id FK
+        bigint assigned_to FK
+        bigint created_by FK
     }
 
     NOTIFICATIONS {
         bigint id PK
         bigint user_id FK
-        string kind
+        string type
         string title
         string body
         string link_type
@@ -445,27 +445,27 @@ erDiagram
 |                          | `pass_hash`[cite: 1]    | `VARCHAR(255)`[cite: 1]                | `NULLABLE`                                                                | Legacy password hash compatibility[cite: 1]. |
 |                          | `password`              | `VARCHAR(255)`                         | `NOT NULL`                                                                | Standard Bcrypt password hash.               |
 | `customers`[cite: 1]     | `sales_person_id`       | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> sales_persons(id) ON DELETE SET NULL`[cite: 14] | Linked sales representative.                 |
-|                          | `created_by_id`         | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Creator user ID.                             |
+|                          | `created_by`         | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Creator user ID.                             |
 | `projects`[cite: 1]      | `customer_id`[cite: 1]  | `BIGINT UNSIGNED`[cite: 1]             | `NOT NULL, FOREIGN KEY -> customers(id) ON DELETE CASCADE`[cite: 1]       | Parent customer reference[cite: 1].          |
 |                          | `coordinator_id`        | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Assigned project coordinator.                |
 |                          | `cost`                  | `DECIMAL(14,2)`                        | `NOT NULL, DEFAULT 0.00`[cite: 20]                                        | Internal delivery cost for margin tracking.  |
 |                          | `amc_amount`            | `DECIMAL(14,2)`                        | `NOT NULL, DEFAULT 0.00`[cite: 20]                                        | Annual maintenance contract value.           |
 |                          | `renew_alert_days`      | `SMALLINT UNSIGNED`                    | `NOT NULL, DEFAULT 7`[cite: 20]                                           | Alert threshold lead-time in days.           |
-|                          | `created_by_id`         | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Creator user ID.                             |
+|                          | `created_by`         | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Creator user ID.                             |
 | `milestones`[cite: 1]    | `project_id`[cite: 1]   | `BIGINT UNSIGNED`[cite: 1]             | `NOT NULL, FOREIGN KEY -> projects(id) ON DELETE CASCADE`[cite: 1]        | Target project reference[cite: 1].           |
 | `payment_terms`[cite: 1] | `project_id`[cite: 1]   | `BIGINT UNSIGNED`[cite: 1]             | `NOT NULL, FOREIGN KEY -> projects(id) ON DELETE CASCADE`[cite: 1]        | Associated project reference[cite: 1].       |
 |                          | `milestone_id`[cite: 1] | `BIGINT UNSIGNED`[cite: 1]             | `NULLABLE, FOREIGN KEY -> milestones(id) ON DELETE SET NULL`[cite: 1]     | Optional linked milestone trigger[cite: 1].  |
 | `payments`[cite: 1]      | `project_id`[cite: 1]   | `BIGINT UNSIGNED`[cite: 1]             | `NOT NULL, FOREIGN KEY -> projects(id) ON DELETE CASCADE`[cite: 1]        | Credited project reference[cite: 1].         |
 |                          | `term_id`[cite: 1]      | `BIGINT UNSIGNED`[cite: 1]             | `NULLABLE, FOREIGN KEY -> payment_terms(id) ON DELETE SET NULL`[cite: 1]  | Optional credited installment[cite: 1].      |
 |                          | `tds`                   | `DECIMAL(14,2)`                        | `NOT NULL, DEFAULT 0.00`                                                  | Tax Deducted at Source (TDS).                |
-|                          | `entered_by_id`         | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Recording coordinator ID.                    |
+|                          | `created_by`         | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Recording coordinator ID.                    |
 | `documents`[cite: 1]     | `customer_id`[cite: 1]  | `BIGINT UNSIGNED`[cite: 1]             | `NOT NULL, FOREIGN KEY -> customers(id) ON DELETE CASCADE`[cite: 1]       | Parent customer reference[cite: 1].          |
 |                          | `project_id`[cite: 1]   | `BIGINT UNSIGNED`[cite: 1]             | `NULLABLE, FOREIGN KEY -> projects(id) ON DELETE CASCADE`[cite: 1]        | Optional project reference[cite: 1].         |
-|                          | `uploaded_by_id`        | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Uploader user ID.                            |
+|                          | `uploaded_by`        | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Uploader user ID.                            |
 | `followups`[cite: 1]     | `customer_id`[cite: 1]  | `BIGINT UNSIGNED`[cite: 1]             | `NOT NULL, FOREIGN KEY -> customers(id) ON DELETE CASCADE`[cite: 1]       | Contacted customer reference[cite: 1].       |
-|                          | `created_by_id`         | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Author user ID.                              |
-| `tasks`[cite: 1]         | `assigned_to_id`        | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Responsible coordinator.                     |
-|                          | `created_by_id`         | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Creator user ID.                             |
+|                          | `created_by`         | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Author user ID.                              |
+| `tasks`[cite: 1]         | `assigned_to`        | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Responsible coordinator.                     |
+|                          | `created_by`         | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Creator user ID.                             |
 | `notifications`[cite: 1] | `user_id`               | `BIGINT UNSIGNED`                      | `NOT NULL, FOREIGN KEY -> users(id) ON DELETE CASCADE`[cite: 14]          | Recipient staff account.                     |
 | `audit_log`[cite: 1]     | `user_id`               | `BIGINT UNSIGNED`                      | `NULLABLE, FOREIGN KEY -> users(id) ON DELETE SET NULL`[cite: 14]         | Performing user identity.                    |
 

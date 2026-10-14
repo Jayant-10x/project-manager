@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Audit;
 
-use App\Models\AuditLog;
+use App\Models\ActivityLog;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -12,7 +12,7 @@ class AuditIndex extends Component {
     use WithPagination;
 
     public function render() {
-        $logs = AuditLog::with('user')
+        $logs = ActivityLog::with('user')
             ->orderByDesc('id')
             ->paginate(30);
 

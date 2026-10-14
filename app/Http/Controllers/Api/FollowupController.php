@@ -35,7 +35,7 @@ class FollowupController extends Controller {
         $followup = Followup::query()->create([
             'customer_id' => $cid,
             'project_id' => $pid ?: null,
-            'kind' => in_array($input['kind'] ?? '', ['Call', 'Email', 'Meeting', 'WhatsApp', 'Note'], true) ? $input['kind'] : 'Call',
+            'type' => in_array($input['type'] ?? '', ['Call', 'Email', 'Meeting', 'WhatsApp', 'Note'], true) ? $input['type'] : 'Call',
             'summary' => $sum,
             'detail' => $input['detail'] ?? null,
             'happened_on' => Carbon::now(),

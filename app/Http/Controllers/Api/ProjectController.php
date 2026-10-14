@@ -1,101 +1,116 @@
 <?php
 
-namespace App\Models;
+namespace App\Http\Controllers\Api;
 
-use App\Services\MoneyCalculationService;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Http\Controllers\Controller;
+use App\Models\Customer;
+use App\Models\Project;
+use App\Services\AuditNotificationService;
+use App\Services\CodeGeneratorService;
+use App\Services\DocumentService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
-class Project extends Model {
-    protected $guarded = ['id'];
-
-    protected $casts = [
-        'start_date' => 'date',
-        'delivery_date' => 'date',
-        'actual_end' => 'date',
-        'amc_start' => 'date',
-        'amc_end' => 'date',
-        'value' => 'float',
-        'cost' => 'float',
-        'amc_amount' => 'float',
-        'amc_required' => 'boolean',
-        'handover_done' => 'boolean',
-    ];
-
-    public function customer(): BelongsTo {
-        return $this->belongsTo(Customer::class);
+class ProjectController extends Controller {
+    public function __construct(
+        protected CodeGeneratorService     $codeService,
+        protected AuditNotificationService $auditService,
+        protected DocumentService          $documentService
+    ) {
     }
 
-    public function coordinator(): BelongsTo {
-        return $this->belongsTo(User::class, 'coordinator_id');
-    }
-
-    public function createdBy(): BelongsTo {
-        return $this->belongsTo(User::class, 'created_by_id');
-    }
-
-    public function terms(): HasMany {
-        return $this->hasMany(PaymentTerm::class)->orderBy('seq');
-    }
-
-    public function milestones(): HasMany {
-        return $this->hasMany(Milestone::class)->orderBy('sort_order');
-    }
-
-    public function payments(): HasMany {
-        return $this->hasMany(Payment::class)->orderByDesc('paid_on');
-    }
-
-    public function documents(): HasMany {
-        return $this->hasMany(Document::class)->orderByDesc('id');
-    }
-
-    public function tasks(): HasMany {
-        return $this->hasMany(Task::class);
-    }
-
-    /**
-     * Strict assignment scope: Coordinators only query projects assigned to them.
-     */
-    public function scopeForUser(Builder $query, ?User $user = null): Builder {
-        $user = $user ?? auth()->user();
-        if (!$user || $user->role === 'Admin') {
-            return $query;
+    public function save(Request $request): JsonResponse {
+        $user = $request->user();
+        if (!$user->isCoordinator()) {
+            return response()->json(['ok' => false, 'error' => 'Only a Coordinator can add or edit projects.']);
         }
 
-        $downlineIds = $user->getDownlineUserIds();
+        $input = $request->input('data', []);
+        $name = trim((string)($input['name'] ?? ''));
+        $cid = (int)($input['customerId'] ?? 0);
 
-        return $query->where(function (Builder $q) use ($user, $downlineIds) {
-            if ($user->role === 'Sales') {
-                $q->where('sales_id', $user->id);
-            } else {
-                $q->whereIn('coordinator_id', $downlineIds)
-                    ->orWhereIn('sales_id', $downlineIds);
-            }
-        });
-    }
+        if (empty($name)) {
+            return response()->json(['ok' => false, 'error' => 'Project name is required.']);
+        }
+        if ($cid <= 0 || !Customer::query()->where('id', $cid)->exists()) {
+            return response()->json(['ok' => false, 'error' => 'Customer not found.']);
+        }
 
-    /**
-     * Calculated financial breakdown cache for the view.
-     */
-    public function getMoneyAttribute(): array {
-        $scheduled = (float)$this->terms->where('status', '!=', 'Cancelled')->sum('amount');
-        $received = (float)$this->payments->sum('amount');
-        $tds = (float)$this->payments->sum('tds');
-        $overdue = (float)$this->terms->where('status', 'Overdue')->sum(fn($t) => max(0, $t->amount - $t->received - $t->tds));
-
-        return [
-            'scheduled' => $scheduled,
-            'received' => $received,
-            'tds' => $tds,
-            'due' => round(max(0, $scheduled - $received - $tds), 2),
-            'overdue' => $overdue,
+        $payload = [
+            'customer_id' => $cid,
+            'name' => $name,
+            'description' => $input['description'] ?? null,
+            'project_type' => $input['type'] ?? null,
+            'coordinator' => $input['coordinator'] ?? $user->name,
+            'value' => (float)($input['value'] ?? 0.0),
+            'cost' => (float)($input['cost'] ?? 0.0),
+            'start_date' => !empty($input['startDate']) ? $input['startDate'] : null,
+            'delivery_date' => !empty($input['deliveryDate']) ? $input['deliveryDate'] : null,
+            'actual_end' => !empty($input['actualEnd']) ? $input['actualEnd'] : null,
+            'status' => in_array($input['status'] ?? '', ['Onboarding', 'In Progress', 'On Hold', 'Delivered', 'Cancelled'], true) ? $input['status'] : 'Onboarding',
+            'health' => in_array($input['health'] ?? '', ['On Track', 'At Risk', 'Delayed', 'Completed'], true) ? $input['health'] : 'On Track',
+            'delay_reason' => $input['delayReason'] ?? null,
+            'amc_required' => !empty($input['amcRequired']),
+            'amc_start' => !empty($input['amcStart']) ? $input['amcStart'] : null,
+            'amc_end' => !empty($input['amcEnd']) ? $input['amcEnd'] : null,
+            'amc_amount' => (float)($input['amcAmount'] ?? 0.0),
+            'renew_alert_days' => max(1, min(180, (int)($input['renewAlertDays'] ?? 7))),
+            'handover_done' => !empty($input['handoverDone']),
+            'handover_notes' => $input['handoverNotes'] ?? null,
+            'notes' => $input['notes'] ?? null,
         ];
+
+        $id = (int)($input['id'] ?? 0);
+        if ($id > 0) {
+            $project = Project::query()->find($id);
+            if (!$project) {
+                return response()->json(['ok' => false, 'error' => 'Project not found.']);
+            }
+
+            $oldHealth = $project->health;
+            $project->update($payload);
+
+            if ($oldHealth !== $payload['health']) {
+                $detail = "Health: {$oldHealth} to {$payload['health']}" . ($payload['delay_reason'] ? " — {$payload['delay_reason']}" : '');
+                $this->auditService->log($user->name, 'update', 'project', $id, $project->customer_id, $detail);
+            } else {
+                $this->auditService->log($user->name, 'update', 'project', $id, $project->customer_id, 'Project updated — ' . $name);
+            }
+
+            return response()->json(['ok' => true, 'id' => $id, 'customer_id' => $project->customer_id, 'created' => false]);
+        }
+
+        $project_code = $this->codeService->generate('project', 'PJT-');
+        $payload['project_code'] = $project_code;
+        $payload['created_by'] = $user->name;
+
+        $project = Project::query()->create($payload);
+
+        $this->auditService->log($user->name, 'create', 'project', $project->id, $project_code, "Project created — {$name} (value {$payload['value']})");
+        $this->auditService->notifyCoordinators('project', 'New project created', "{$name} ({$project_code})", 'project', $project->id);
+
+        return response()->json(['ok' => true, 'id' => $project->id, 'project_code' => $project_code, 'created' => true]);
     }
 
-    public function salesPerson(): BelongsTo {
-        return $this->belongsTo(User::class, 'sales_id');
+    public function delete(Request $request): JsonResponse {
+        $user = $request->user();
+        if (!$user->isAdmin()) {
+            return response()->json(['ok' => false, 'error' => 'Only an Admin can delete projects.']);
+        }
+
+        $id = (int)$request->input('id', 0);
+        $project = Project::query()->with('documents')->find($id);
+        if (!$project) {
+            return response()->json(['ok' => false, 'error' => 'Project not found.']);
+        }
+
+        foreach ($project->documents as $doc) {
+            $this->documentService->deleteDocument($doc);
+        }
+
+        $project->delete();
+        $this->auditService->log($user->name, 'delete', 'project', $id, $project->project_code, 'Project deleted — ' . $project->name);
+
+        return response()->json(['ok' => true]);
     }
 }

@@ -38,7 +38,7 @@ class ProjectDetail extends Component {
     public function deleteTerm(int $termId): void {
         $term = PaymentTerm::where('project_id', $this->project->id)->findOrFail($termId);
         if ($term->received > 0) {
-            $this->dispatch('toast', ['msg' => 'Payments exist for this installment. Remove payment first.', 'kind' => 'err']);
+            $this->dispatch('toast', ['msg' => 'Payments exist for this installment. Remove payment first.', 'type' => 'err']);
             return;
         }
         $term->delete();

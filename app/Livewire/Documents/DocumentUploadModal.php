@@ -81,13 +81,13 @@ class DocumentUploadModal extends Component {
             'stored_as' => $storedName,
             'mime' => $this->file->getMimeType(),
             'size_kb' => round($this->file->getSize() / 1024),
-            'uploaded_by_id' => auth()->id(),
+            'uploaded_by' => auth()->id(),
         ]);
 
         $this->reset(['file', 'title', 'category', 'customer_id', 'project_id']);
         $this->dispatch('document-saved');
         $this->dispatch('close-modal', 'document-upload-modal');
-        $this->dispatch('toast', ['msg' => 'Document uploaded successfully', 'kind' => 'ok']);
+        $this->dispatch('toast', ['msg' => 'Document uploaded successfully', 'type' => 'ok']);
         $this->redirect(request()->header('Referer') ?: route('documents.index'), navigate: true);
     }
 

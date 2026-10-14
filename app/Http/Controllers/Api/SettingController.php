@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\AuditLog;
+use App\Models\ActivityLog;
 use App\Models\Setting;
 use App\Services\AuditNotificationService;
 use Illuminate\Http\JsonResponse;
@@ -38,7 +38,7 @@ class SettingController extends Controller {
     }
 
     public function auditFeed(): JsonResponse {
-        $rows = AuditLog::query()->orderByDesc('id')->limit(300)->get()->map(fn($a) => [
+        $rows = ActivityLog::query()->orderByDesc('id')->limit(300)->get()->map(fn($a) => [
             'who' => $a->who,
             'action' => $a->action,
             'entity' => $a->entity,

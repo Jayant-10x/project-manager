@@ -50,14 +50,14 @@ class SalesIndex extends Component {
 
     public function deleteSales(int $id): void {
         if (auth()->user()->role !== 'Admin') {
-            $this->dispatch('toast', ['msg' => 'Only an Admin can remove a salesperson.', 'kind' => 'err']);
+            $this->dispatch('toast', ['msg' => 'Only an Admin can remove a salesperson.', 'type' => 'err']);
             return;
         }
 
         $sp = SalesPerson::findOrFail($id);
         $sp->delete();
 
-        $this->dispatch('toast', ['msg' => 'Salesperson removed', 'kind' => 'ok']);
+        $this->dispatch('toast', ['msg' => 'Salesperson removed', 'type' => 'ok']);
     }
 
     public function render() {

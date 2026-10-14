@@ -46,22 +46,22 @@
                         'WhatsApp' => '#5aa236',
                         'Note'     => '#8894ac',
                     ];
-                    $c = $kindColors[$f->kind] ?? '#8894ac';
+                    $c = $kindColors[$f->type] ?? '#8894ac';
                     $isOverdue = $f->next_date && $f->next_date->toDateString() < $today;
                 @endphp
                 <div
                     class="fu flex items-start gap-3 p-3.5 border-b last:border-b-0 border-[#eef2f9] hover:bg-slate-50 transition">
                     <span class="fu-ico flex-shrink-0" style="background: {{ $c }}1a; color: {{ $c }}">
-                        @if($f->kind === 'Meeting')
+                        @if($f->type === 'Meeting')
                             <svg viewBox="0 0 24 24" class="w-4 h-4"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle
                                     cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>
-                        @elseif($f->kind === 'Email')
+                        @elseif($f->type === 'Email')
                             <svg viewBox="0 0 24 24" class="w-4 h-4"><rect x="2" y="4" width="20" height="16" rx="2"/><path
                                     d="M22 6l-10 7L2 6"/></svg>
-                        @elseif($f->kind === 'WhatsApp')
+                        @elseif($f->type === 'WhatsApp')
                             <svg viewBox="0 0 24 24" class="w-4 h-4"><path
                                     d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                        @elseif($f->kind === 'Note')
+                        @elseif($f->type === 'Note')
                             <svg viewBox="0 0 24 24" class="w-4 h-4"><path
                                     d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path
                                     d="M14 2v6h6"/></svg>
@@ -85,7 +85,7 @@
                             @if($f->project)
                                 · {{ $f->project->code }}
                             @endif
-                            · {{ $f->kind }} · {{ $f->happened_on->format('d M H:i') }}
+                            · {{ $f->type }} · {{ $f->happened_on->format('d M H:i') }}
                             @if($f->createdBy)
                                 · {{ $f->createdBy->name }}
                             @endif
@@ -149,15 +149,15 @@
 
                 <label class="f">
                     <span>Channel *</span>
-                    <select wire:model.blur="kind"
-                            class="i @error('kind') border-red-500! bg-red-50/20! @enderror">
+                    <select wire:model.blur="type"
+                            class="i @error('type') border-red-500! bg-red-50/20! @enderror">
                         <option value="Call">Call</option>
                         <option value="Email">Email</option>
                         <option value="Meeting">Meeting</option>
                         <option value="WhatsApp">WhatsApp</option>
                         <option value="Note">Note</option>
                     </select>
-                    @error('kind')
+                    @error('type')
                     <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
                     @enderror
                 </label>

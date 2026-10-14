@@ -41,7 +41,7 @@ class UsersSeeder extends Seeder {
             [
                 'name' => 'Project Manager',
                 'email' => 'manager@the10xagency.in',
-                'phone' => '9876543211',
+                'phone' => '9876543213',
                 'role' => 'Manager',
                 'designation' => 'Manager',
                 'city' => 'Kanpur',
@@ -53,7 +53,7 @@ class UsersSeeder extends Seeder {
             [
                 'name' => 'Lead Coordinator',
                 'email' => 'coordinator@the10xagency.in',
-                'phone' => '9876543211',
+                'phone' => '9876543291',
                 'role' => 'Coordinator',
                 'designation' => 'Project Coordinator',
                 'city' => 'Kanpur',

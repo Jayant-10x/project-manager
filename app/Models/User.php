@@ -49,23 +49,23 @@ class User extends Authenticatable {
     }
 
     public function tasks(): HasMany {
-        return $this->hasMany(Task::class, 'assigned_to_id');
+        return $this->hasMany(Task::class, 'assigned_to');
     }
 
     public function createdBy(): BelongsTo {
-        return $this->belongsTo(User::class, 'created_by_id');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function reportingTo(): BelongsTo {
-        return $this->belongsTo(User::class, 'reporting_to_id');
+        return $this->belongsTo(User::class, 'reporting_to');
     }
 
     public function subordinates(): HasMany {
-        return $this->hasMany(User::class, 'reporting_to_id');
+        return $this->hasMany(User::class, 'reporting_to');
     }
 
     public function salesProjects(): HasMany {
-        return $this->hasMany(Project::class, 'sales_id');
+        return $this->hasMany(Project::class, 'sales_person_id');
     }
 
     /**
@@ -73,7 +73,7 @@ class User extends Authenticatable {
      */
     public function getDownlineUserIds(): array {
         $ids = [$this->id];
-        $directSubs = self::where('reporting_to_id', $this->id)->pluck('id')->toArray();
+        $directSubs = self::where('reporting_to', $this->id)->pluck('id')->toArray();
 
         foreach ($directSubs as $subId) {
             $subUser = self::find($subId);

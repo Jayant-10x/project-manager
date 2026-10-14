@@ -26,7 +26,7 @@ class FollowupIndex extends Component {
         return [
             'customer_id' => 'required|integer|exists:customers,id',
             'project_id' => 'nullable|integer|exists:projects,id',
-            'kind' => 'required|in:Call,Email,Meeting,WhatsApp,Note',
+            'type' => 'required|in:Call,Email,Meeting,WhatsApp,Note',
             'summary' => 'required|string|max:300',
             'detail' => 'nullable|string|max:4000',
             'next_date' => 'nullable|date',
@@ -67,34 +67,34 @@ class FollowupIndex extends Component {
         Followup::create([
             'customer_id' => $validated['customer_id'],
             'project_id' => $validated['project_id'],
-            'kind' => $validated['kind'],
+            'type' => $validated['type'],
             'summary' => $validated['summary'],
             'detail' => !empty($validated['detail']) ? $validated['detail'] : null,
             'happened_on' => now(),
             'next_date' => $validated['next_date'],
             'next_note' => !empty($validated['next_note']) ? $validated['next_note'] : null,
-            'created_by_id' => auth()->id(),
+            'created_by' => auth()->id(),
         ]);
 
         $this->reset(['customer_id', 'project_id', 'summary', 'detail', 'next_date', 'next_note']);
-        $this->kind = 'Call';
+        $this->type = 'Call';
         $this->resetValidation();
 
         $this->dispatch('close-modal', 'followup-modal');
-        $this->dispatch('toast', ['msg' => 'Follow-up logged successfully', 'kind' => 'ok']);
+        $this->dispatch('toast', ['msg' => 'Follow-up logged successfully', 'type' => 'ok']);
     }
 
     public function deleteFollowup(int $id): void {
         $user = auth()->user();
         $fu = Followup::findOrFail($id);
 
-        if ($user->role !== 'Admin' && $fu->created_by_id !== $user->id) {
-            $this->dispatch('toast', ['msg' => 'You can only remove follow-ups you logged.', 'kind' => 'err']);
+        if ($user->role !== 'Admin' && $fu->created_by !== $user->id) {
+            $this->dispatch('toast', ['msg' => 'You can only remove follow-ups you logged.', 'type' => 'err']);
             return;
         }
 
         $fu->delete();
-        $this->dispatch('toast', ['msg' => 'Follow-up removed', 'kind' => 'ok']);
+        $this->dispatch('toast', ['msg' => 'Follow-up removed', 'type' => 'ok']);
     }
 
     public function render() {

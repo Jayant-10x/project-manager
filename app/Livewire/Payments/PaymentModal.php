@@ -111,7 +111,7 @@ class PaymentModal extends Component {
 
         $validated['code'] = $codeService->generate('payment', 'RCP-');
         $validated['customer_id'] = $project->customer_id;
-        $validated['entered_by_id'] = auth()->id();
+        $validated['created_by'] = auth()->id();
 
         Payment::create($validated);
 

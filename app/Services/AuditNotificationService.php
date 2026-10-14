@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\AuditLog;
+use App\Models\ActivityLog;
 use App\Models\Notification;
 use App\Models\User;
 use Carbon\Carbon;
@@ -11,7 +11,7 @@ use Throwable;
 class AuditNotificationService {
     public function log(string $who, string $action, string $entity, ?int $entityId = null, string $code = '', string $detail = ''): void {
         try {
-            AuditLog::query()->create([
+            ActivityLog::query()->create([
                 'who' => mb_substr($who, 0, 80),
                 'action' => mb_substr($action, 0, 60),
                 'entity' => mb_substr($entity, 0, 40),
@@ -33,7 +33,7 @@ class AuditNotificationService {
         try {
             Notification::query()->create([
                 'user_email' => mb_substr($email, 0, 160),
-                'kind' => mb_substr($kind, 0, 40),
+                'type' => mb_substr($kind, 0, 40),
                 'title' => mb_substr($title, 0, 200),
                 'body' => mb_substr($body, 0, 300),
                 'link_type' => mb_substr($linkType, 0, 20),

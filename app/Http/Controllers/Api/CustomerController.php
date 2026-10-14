@@ -47,10 +47,10 @@ class CustomerController extends Controller
             'city' => $input['city'] ?? null,
             'state' => $input['state'] ?? null,
             'address' => $input['address'] ?? null,
-            'gstin' => isset($input['gstin']) ? strtoupper(trim($input['gstin'])) : null,
-            'pan' => isset($input['pan']) ? strtoupper(trim($input['pan'])) : null,
+            'gst_number' => isset($input['gst_number']) ? strtoupper(trim($input['gst_number'])) : null,
+            'pan_number' => isset($input['pan_number']) ? strtoupper(trim($input['pan_number'])) : null,
             'billing_name' => $input['billingName'] ?? null,
-            'billing_addr' => $input['billingAddr'] ?? null,
+            'billing_address' => $input['billingAddr'] ?? null,
             'source' => $input['source'] ?? null,
             'industry' => $input['industry'] ?? null,
             'onboarded_by' => $input['onboardedBy'] ?? null,
@@ -66,18 +66,18 @@ class CustomerController extends Controller
             }
 
             $customer->update($payload);
-            $this->auditService->log($user->name, 'update', 'customer', $id, $customer->code, 'Customer updated — ' . $company);
+            $this->auditService->log($user->name, 'update', 'customer', $id, $customer->customer_code, 'Customer updated — ' . $company);
 
-            return response()->json(['ok' => true, 'id' => $id, 'code' => $customer->code, 'created' => false]);
+            return response()->json(['ok' => true, 'id' => $id, 'customer_code' => $customer->customer_code, 'created' => false]);
         }
 
         $existing = Customer::query()->whereRaw('LOWER(company) = ?', [strtolower($company)])->first();
         if ($existing) {
-            return response()->json(['ok' => false, 'error' => 'A customer with this name already exists (' . $existing->code . ').']);
+            return response()->json(['ok' => false, 'error' => 'A customer with this name already exists (' . $existing->customer_code . ').']);
         }
 
         $code = $this->codeService->generate('customer', 'CUS-');
-        $payload['code'] = $code;
+        $payload['customer_code'] = $code;
         $payload['created_by'] = $user->name;
 
         $customer = Customer::query()->create($payload);
@@ -85,7 +85,7 @@ class CustomerController extends Controller
         $this->auditService->log($user->name, 'create', 'customer', $customer->id, $code, 'Customer onboarded — ' . $company);
         $this->auditService->notifyCoordinators('customer', 'New customer onboarded', "{$company} ({$code})", 'customer', $customer->id);
 
-        return response()->json(['ok' => true, 'id' => $customer->id, 'code' => $code, 'created' => true]);
+        return response()->json(['ok' => true, 'id' => $customer->id, 'customer_code' => $code, 'created' => true]);
     }
 
     public function delete(Request $request): JsonResponse
@@ -122,7 +122,7 @@ class CustomerController extends Controller
         }
 
         $customer->delete();
-        $this->auditService->log($user->name, 'delete', 'customer', $id, $customer->code, 'Customer deleted — ' . $customer->company);
+        $this->auditService->log($user->name, 'delete', 'customer', $id, $customer->customer_code, 'Customer deleted — ' . $customer->company);
 
         return response()->json(['ok' => true]);
     }
@@ -175,14 +175,14 @@ class CustomerController extends Controller
                 $email = strtolower(trim((string) ($row['email'] ?? '')));
 
                 Customer::query()->create([
-                    'code' => $code,
+                    'customer_code' => $code,
                     'company' => $company,
                     'contact_name' => $row['contactName'] ?? null,
                     'email' => filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null,
                     'phone' => $row['phone'] ?? null,
                     'city' => $row['city'] ?? null,
                     'state' => $row['state'] ?? null,
-                    'gstin' => !empty($row['gstin']) ? strtoupper(trim($row['gstin'])) : null,
+                    'gst_number' => !empty($row['gst_number']) ? strtoupper(trim($row['gst_number'])) : null,
                     'source' => $row['source'] ?? null,
                     'industry' => $row['industry'] ?? null,
                     'onboarded_by' => $row['onboardedBy'] ?? $spName,

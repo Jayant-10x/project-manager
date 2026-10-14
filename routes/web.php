@@ -24,28 +24,28 @@ Route::redirect('/', '/dashboard');
 Route::middleware(['auth', 'verified'])->group(function () {
     // 1. Overview
     Route::get('/dashboard', DashboardIndex::class)->name('dashboard');
-    Route::get('/today', TodayWorkIndex::class)->name('today.index');
+    Route::get('/today-work', TodayWorkIndex::class)->name('today.index');
 
     // 2. Customers
     Route::get('/customers', CustomerIndex::class)->name('customers.index');
-    Route::get('/customers/{customer}', CustomerDetail::class)->name('customers.show');
+    Route::get('/customer/{customer}', CustomerDetail::class)->name('customers.show');
     Route::get('/projects', ProjectIndex::class)->name('projects.index');
-    Route::get('/projects/{project}', ProjectDetail::class)->name('projects.show');
-    Route::get('/tasks', TaskIndex::class)->name('tasks.index');
+    Route::get('/project/{project}', ProjectDetail::class)->name('projects.show');
+    Route::get('/my-tasks', TaskIndex::class)->name('tasks.index');
 
     // 3. Money
     Route::get('/payments', PaymentIndex::class)->name('payments.index');
-    Route::get('/schedule', ScheduleIndex::class)->name('schedule.index');
+    Route::get('/schedules', ScheduleIndex::class)->name('schedule.index');
     Route::get('/reports', ReportIndex::class)->name('reports.index');
 
     // 4. Records
     Route::get('/documents', DocumentIndex::class)->name('documents.index');
-    Route::get('/followups', FollowupIndex::class)->name('followups.index');
-    Route::get('/sales', SalesIndex::class)->name('sales.index');
+    Route::get('/follow-ups', FollowupIndex::class)->name('followups.index');
+    Route::get('/sales-team', SalesIndex::class)->name('sales.index');
 
     // 5. System
     Route::get('/notifications', NotificationIndex::class)->name('notifications.index');
-    Route::get('/audit', AuditIndex::class)->name('audit.index');
+    Route::get('/activity-log', AuditIndex::class)->name('audit.index');
     Route::get('/settings', SettingIndex::class)->name('settings.index');
 
     // User Profile

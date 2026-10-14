@@ -22,7 +22,7 @@ class ExportController extends Controller {
         }
 
         $this->moneyService->refreshOverdueStatus();
-        $kind = (string)$request->input('kind', 'customers');
+        $kind = (string)$request->input('type', 'customers');
 
         return $this->exportService->exportCsv($kind);
     }

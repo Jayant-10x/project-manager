@@ -46,8 +46,8 @@ class PaymentIndex extends Component {
             ->findOrFail($id);
 
         // Coordinators can only delete their own entries unless Admin
-        if ($user->role !== 'Admin' && $payment->entered_by_id !== $user->id) {
-            $this->dispatch('toast', ['msg' => 'You can only remove receipts you entered.', 'kind' => 'err']);
+        if ($user->role !== 'Admin' && $payment->created_by !== $user->id) {
+            $this->dispatch('toast', ['msg' => 'You can only remove receipts you entered.', 'type' => 'err']);
             return;
         }
 

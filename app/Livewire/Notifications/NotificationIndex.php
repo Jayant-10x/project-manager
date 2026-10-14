@@ -16,7 +16,7 @@ class NotificationIndex extends Component {
             ->where('is_read', false)
             ->update(['is_read' => true]);
 
-        $this->dispatch('toast', ['msg' => 'All marked as read', 'kind' => 'ok']);
+        $this->dispatch('toast', ['msg' => 'All marked as read', 'type' => 'ok']);
     }
 
     public function openNotification(int $id) {

@@ -69,14 +69,14 @@
 
             <label class="f">
                 <span>Salesperson *</span>
-                <select wire:model.blur="sales_id"
-                        class="i @error('sales_id') border-red-500! bg-red-50/20! @enderror">
+                <select wire:model.blur="sales_person_id"
+                        class="i @error('sales_person_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— Select Salesperson —</option>
                     @foreach($salesUsers as $su)
                         <option value="{{ $su->id }}">{{ $su->name }}</option>
                     @endforeach
                 </select>
-                @error('sales_id')
+                @error('sales_person_id')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>

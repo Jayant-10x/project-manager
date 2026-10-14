@@ -199,7 +199,7 @@ class PaymentController extends Controller {
                 ]);
             }
 
-            $this->auditService->log($user->name, 'update', 'terms', $projectId, $project->code, "Payment schedule updated ({$createdCount} editable installments)");
+            $this->auditService->log($user->name, 'update', 'terms', $projectId, $project->project_code, "Payment schedule updated ({$createdCount} editable installments)");
         });
 
         return response()->json(['ok' => true, 'count' => $createdCount]);
@@ -250,7 +250,7 @@ class PaymentController extends Controller {
             $created++;
         }
 
-        $this->auditService->log($user->name, 'update', 'terms', $projectId, $project->code, "{$created} recurring installments generated");
+        $this->auditService->log($user->name, 'update', 'terms', $projectId, $project->project_code, "{$created} recurring installments generated");
 
         return response()->json(['ok' => true, 'count' => $created]);
     }
@@ -272,7 +272,7 @@ class PaymentController extends Controller {
         }
 
         $label = $term->label;
-        $code = $term->project?->code ?? '';
+        $code = $term->project?->project_code ?? '';
 
         $term->delete();
         $this->auditService->log($user->name, 'delete', 'term', $id, $code, 'Installment removed — ' . $label);

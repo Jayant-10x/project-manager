@@ -39,8 +39,8 @@
                         @if($customer->source)
                             <span class="pill">{{ $customer->source }}</span>
                         @endif
-                        @if($customer->gstin)
-                            <span class="pill">GST {{ $customer->gstin }}</span>
+                        @if($customer->gst_number)
+                            <span class="pill">GST {{ $customer->gst_number }}</span>
                         @endif
                         @if($customer->salesPerson)
                             <span class="pill">Sales: {{ $customer->salesPerson->name }}</span>
@@ -178,11 +178,11 @@
                         </div>
                         <div class="field mb-3">
                             <div class="k text-xs font-bold text-gray-400 uppercase">GSTIN</div>
-                            <div class="v font-semibold">{{ $customer->gstin ?: '—' }}</div>
+                            <div class="v font-semibold">{{ $customer->gst_number ?: '—' }}</div>
                         </div>
                         <div class="field">
                             <div class="k text-xs font-bold text-gray-400 uppercase">PAN</div>
-                            <div class="v font-semibold">{{ $customer->pan ?: '—' }}</div>
+                            <div class="v font-semibold">{{ $customer->pan_number ?: '—' }}</div>
                         </div>
                     </div>
                     <div>
@@ -209,11 +209,11 @@
                     </div>
                 @endif
 
-                @if($customer->billing_name || $customer->billing_addr)
+                @if($customer->billing_name || $customer->billing_address)
                     <div class="divider"></div>
                     <div class="field">
                         <div class="k text-xs font-bold text-gray-400 uppercase">Billing</div>
-                        <div class="v mt-0.5">{{ $customer->billing_name }}<br>{{ $customer->billing_addr }}</div>
+                        <div class="v mt-0.5">{{ $customer->billing_name }}<br>{{ $customer->billing_address }}</div>
                     </div>
                 @endif
 
@@ -450,13 +450,13 @@
                 </div>
                 @forelse($followups as $fu)
                     <div class="fu flex items-start gap-3 p-3 border-b border-[#eef2f9]">
-                        <span class="fu-ico">{{ substr($fu->kind, 0, 1) }}</span>
+                        <span class="fu-ico">{{ substr($fu->type, 0, 1) }}</span>
                         <div style="flex:1;min-width:0">
                             <div class="fu-s font-bold text-sm">{{ $fu->summary }}</div>
                             @if($fu->detail)
                                 <div class="fu-t text-xs text-gray-500 mt-0.5">{{ $fu->detail }}</div>
                             @endif
-                            <div class="fu-t text-xs text-[#8894ac] mt-1">{{ $fu->kind }}
+                            <div class="fu-t text-xs text-[#8894ac] mt-1">{{ $fu->type }}
                                 · {{ $fu->happened_on->format('d M H:i') }}</div>
                             @if($fu->next_date)
                                 <div class="mt-1">

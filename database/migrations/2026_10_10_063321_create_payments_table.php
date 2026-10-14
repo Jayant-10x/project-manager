@@ -11,15 +11,15 @@ return new class extends Migration {
             $table->string('code', 20)->unique();
             $table->foreignId('project_id')->constrained('projects')->cascadeOnDelete();
             $table->foreignId('customer_id')->constrained('customers')->cascadeOnDelete();
-            $table->foreignId('term_id')->nullable()->constrained('payment_terms')->nullOnDelete();
+            $table->foreignId('term_id')->nullable()->default(null)->constrained('payment_terms')->nullOnDelete();
             $table->decimal('amount', 14, 2)->default(0.00);
             $table->decimal('tds', 14, 2)->default(0.00);
             $table->date('paid_on');
             $table->enum('mode', ['Cash', 'UPI', 'NEFT', 'RTGS', 'Cheque', 'Card', 'Other'])->default('NEFT');
-            $table->string('reference', 80)->nullable();
-            $table->string('bank', 80)->nullable();
-            $table->text('note')->nullable();
-            $table->foreignId('entered_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('reference', 80)->nullable()->default(null);
+            $table->string('bank', 80)->nullable()->default(null);
+            $table->text('note')->nullable()->default(null);
+            $table->foreignId('created_by')->nullable()->default(null)->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

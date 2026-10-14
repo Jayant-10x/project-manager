@@ -61,13 +61,13 @@
                 @if(auth()->user()->role === 'Admin')
                     <div class="md:col-span-3">
                         <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Assign to</label>
-                        <select wire:model.live="assigned_to_id"
-                                class="i text-sm @error('assigned_to_id') border-red-500! bg-red-50/20! @enderror">
+                        <select wire:model.live="assigned_to"
+                                class="i text-sm @error('assigned_to') border-red-500! bg-red-50/20! @enderror">
                             @foreach($users as $u)
                                 <option value="{{ $u->id }}">{{ $u->name }}</option>
                             @endforeach
                         </select>
-                        @error('assigned_to_id')
+                        @error('assigned_to')
                         <span class="text-[11px] text-red-500 font-medium mt-1 block">{{ $message }}</span>
                         @enderror
                     </div>

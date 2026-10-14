@@ -23,7 +23,7 @@
         <div class="card-body p-0">
             @forelse($notifications as $n)
                 @php
-                    $kindConfig = match ($n->kind) {
+                    $kindConfig = match ($n->type) {
                         'payment_due' => ['color' => '#e0a13a', 'icon' => 'clock'],
                         'overdue'     => ['color' => '#d94b4b', 'icon' => 'alert'],
                         'amc'         => ['color' => '#5aa236', 'icon' => 'refresh'],

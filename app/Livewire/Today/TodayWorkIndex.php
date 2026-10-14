@@ -73,7 +73,7 @@ class TodayWorkIndex extends Component {
         // Financial totals
         $totalOverdue = (float)$overdue->sum(fn($t) => max(0, (float)$t->amount - (float)$t->received - (float)$t->tds));
         $totalSoon = (float)$soon->sum(fn($t) => max(0, (float)$t->amount - (float)$t->received - (float)$t->tds));
-        $openTasksCount = Task::where('assigned_to_id', $user->id)->where('done', false)->count();
+        $openTasksCount = Task::where('assigned_to', $user->id)->where('done', false)->count();
 
         return view('livewire.today.today-work-index', [
             'overdue' => $overdue,

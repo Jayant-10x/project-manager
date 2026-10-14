@@ -77,7 +77,7 @@ class SalesModal extends Component {
         $this->reset();
         $this->dispatch('sales-saved');
         $this->dispatch('close-modal', 'sales-modal');
-        $this->dispatch('toast', ['msg' => 'Salesperson saved successfully', 'kind' => 'ok']);
+        $this->dispatch('toast', ['msg' => 'Salesperson saved successfully', 'type' => 'ok']);
         $this->redirect(route('sales.index'), navigate: true);
     }
 

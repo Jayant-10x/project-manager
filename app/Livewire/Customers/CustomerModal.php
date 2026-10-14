@@ -19,7 +19,7 @@ class CustomerModal extends Component {
     public string $city = '';
     public string $state = '';
     public string $address = '';
-    public string $gstin = '';
+    public string $gst_number = '';
     public string $pan = '';
     public string $billing_name = '';
     public string $billing_addr = '';
@@ -45,10 +45,10 @@ class CustomerModal extends Component {
             $this->city = $c->city ?? '';
             $this->state = $c->state ?? '';
             $this->address = $c->address ?? '';
-            $this->gstin = $c->gstin ?? '';
-            $this->pan = $c->pan ?? '';
+            $this->gst_number = $c->gst_number ?? '';
+            $this->pan_number = $c->pan_number ?? '';
             $this->billing_name = $c->billing_name ?? '';
-            $this->billing_addr = $c->billing_addr ?? '';
+            $this->billing_address = $c->billing_address ?? '';
             $this->source = $c->source ?? '';
             $this->industry = $c->industry ?? '';
             $this->sales_person_id = $c->sales_person_id;
@@ -74,10 +74,10 @@ class CustomerModal extends Component {
             'city' => 'nullable|string|max:60',
             'state' => 'nullable|string|max:60',
             'address' => 'nullable|string|max:1000',
-            'gstin' => 'nullable|string|max:20',
-            'pan' => 'nullable|string|max:15',
+            'gst_number' => 'nullable|string|max:20',
+            'pan_number' => 'nullable|string|max:15',
             'billing_name' => 'nullable|string|max:160',
-            'billing_addr' => 'nullable|string|max:1000',
+            'billing_address' => 'nullable|string|max:1000',
             'source' => 'nullable|string|max:60',
             'industry' => 'nullable|string|max:60',
             'sales_person_id' => 'nullable|integer|exists:sales_persons,id',
@@ -100,7 +100,7 @@ class CustomerModal extends Component {
             $customer->update($validated);
         } else {
             $validated['code'] = $codeService->generate('customer', 'CUS-');
-            $validated['created_by_id'] = auth()->id();
+            $validated['created_by'] = auth()->id();
             Customer::create($validated);
         }
 

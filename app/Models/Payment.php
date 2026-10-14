@@ -27,6 +27,6 @@ class Payment extends Model {
     }
 
     public function enteredBy(): BelongsTo {
-        return $this->belongsTo(User::class, 'entered_by_id');
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

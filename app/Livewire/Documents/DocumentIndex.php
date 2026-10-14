@@ -43,15 +43,15 @@ class DocumentIndex extends Component {
         $user = auth()->user();
         $doc = Document::findOrFail($id);
 
-        if ($user->role !== 'Admin' && $doc->uploaded_by_id !== $user->id) {
-            $this->dispatch('toast', ['msg' => 'You can only remove files you uploaded.', 'kind' => 'err']);
+        if ($user->role !== 'Admin' && $doc->uploaded_by !== $user->id) {
+            $this->dispatch('toast', ['msg' => 'You can only remove files you uploaded.', 'type' => 'err']);
             return;
         }
 
         Storage::disk('public')->delete($doc->stored_as);
         $doc->delete();
 
-        $this->dispatch('toast', ['msg' => 'Document removed', 'kind' => 'ok']);
+        $this->dispatch('toast', ['msg' => 'Document removed', 'type' => 'ok']);
     }
 
     public function render() {

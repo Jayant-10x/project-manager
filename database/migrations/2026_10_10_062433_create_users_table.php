@@ -9,28 +9,28 @@ return new class extends Migration {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('email', 160)->unique();
-            $table->string('phone', 30)->nullable();
+            $table->string('email', 160)->unique('email');
+            $table->string('phone', 30)->nullable()->default(null)->unique('phone');
             $table->enum('role', ['Admin', 'Manager', 'Coordinator', 'Sales'])->default('Coordinator');
-            $table->enum('status', ['Active', 'Inactive'])->default('Active');
-            $table->string('designation', 60)->nullable();
-            $table->string('city', 60)->nullable();
+            $table->enum('status', ['Active', 'Inactive'])->default('Inactive');
+            $table->string('designation', 60)->nullable()->default(null);
+            $table->string('city', 60)->nullable()->default(null);
 
             // Presence tracking
             $table->boolean('is_online')->default(false);
-            $table->timestamp('last_seen')->nullable();
+            $table->timestamp('last_seen')->nullable()->default(null);
 
             // Auth & Account Security
             $table->string('password');
             $table->rememberToken(); // Standard Laravel session persistence
             $table->boolean('must_change')->default(false);
             $table->unsignedSmallInteger('fail_count')->default(0);
-            $table->timestamp('locked_until')->nullable();
+            $table->timestamp('locked_until')->nullable()->default(null);
             // Hierarchy link
-            $table->foreignId('reporting_to_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('reporting_to')->nullable()->default(null)->constrained('users', indexName: 'reporting_to')->nullOnDelete()->cascadeOnUpdate();
 
             // Self-referencing audit relation
-            $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by')->nullable()->default(null)->constrained('users', indexName: 'created_by')->nullOnDelete();
 
             $table->timestamps();
         });

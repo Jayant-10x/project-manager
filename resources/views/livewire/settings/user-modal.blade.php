@@ -57,14 +57,14 @@
 
             <label class="f">
                 <span>Reports To <span class="text-red-500">*</span></span>
-                <select wire:model.blur="reporting_to_id"
-                        class="i @error('reporting_to_id') border-red-500! bg-red-50/20! @enderror">
+                <select wire:model.blur="reporting_to"
+                        class="i @error('reporting_to') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— No Supervisor (Top Level) —</option>
                     @foreach($supervisors as $s)
                         <option value="{{ $s->id }}">{{ $s->name }} ({{ $s->role }})</option>
                     @endforeach
                 </select>
-                @error('reporting_to_id')
+                @error('reporting_to')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>

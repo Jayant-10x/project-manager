@@ -85,7 +85,7 @@ class CustomerIndex extends Component {
                     $c->phone,
                     $c->email,
                     $c->city,
-                    $c->gstin,
+                    $c->gst_number,
                     $c->source,
                     $c->salesPerson?->name ?? '',
                     $c->status,
@@ -116,7 +116,7 @@ class CustomerIndex extends Component {
                         ->orWhere('phone', 'like', $term)
                         ->orWhere('email', 'like', $term)
                         ->orWhere('city', 'like', $term)
-                        ->orWhere('gstin', 'like', $term);
+                        ->orWhere('gst_number', 'like', $term);
                 });
             })
             ->when($this->sales, fn($q) => $q->where('sales_person_id', $this->sales))

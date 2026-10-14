@@ -57,7 +57,7 @@ class SettingIndex extends Component {
 
     public function saveSettings(): void {
         if (auth()->user()->role !== 'Admin') {
-            $this->dispatch('toast', ['msg' => 'Only administrators can update system settings.', 'kind' => 'err']);
+            $this->dispatch('toast', ['msg' => 'Only administrators can update system settings.', 'type' => 'err']);
             return;
         }
 
@@ -73,7 +73,7 @@ class SettingIndex extends Component {
         Setting::query()->updateOrCreate(['key' => 'company_name'], ['value' => trim($validated['companyName'])]);
         Setting::query()->updateOrCreate(['key' => 'display_currency'], ['value' => $validated['displayCurrency']]);
 
-        $this->dispatch('toast', ['msg' => 'Settings saved successfully', 'kind' => 'ok']);
+        $this->dispatch('toast', ['msg' => 'Settings saved successfully', 'type' => 'ok']);
     }
 
     public function updatePassword(): void {
@@ -112,17 +112,17 @@ class SettingIndex extends Component {
 
         $this->reset(['current_password', 'new_password', 'new_password_confirmation']);
         $this->resetValidation();
-        $this->dispatch('toast', ['msg' => 'Password updated successfully', 'kind' => 'ok']);
+        $this->dispatch('toast', ['msg' => 'Password updated successfully', 'type' => 'ok']);
     }
 
     public function deleteUser(int $id): void {
         if (auth()->user()->role !== 'Admin') {
-            $this->dispatch('toast', ['msg' => 'Only administrators can manage user accounts.', 'kind' => 'err']);
+            $this->dispatch('toast', ['msg' => 'Only administrators can manage user accounts.', 'type' => 'err']);
             return;
         }
 
         if (auth()->id() === $id) {
-            $this->dispatch('toast', ['msg' => 'You cannot delete your own account.', 'kind' => 'err']);
+            $this->dispatch('toast', ['msg' => 'You cannot delete your own account.', 'type' => 'err']);
             return;
         }
 
@@ -131,13 +131,13 @@ class SettingIndex extends Component {
         if ($target->role === 'Admin' && $target->status === 'Active') {
             $activeAdminCount = User::where('role', 'Admin')->where('status', 'Active')->count();
             if ($activeAdminCount <= 1) {
-                $this->dispatch('toast', ['msg' => 'Cannot delete the last active Admin account.', 'kind' => 'err']);
+                $this->dispatch('toast', ['msg' => 'Cannot delete the last active Admin account.', 'type' => 'err']);
                 return;
             }
         }
 
         $target->delete();
-        $this->dispatch('toast', ['msg' => 'User removed', 'kind' => 'ok']);
+        $this->dispatch('toast', ['msg' => 'User removed', 'type' => 'ok']);
     }
 
     public function logout(): void {

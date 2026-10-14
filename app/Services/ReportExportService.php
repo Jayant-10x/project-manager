@@ -44,8 +44,8 @@ class ReportExportService {
         foreach ($customers as $c) {
             $due = round((float)$c->proj_value - (float)$c->received, 2);
             fputcsv($handle, [
-                $c->code, $c->company, $c->contact_name, $c->phone, $c->email, $c->city,
-                $c->gstin, $c->source, $c->onboarded_by, $c->status,
+                $c->customer_code, $c->company, $c->contact_name, $c->phone, $c->email, $c->city,
+                $c->gst_number, $c->source, $c->onboarded_by, $c->status,
                 $c->proj_count, $c->proj_value, $c->received, $due
             ]);
         }

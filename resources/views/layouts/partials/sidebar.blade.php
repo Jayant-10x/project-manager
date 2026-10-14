@@ -2,7 +2,7 @@
     $user = auth()->user();
     $assignedProjectsCount = \App\Models\Project::forUser($user)->count();
     $totalCustomersCount = \App\Models\Customer::count();
-    $openTasksCount = \App\Models\Task::where('assigned_to_id', $user->id)->where('done', false)->count();
+    $openTasksCount = \App\Models\Task::where('assigned_to', $user->id)->where('done', false)->count();
 
     $assignedProjectIds = \App\Models\Project::forUser($user)->pluck('id');
     $overdueCount = \App\Models\PaymentTerm::whereIn('project_id', $assignedProjectIds)->where('status', 'Overdue')->count();

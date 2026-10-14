@@ -17,7 +17,7 @@ class UserModal extends Component {
     public string $city = '';
     public string $status = '';
     public string $password = '';
-    public ?int $reporting_to_id = null;
+    public ?int $reporting_to = null;
 
     #[On('open-user-modal')]
     public function openModal(?int $id = null): void {
@@ -34,12 +34,12 @@ class UserModal extends Component {
             $this->designation = $user->designation ?? 'Sales Person';
             $this->city = $user->city ?? null;
             $this->status = $user->status ?? 'Inactive';
-            $this->reporting_to_id = $user->reporting_to_id;
+            $this->reporting_to = $user->reporting_to;
         } else {
             $this->role = 'Sales';
             $this->designation = 'Sales Person';
             $this->status = 'Inactive';
-            $this->reporting_to_id = null;
+            $this->reporting_to = null;
         }
 
         $this->dispatch('open-modal', 'user-modal');
@@ -55,7 +55,7 @@ class UserModal extends Component {
             ],
             'phone' => 'nullable|numeric|max:30',
             'role' => 'required|in:Admin,Manager,Coordinator,Sales',
-            'reporting_to_id' => 'nullable|exists:users,id',
+            'reporting_to' => 'nullable|exists:users,id',
             'designation' => 'nullable|string|max:60',
             'city' => 'nullable|string|max:60',
             'status' => 'required|in:Active,Inactive',
@@ -76,7 +76,7 @@ class UserModal extends Component {
 
     public function save(): void {
         if (auth()->user()->role !== 'Admin') {
-            $this->dispatch('toast', ['msg' => 'Only administrators can manage users.', 'kind' => 'err']);
+            $this->dispatch('toast', ['msg' => 'Only administrators can manage users.', 'type' => 'err']);
             return;
         }
 
@@ -95,7 +95,7 @@ class UserModal extends Component {
             if ($user->role === 'Admin' && $user->status === 'Active' && ($validated['role'] !== 'Admin' || $validated['status'] !== 'Active')) {
                 $activeAdminCount = User::where('role', 'Admin')->where('status', 'Active')->count();
                 if ($activeAdminCount <= 1) {
-                    $this->dispatch('toast', ['msg' => 'Cannot demote or deactivate the last active Admin.', 'kind' => 'err']);
+                    $this->dispatch('toast', ['msg' => 'Cannot demote or deactivate the last active Admin.', 'type' => 'err']);
                     return;
                 }
             }
@@ -111,14 +111,14 @@ class UserModal extends Component {
             $tempPass = !empty($validated['password']) ? $validated['password'] : 'Welcome@10x';
             $validated['password'] = $tempPass;
             $validated['must_change'] = true;
-            $validated['created_by_id'] = auth()->id();
+            $validated['created_by'] = auth()->id();
             User::create($validated);
         }
 
         $this->reset();
         $this->dispatch('user-saved');
         $this->dispatch('close-modal', 'user-modal');
-        $this->dispatch('toast', ['msg' => 'User saved successfully', 'kind' => 'ok']);
+        $this->dispatch('toast', ['msg' => 'User saved successfully', 'type' => 'ok']);
         $this->redirect(route('settings.index'), navigate: true);
     }
 

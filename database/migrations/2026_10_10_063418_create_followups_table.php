@@ -9,14 +9,14 @@ return new class extends Migration {
         Schema::create('followups', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->constrained('customers')->cascadeOnDelete();
-            $table->foreignId('project_id')->nullable()->constrained('projects')->nullOnDelete();
-            $table->enum('kind', ['Call', 'Email', 'Meeting', 'WhatsApp', 'Note'])->default('Call');
+            $table->foreignId('project_id')->nullable()->default(null)->constrained('projects')->nullOnDelete();
+            $table->enum('type', ['Call', 'Email', 'Meeting', 'WhatsApp', 'Note'])->default('Call');
             $table->string('summary', 300);
-            $table->text('detail')->nullable();
+            $table->text('detail')->nullable()->default(null);
             $table->timestamp('happened_on')->useCurrent();
-            $table->date('next_date')->nullable();
-            $table->string('next_note', 200)->nullable();
-            $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->date('next_date')->nullable()->default(null);
+            $table->string('next_note', 200)->nullable()->default(null);
+            $table->foreignId('created_by')->nullable()->default(null)->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

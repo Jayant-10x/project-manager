@@ -62,16 +62,16 @@
 
             <label class="f">
                 <span>GSTIN</span>
-                <input wire:model="gstin" class="i @error('gstin') border-red-500! bg-red-50/20! @enderror"
+                <input wire:model="gst_number" class="i @error('gst_number') border-red-500! bg-red-50/20! @enderror"
                        placeholder="27AABCS1429P1ZV">
-                @error('gstin') <span
+                @error('gst_number') <span
                     class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
 
             <label class="f">
                 <span>PAN</span>
-                <input wire:model="pan" class="i @error('pan') border-red-500! bg-red-50/20! @enderror">
-                @error('pan') <span
+                <input wire:model="pan_number" class="i @error('pan_number') border-red-500! bg-red-50/20! @enderror">
+                @error('pan_number') <span
                     class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
 
@@ -128,10 +128,10 @@
 
             <label class="f full">
                 <span>Billing name &amp; address</span>
-                <textarea wire:model="billing_addr"
-                          class="i @error('billing_addr') border-red-500! bg-red-50/20! @enderror"
+                <textarea wire:model="billing_address"
+                          class="i @error('billing_address') border-red-500! bg-red-50/20! @enderror"
                           style="min-height:56px"></textarea>
-                @error('billing_addr') <span
+                @error('billing_address') <span
                     class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
 

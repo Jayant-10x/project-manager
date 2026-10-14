@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\AuditLog;
+use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Followup;
@@ -60,7 +60,7 @@ class DashboardController extends Controller {
 
         $unreadCount = $notifications->where('is_read', false)->count();
 
-        $auditLogs = AuditLog::query()->orderByDesc('id')->limit(120)->get();
+        $auditLogs = ActivityLog::query()->orderByDesc('id')->limit(120)->get();
 
         // Project money maps
         $byProject = [];
@@ -92,10 +92,10 @@ class DashboardController extends Controller {
 
             return [
                 'id' => (int)$p->id,
-                'code' => $p->code,
+                'project_code' => $p->project_code,
                 'customerId' => (int)$p->customer_id,
                 'customer' => $p->customer?->company ?? '',
-                'customerCode' => $p->customer?->code ?? '',
+                'customerCode' => $p->customer?->customer_code ?? '',
                 'name' => $p->name,
                 'description' => $p->description ?? '',
                 'type' => $p->project_type ?? '',
@@ -135,7 +135,7 @@ class DashboardController extends Controller {
                     'target' => (float)$s->target, 'status' => $s->status
                 ]),
                 'customers' => $customers->map(fn($c) => [
-                    'id' => (int)$c->id, 'code' => $c->code, 'company' => $c->company,
+                    'id' => (int)$c->id, 'customer_code' => $c->customer_code, 'company' => $c->company,
                     'contactName' => $c->contact_name ?? '', 'email' => $c->email ?? '',
                     'phone' => $c->phone ?? '', 'altPhone' => $c->alt_phone ?? '',
                     'city' => $c->city ?? '', 'state' => $c->state ?? '', 'address' => $c->address ?? '',
@@ -158,7 +158,7 @@ class DashboardController extends Controller {
                 'payments' => $payments->map(fn($p) => [
                     'id' => (int)$p->id, 'code' => $p->code, 'projectId' => (int)$p->project_id,
                     'customerId' => (int)$p->customer_id, 'termId' => $p->term_id ? (int)$p->term_id : null,
-                    'customer' => $p->customer?->company ?? '', 'projectCode' => $p->project?->code ?? '',
+                    'customer' => $p->customer?->company ?? '', 'projectCode' => $p->project?->project_code ?? '',
                     'projectName' => $p->project?->name ?? '', 'amount' => (float)$p->amount, 'tds' => (float)$p->tds,
                     'paidOn' => $p->paid_on->toDateString(), 'mode' => $p->mode, 'reference' => $p->reference ?? '',
                     'bank' => $p->bank ?? '', 'note' => $p->note ?? '', 'enteredBy' => $p->entered_by ?? ''
@@ -176,7 +176,7 @@ class DashboardController extends Controller {
                 'followups' => $followups->map(fn($f) => [
                     'id' => (int)$f->id, 'customerId' => (int)$f->customer_id,
                     'projectId' => $f->project_id ? (int)$f->project_id : null,
-                    'customer' => $f->customer?->company ?? '', 'kind' => $f->kind,
+                    'customer' => $f->customer?->company ?? '', 'type' => $f->type,
                     'summary' => $f->summary, 'detail' => $f->detail ?? '',
                     'happenedOn' => $f->happened_on->format('Y-m-d H:i'),
                     'nextDate' => $f->next_date ? $f->next_date->toDateString() : '',
@@ -191,12 +191,12 @@ class DashboardController extends Controller {
                 'tasks' => $tasks->map(fn($t) => [
                     'id' => (int)$t->id, 'projectId' => $t->project_id ? (int)$t->project_id : null,
                     'customerId' => $t->customer_id ? (int)$t->customer_id : null,
-                    'customer' => $t->customer?->company ?? '', 'projectCode' => $t->project?->code ?? '',
+                    'customer' => $t->customer?->company ?? '', 'projectCode' => $t->project?->project_code ?? '',
                     'title' => $t->title, 'dueDate' => $t->due_date ? $t->due_date->toDateString() : '',
                     'done' => (int)$t->done, 'priority' => $t->priority, 'assignedTo' => $t->assigned_to ?? ''
                 ]),
                 'notifications' => $notifications->map(fn($n) => [
-                    'id' => (int)$n->id, 'kind' => $n->kind, 'title' => $n->title, 'body' => $n->body,
+                    'id' => (int)$n->id, 'type' => $n->type, 'title' => $n->title, 'body' => $n->body,
                     'linkType' => $n->link_type ?? '', 'linkId' => $n->link_id ? (int)$n->link_id : null,
                     'read' => (int)$n->is_read, 'at' => $n->created_at->format('Y-m-d H:i')
                 ]),
@@ -333,7 +333,7 @@ class DashboardController extends Controller {
                 'dueDate' => $t->due_date ? $t->due_date->toDateString() : '',
                 'status' => $t->status,
                 'balance' => round(max(0, (float)$t->amount - (float)$t->received - (float)$t->tds), 2),
-                'projectCode' => $t->project?->code ?? '',
+                'projectCode' => $t->project?->project_code ?? '',
                 'projectName' => $t->project?->name ?? '',
                 'company' => $t->project?->customer?->company ?? '',
                 'customerId' => (int)$t->project?->customer_id,
@@ -366,7 +366,7 @@ class DashboardController extends Controller {
                 'followups' => $fupDue->map(fn($f) => [
                     'id' => (int)$f->id,
                     'company' => $f->customer?->company ?? '',
-                    'kind' => $f->kind,
+                    'type' => $f->type,
                     'nextDate' => $f->next_date ? $f->next_date->toDateString() : '',
                     'nextNote' => $f->next_note ?: $f->summary,
                     'customerId' => (int)$f->customer_id,
@@ -382,7 +382,7 @@ class DashboardController extends Controller {
                 ]),
                 'late' => $late->map(fn($p) => [
                     'id' => (int)$p->id,
-                    'code' => $p->code,
+                    'project_id' => $p->project_id,
                     'name' => $p->name,
                     'company' => $p->customer?->company ?? '',
                     'health' => $p->health,
@@ -422,7 +422,7 @@ class DashboardController extends Controller {
         $customers = Customer::query()
             ->where(fn($q) => $q->where('company', 'LIKE', $like)
                 ->orWhere('contact_name', 'LIKE', $like)
-                ->orWhere('code', 'LIKE', $like)
+                ->orWhere('customer_code', 'LIKE', $like)
                 ->orWhere('phone', 'LIKE', $like)
                 ->orWhere('city', 'LIKE', $like))
             ->orderBy('company')
@@ -430,7 +430,7 @@ class DashboardController extends Controller {
             ->get();
 
         foreach ($customers as $c) {
-            $sub = $c->code . ($c->contact_name ? ' · ' . $c->contact_name : '') . ($c->city ? ' · ' . $c->city : '');
+            $sub = $c->customer_code . ($c->contact_name ? ' · ' . $c->contact_name : '') . ($c->city ? ' · ' . $c->city : '');
             $results[] = [
                 'type' => 'customer',
                 'id' => (int)$c->id,
@@ -441,15 +441,15 @@ class DashboardController extends Controller {
 
         $projects = Project::query()->with('customer')
             ->where(fn($q) => $q->where('name', 'LIKE', $like)
-                ->orWhere('code', 'LIKE', $like)
+                ->orWhere('project_code', 'LIKE', $like)
                 ->orWhere('project_type', 'LIKE', $like)
                 ->orWhereHas('customer', fn($cq) => $cq->where('company', 'LIKE', $like)))
-            ->orderBy('code')
+            ->orderBy('project_code')
             ->limit(10)
             ->get();
 
         foreach ($projects as $p) {
-            $sub = $p->code . ' · ' . ($p->customer?->company ?? '') . ' · ' . $p->status;
+            $sub = $p->project_code . ' · ' . ($p->customer?->company ?? '') . ' · ' . $p->status;
             $results[] = [
                 'type' => 'project',
                 'id' => (int)$p->id,

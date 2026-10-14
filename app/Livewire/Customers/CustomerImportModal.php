@@ -61,11 +61,11 @@ class CustomerImportModal extends Component {
                 'email' => trim($row[$headerMap['email'] ?? -1] ?? ''),
                 'city' => trim($row[$headerMap['city'] ?? -1] ?? ''),
                 'state' => trim($row[$headerMap['state'] ?? -1] ?? ''),
-                'gstin' => strtoupper(trim($row[$headerMap['gstin'] ?? $headerMap['gst'] ?? -1] ?? '')),
+                'gst_number' => strtoupper(trim($row[$headerMap['gst_number'] ?? $headerMap['gst'] ?? -1] ?? '')),
                 'source' => trim($row[$headerMap['source'] ?? -1] ?? ''),
                 'sales_person_id' => $this->defaultSalesPersonId,
                 'status' => 'Active',
-                'created_by_id' => auth()->id(),
+                'created_by' => auth()->id(),
             ]);
             $created++;
         }

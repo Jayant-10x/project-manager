@@ -81,10 +81,10 @@
                             </span>
                             <div class="flex-1 min-w-0">
                                 <div class="t">{{ $f->customer?->company }}</div>
-                                <div class="s">{{ $f->next_note ?: $f->kind }}
+                                <div class="s">{{ $f->next_note ?: $f->type }}
                                     · {{ $fupDate ? $fupDate->format('d M') : '—' }}</div>
                             </div>
-                            <div class="r"><span class="badge b-navy">{{ $f->kind }}</span></div>
+                            <div class="r"><span class="badge b-navy">{{ $f->type }}</span></div>
                         </div>
                     @endforeach
 

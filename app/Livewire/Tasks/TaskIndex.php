@@ -18,7 +18,7 @@ class TaskIndex extends Component {
     public ?int $assigned_to_id = null;
 
     public function mount(): void {
-        $this->assigned_to_id = auth()->id();
+        $this->assigned_to = auth()->id();
         $this->due_date = now()->toDateString();
     }
 
@@ -28,7 +28,7 @@ class TaskIndex extends Component {
             'project_id' => 'nullable|integer|exists:projects,id',
             'priority' => 'required|in:Low,Medium,High,Urgent',
             'due_date' => 'nullable|date',
-            'assigned_to_id' => 'nullable|integer|exists:users,id',
+            'assigned_to' => 'nullable|integer|exists:users,id',
         ];
     }
 
@@ -46,7 +46,7 @@ class TaskIndex extends Component {
     public function toggleDone(int $taskId): void {
         $task = Task::query()
             ->when(auth()->user()->role !== 'Admin', function ($q) {
-                $q->where('assigned_to_id', auth()->id());
+                $q->where('assigned_to', auth()->id());
             })
             ->findOrFail($taskId);
 
@@ -57,7 +57,7 @@ class TaskIndex extends Component {
     public function deleteTask(int $taskId): void {
         $task = Task::query()
             ->when(auth()->user()->role !== 'Admin', function ($q) {
-                $q->where('assigned_to_id', auth()->id());
+                $q->where('assigned_to', auth()->id());
             })
             ->findOrFail($taskId);
 
@@ -67,7 +67,7 @@ class TaskIndex extends Component {
     public function addTask(): void {
         // Sanitize empty strings into null before validation
         $this->project_id = !empty($this->project_id) ? (int)$this->project_id : null;
-        $this->assigned_to_id = !empty($this->assigned_to_id) ? (int)$this->assigned_to_id : auth()->id();
+        $this->assigned_to = !empty($this->assigned_to) ? (int)$this->assigned_to : auth()->id();
         $this->due_date = !empty($this->due_date) ? $this->due_date : null;
         $this->title = trim($this->title);
 
@@ -84,15 +84,15 @@ class TaskIndex extends Component {
             'customer_id' => $customerId,
             'priority' => $this->priority,
             'due_date' => $this->due_date,
-            'assigned_to_id' => $this->assigned_to_id,
-            'created_by_id' => auth()->id(),
+            'assigned_to' => $this->assigned_to,
+            'created_by' => auth()->id(),
             'done' => false,
         ]);
 
         $this->reset(['title', 'project_id']);
         $this->priority = 'Medium';
         $this->due_date = now()->toDateString();
-        $this->assigned_to_id = auth()->id();
+        $this->assigned_to = auth()->id();
         $this->resetValidation();
     }
 
@@ -101,7 +101,7 @@ class TaskIndex extends Component {
         $today = Carbon::today()->toDateString();
 
         $query = Task::query()
-            ->when($user->role !== 'Admin', fn($q) => $q->where('assigned_to_id', $user->id))
+            ->when($user->role !== 'Admin', fn($q) => $q->where('assigned_to', $user->id))
             ->with(['project.customer', 'customer', 'assignedTo'])
             ->orderBy('done')
             ->orderByRaw('due_date IS NULL, due_date ASC');

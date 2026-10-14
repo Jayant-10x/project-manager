@@ -8,26 +8,25 @@ return new class extends Migration {
     public function up(): void {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
-            $table->string('code', 20)->unique();
+            $table->string('customer_code', 20)->unique();
             $table->string('company', 160)->unique();
-            $table->string('contact_name', 80)->nullable();
-            $table->string('email', 160)->nullable();
-            $table->string('phone', 30)->nullable();
-            $table->string('alt_phone', 30)->nullable();
-            $table->string('city', 60)->nullable();
-            $table->string('state', 60)->nullable();
-            $table->text('address')->nullable();
-            $table->string('gstin', 20)->nullable();
-            $table->string('pan', 15)->nullable();
-            $table->string('billing_name', 160)->nullable();
-            $table->text('billing_addr')->nullable();
-            $table->string('source', 60)->nullable();
-            $table->string('industry', 60)->nullable();
-            $table->foreignId('sales_person_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('contact_name', 80);
+            $table->string('email', 160);
+            $table->string('phone', 30)->nullable()->default(null);
+            $table->string('alt_phone', 30)->nullable()->default(null);
+            $table->string('city', 60)->nullable()->default(null);
+            $table->string('state', 60)->nullable()->default(null);
+            $table->text('address')->nullable()->default(null);
+            $table->string('gst_number', 20)->nullable()->default(null);
+            $table->string('pan_number', 15)->nullable()->default(null);
+            $table->string('billing_name', 160)->nullable()->default(null);
+            $table->text('billing_address')->nullable()->default(null);
+            $table->string('source', 60)->nullable()->default(null);
+            $table->string('industry', 60)->nullable()->default(null);
             $table->enum('status', ['Active', 'On Hold', 'Completed', 'Churned'])->default('Active');
-            $table->text('internal_notes')->nullable();
-            $table->string('created_by', 80)->nullable();
+            $table->text('internal_notes')->nullable()->default(null);
+            $table->foreignId('sales_person_id')->nullable()->default(null)->constrained('users')->nullOnDelete();
+            $table->foreignId('created_by')->nullable()->default(null)->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }

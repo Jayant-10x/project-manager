@@ -82,7 +82,7 @@ class MilestoneController extends Controller {
             }
 
             $count = $order;
-            $this->auditService->log($user->name, 'update', 'milestones', $projectId, $project->code, "{$count} milestones saved");
+            $this->auditService->log($user->name, 'update', 'milestones', $projectId, $project->project_code, "{$count} milestones saved");
         });
 
         return response()->json([
