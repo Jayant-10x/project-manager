@@ -1,12 +1,16 @@
 <?php
 
+use App\Http\Controllers\Api\NotificationPollController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Middleware\EnsurePasswordIsChanged;
 use App\Livewire\Audit\AuditIndex;
+use App\Livewire\Auth\ForcePasswordChange;
 use App\Livewire\Customers\CustomerDetail;
 use App\Livewire\Customers\CustomerIndex;
 use App\Livewire\Dashboard\DashboardIndex;
 use App\Livewire\Documents\DocumentIndex;
 use App\Livewire\Followups\FollowupIndex;
+use App\Livewire\Notifications\NotificationDetail;
 use App\Livewire\Notifications\NotificationIndex;
 use App\Livewire\Payments\PaymentIndex;
 use App\Livewire\Projects\ProjectDetail;
@@ -21,8 +25,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    // 1. Overview
+// Dedicated change-password route
+Route::middleware(['auth'])->group(function () {
+    Route::get('/change-password', ForcePasswordChange::class)->name('password.change');
+});
+
+// Primary CRM authenticated route group
+Route::middleware(['auth', 'verified', EnsurePasswordIsChanged::class])->group(function () {
     Route::get('/dashboard', DashboardIndex::class)->name('dashboard');
     Route::get('/today-work', TodayWorkIndex::class)->name('today.index');
 
@@ -44,7 +53,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/sales-team', SalesIndex::class)->name('sales.index');
 
     // 5. System
+    // 5. System - Notifications
     Route::get('/notifications', NotificationIndex::class)->name('notifications.index');
+    Route::get('/notifications/{notification}', NotificationDetail::class)->name('notifications.show');
     Route::get('/activity-log', AuditIndex::class)->name('audit.index');
     Route::get('/settings', SettingIndex::class)->name('settings.index');
 
@@ -52,6 +63,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Lightweight notification polling route
+    Route::get('/api/notifications/poll', [NotificationPollController::class, 'check'])
+        ->name('api.notifications.poll');
 });
 
 require __DIR__ . '/auth.php';

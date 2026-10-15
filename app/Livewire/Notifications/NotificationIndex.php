@@ -33,6 +33,8 @@ class NotificationIndex extends Component {
         if ($notif->link_type === 'customer' && $notif->link_id) {
             return $this->redirect(route('customers.show', $notif->link_id), navigate: true);
         }
+
+        return $this->redirect(route('notifications.show', $notif->id), navigate: true);
     }
 
     public function render() {

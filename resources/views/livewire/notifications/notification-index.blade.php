@@ -38,7 +38,7 @@
                     $ico = $kindConfig['icon'];
                 @endphp
                 <div wire:click="openNotification({{ $n->id }})"
-                     class="mini-item flex items-center gap-3.5 p-3.5 border-b last:border-b-0 border-[#eef2f9] transition cursor-pointer hover:bg-slate-50"
+                     class="mini-item flex items-center gap-3.5 p-3.5 border-b last:border-b-0 border-[#eef2f9] transition cursor-pointer hover:bg-slate-50 pl-5!"
                      style="{{ $n->is_read ? '' : 'background:#f6f9ff;box-shadow:inset 3px 0 0 #0b3d91;' }}">
 
                     <span class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -75,7 +75,8 @@
                     <div style="flex:1;min-width:0">
                         <div class="t font-semibold text-sm text-[#0d1b34]">{{ $n->title }}</div>
                         <div class="s text-xs text-[#4a5875] mt-0.5 leading-relaxed">{{ $n->body }}</div>
-                        <div class="s text-[11px] text-[#8894ac] mt-1">{{ $n->created_at->diffForHumans() }}</div>
+                        <div
+                            class="s text-[11px] text-[#8894ac] mt-1">{{ $n->created_at?->diffForHumans() ?? 'Just now' }}</div>
                     </div>
 
                     @if(!$n->is_read)

@@ -4,10 +4,10 @@
     <form wire:submit="save" novalidate>
         <div class="form-grid">
             <label class="f full">
-                <span>Full name <span class="text-red-500">*</span>
-                <input wire:model.blur="name"
+                <span>Full name <span class="text-red-500">*</span></span>
+                <input wire:model.live.blur="name"
                        class="i @error('name') border-red-500! bg-red-50/20! @enderror"
-                       placeholder="e.g. Imran Khan"
+                       placeholder="e.g. Abdurrahman Ansari"
                        maxlength="160">
                 @error('name')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
@@ -15,11 +15,11 @@
             </label>
 
             <label class="f">
-                <span>Email (login ID) <span class="text-red-500">*</span>
-                <input wire:model.blur="email"
-                       type="email"
+                <span>Email (login ID) <span class="text-red-500">*</span></span>
+                <input wire:model.live.blur="email"
+                       type="email" autocomplete="new"
                        class="i @error('email') border-red-500! bg-red-50/20! @enderror"
-                       placeholder="imran@the10xagency.in"
+                       placeholder="abdur@the10xagency.in"
                        maxlength="160">
                 @error('email')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
@@ -28,7 +28,7 @@
 
             <label class="f">
                 <span>Phone</span>
-                <input wire:model.blur="phone"
+                <input wire:model.live.blur="phone"
                        class="i @error('phone') border-red-500! bg-red-50/20! @enderror"
                        placeholder="+91 ..."
                        maxlength="30">
@@ -38,8 +38,8 @@
             </label>
 
             <label class="f">
-                <span>Role <span class="text-red-500">*</span> </span>
-                <select wire:model.blur="role"
+                <span>Role <span class="text-red-500">*</span></span>
+                <select wire:model.live="role"
                         class="i @error('role') border-red-500! bg-red-50/20! @enderror">
                     <option value="Admin">Admin</option>
                     <option value="Manager">Manager</option>
@@ -49,15 +49,11 @@
                 @error('role')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
-                {{--<div class="hint text-xs text-[#8894ac] mt-1">
-                    Admin: System & users · Manager: Delivery governance · Coordinator: Project ops · Sales: Client
-                    acquisition
-                </div>--}}
             </label>
 
             <label class="f">
                 <span>Reports To <span class="text-red-500">*</span></span>
-                <select wire:model.blur="reporting_to"
+                <select wire:model.live="reporting_to"
                         class="i @error('reporting_to') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— No Supervisor (Top Level) —</option>
                     @foreach($supervisors as $s)
@@ -71,7 +67,7 @@
 
             <label class="f">
                 <span>Designation</span>
-                <input wire:model.blur="designation"
+                <input wire:model.live.blur="designation"
                        class="i @error('designation') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Project Coordinator"
                        maxlength="80">
@@ -82,7 +78,7 @@
 
             <label class="f">
                 <span>City</span>
-                <input wire:model.blur="city"
+                <input wire:model.live.blur="city"
                        class="i @error('city') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Mumbai"
                        maxlength="60">
@@ -92,8 +88,8 @@
             </label>
 
             <label class="f">
-                <span>Status <span class="text-red-500">*</span>
-                <select wire:model.blur="status"
+                <span>Status <span class="text-red-500">*</span></span>
+                <select wire:model.live="status"
                         class="i @error('status') border-red-500! bg-red-50/20! @enderror">
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
@@ -105,7 +101,7 @@
 
             <label class="f">
                 <span>{{ $userId ? 'New password (optional)' : str('Temporary password'." <span class='text-red-500'>*</span>")->toHtmlString() }}</span>
-                <input wire:model.blur="password"
+                <input wire:model.live.blur="password"
                        type="password"
                        class="i @error('password') border-red-500! bg-red-50/20! @enderror"
                        placeholder="{{ $userId ? 'Leave blank to preserve existing password' : 'Min 8 chars, 1 uppercase, 1 lowercase, 1 number' }}">

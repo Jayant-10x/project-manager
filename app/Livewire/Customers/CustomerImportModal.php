@@ -63,7 +63,7 @@ class CustomerImportModal extends Component {
                 'state' => trim($row[$headerMap['state'] ?? -1] ?? ''),
                 'gst_number' => strtoupper(trim($row[$headerMap['gst_number'] ?? $headerMap['gst'] ?? -1] ?? '')),
                 'source' => trim($row[$headerMap['source'] ?? -1] ?? ''),
-                'sales_person_id' => $this->defaultSalesPersonId,
+                'sales_person' => $this->defaultSalesPersonId,
                 'status' => 'Active',
                 'created_by' => auth()->id(),
             ]);

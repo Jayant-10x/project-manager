@@ -119,7 +119,7 @@ class CustomerIndex extends Component {
                         ->orWhere('gst_number', 'like', $term);
                 });
             })
-            ->when($this->sales, fn($q) => $q->where('sales_person_id', $this->sales))
+            ->when($this->sales, fn($q) => $q->where('sales_person', $this->sales))
             ->when($this->city, fn($q) => $q->where('city', $this->city))
             ->when($this->status, fn($q) => $q->where('status', $this->status))
             ->orderBy('company');

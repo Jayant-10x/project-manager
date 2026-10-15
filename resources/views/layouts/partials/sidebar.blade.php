@@ -119,12 +119,17 @@
         <div class="nav-label">System</div>
         <a href="{{ route('notifications.index') }}" wire:navigate
            class="nav-item {{ request()->routeIs('notifications.*') ? 'active' : '' }}" title="Notifications">
-            <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path
-                        d="M13.7 21a2 2 0 01-3.4 0"/></svg></span>
+            <span class="nav-ico">
+                <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path
+                        d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            </span>
             <span class="lbl">Notifications</span>
-            @if($unreadNotifications > 0)
-                <span class="nav-count warn">{{ $unreadNotifications }}</span>
-            @endif
+            <span class="nav-count warn"
+                  x-show="$store.notifications.unread > 0"
+                  x-text="$store.notifications.unread"
+                  style="{{ $unreadNotifications > 0 ? '' : 'display: none;' }}">
+                {{ $unreadNotifications }}
+            </span>
         </a>
         <a href="{{ route('audit.index') }}" wire:navigate
            class="nav-item {{ request()->routeIs('audit.*') ? 'active' : '' }}" title="Activity Log">
@@ -148,7 +153,8 @@
             </div>
             <form method="POST" action="{{ route('logout') }}" class="inline">
                 @csrf
-                <button type="submit" class="sb-btn" title="Sign out" onclick="return confirm('Are you sure want to logout?')">
+                <button type="submit" class="sb-btn" title="Sign out"
+                        onclick="return confirm('Are you sure want to logout?')">
                     <svg viewBox="0 0 24 24">
                         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
                         <path d="M16 17l5-5-5-5"/>

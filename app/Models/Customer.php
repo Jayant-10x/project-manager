@@ -14,7 +14,7 @@ class Customer extends Model {
     }
 
     public function salesPerson(): BelongsTo {
-        return $this->belongsTo(SalesPerson::class, 'sales_person_id');
+        return $this->belongsTo(User::class)->where('role', 'Sales');
     }
 
     public function createdBy(): BelongsTo {

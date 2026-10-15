@@ -24,6 +24,7 @@ class ProjectModal extends Component {
     public string $health = 'On Track';
     public string $delay_reason = '';
     public string $description = '';
+    public ?int $sales_person_id = null;
 
     // AMC fields
     public bool $amc_required = false;

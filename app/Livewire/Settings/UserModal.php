@@ -5,18 +5,28 @@ namespace App\Livewire\Settings;
 use App\Models\User;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
 
 class UserModal extends Component {
     public ?int $userId = null;
+    #[Validate]
     public string $name = '';
+    #[Validate]
     public string $email = '';
+    #[Validate]
     public string $phone = '';
+    #[Validate]
     public string $role = '';
+    #[Validate]
     public string $designation = '';
+    #[Validate]
     public string $city = '';
+    #[Validate]
     public string $status = '';
+    #[Validate]
     public string $password = '';
+    #[Validate]
     public ?int $reporting_to = null;
 
     #[On('open-user-modal')]
@@ -46,20 +56,16 @@ class UserModal extends Component {
     }
 
     protected function rules(): array {
-        $passwordRules = ['nullable', 'string', 'min:8', 'regex:/[A-Z]/', 'regex:/[a-z]/', 'regex:/[0-9]/'];
-
         return [
-            'name' => 'required|string|max:80',
-            'email' => ['required', 'email', 'max:160',
-                Rule::unique('users', 'email')->ignore($this->userId),
-            ],
-            'phone' => 'nullable|numeric|max:30',
-            'role' => 'required|in:Admin,Manager,Coordinator,Sales',
-            'reporting_to' => 'nullable|exists:users,id',
-            'designation' => 'nullable|string|max:60',
-            'city' => 'nullable|string|max:60',
-            'status' => 'required|in:Active,Inactive',
-            'password' => $passwordRules,
+            'name' => 'required|string|min:2|max:200',
+            'email' => 'required|email|min:2|max:160|unique:customers,email,' . $this->userId,
+            'phone' => 'nullable|integer|digits_between:10,30|unique:customers,phone,' . $this->userId,
+            'role' => 'required|string|in:Admin,Manager,Coordinator,Sales',
+            'reporting_to' => 'nullable|integer|exists:users,id',
+            'designation' => 'nullable|string|min:2|max:60',
+            'city' => 'nullable|string|min:2|max:60',
+            'status' => 'required|string|in:Active,Inactive',
+            'password' => ['required', 'string', 'min:8', 'max:200', 'regex:/[A-Z]/', 'regex:/[a-z]/', 'regex:/[0-9]/'],
         ];
     }
 

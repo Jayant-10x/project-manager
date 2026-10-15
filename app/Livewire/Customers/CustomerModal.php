@@ -7,27 +7,53 @@ use App\Models\SalesPerson;
 use App\Services\CodeGeneratorService;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
 
 class CustomerModal extends Component {
     public ?int $customerId = null;
+
+    #[Validate]
     public string $company = '';
+    #[Validate]
     public string $contact_name = '';
+    #[Validate]
     public string $email = '';
+    #[Validate]
     public string $phone = '';
+    #[Validate]
     public string $alt_phone = '';
+    #[Validate]
     public string $city = '';
+    #[Validate]
     public string $state = '';
+    #[Validate]
     public string $address = '';
+    #[Validate]
     public string $gst_number = '';
-    public string $pan = '';
+    #[Validate]
+    public string $pan_number = '';
+    #[Validate]
     public string $billing_name = '';
-    public string $billing_addr = '';
+    #[Validate]
+    public string $billing_address = '';
+    #[Validate]
     public string $source = '';
+    #[Validate]
     public string $industry = '';
-    public ?int $sales_person_id = null;
+    #[Validate]
+    public ?int $sales_person = null;
+    #[Validate]
     public string $status = 'Active';
+
+    // Added #[Validate] attribute
+    #[Validate]
     public string $internal_notes = '';
+
+    // Optional but recommended for dynamic rules: guarantees validateOnly on change
+    public function updated($propertyName): void {
+        $this->validateOnly($propertyName);
+    }
 
     #[On('open-customer-modal')]
     public function loadCustomer(?int $id = null): void {
@@ -36,24 +62,24 @@ class CustomerModal extends Component {
         $this->customerId = $id;
 
         if ($id) {
-            $c = Customer::findOrFail($id);
-            $this->company = $c->company ?? '';
-            $this->contact_name = $c->contact_name ?? '';
-            $this->email = $c->email ?? '';
-            $this->phone = $c->phone ?? '';
-            $this->alt_phone = $c->alt_phone ?? '';
-            $this->city = $c->city ?? '';
-            $this->state = $c->state ?? '';
-            $this->address = $c->address ?? '';
-            $this->gst_number = $c->gst_number ?? '';
-            $this->pan_number = $c->pan_number ?? '';
-            $this->billing_name = $c->billing_name ?? '';
-            $this->billing_address = $c->billing_address ?? '';
-            $this->source = $c->source ?? '';
-            $this->industry = $c->industry ?? '';
-            $this->sales_person_id = $c->sales_person_id;
-            $this->status = $c->status ?? 'Active';
-            $this->internal_notes = $c->internal_notes ?? '';
+            $customer = Customer::findOrFail($id);
+            $this->company = $customer->company ?? '';
+            $this->contact_name = $customer->contact_name ?? '';
+            $this->email = $customer->email ?? '';
+            $this->phone = $customer->phone ?? '';
+            $this->alt_phone = $customer->alt_phone ?? '';
+            $this->city = $customer->city ?? '';
+            $this->state = $customer->state ?? '';
+            $this->address = $customer->address ?? '';
+            $this->gst_number = $customer->gst_number ?? '';
+            $this->pan_number = $customer->pan_number ?? '';
+            $this->billing_name = $customer->billing_name ?? '';
+            $this->billing_address = $customer->billing_address ?? '';
+            $this->source = $customer->source ?? '';
+            $this->industry = $customer->industry ?? '';
+            $this->sales_person = $customer->sales_person ?? null;
+            $this->status = $customer->status ?? 'Active';
+            $this->internal_notes = $customer->internal_notes ?? '';
         }
 
         $this->dispatch('open-modal', 'customer-modal');
@@ -61,35 +87,47 @@ class CustomerModal extends Component {
 
     protected function rules(): array {
         return [
-            'company' => [
-                'required',
-                'string',
-                'max:160',
-                Rule::unique('customers', 'company')->ignore($this->customerId),
+            'company' => 'required|string|min:2|max:160|unique:customers,company,' . $this->customerId . ',id',
+            'contact_name' => 'nullable|string|min:2|max:80',
+            'email' => 'nullable|email|min:2|max:160|unique:customers,email,' . $this->customerId,
+            'phone' => 'nullable|integer|digits_between:10,30|unique:customers,phone,' . $this->customerId,
+            'alt_phone' => 'nullable|integer|digits_between:10,30',
+            'city' => 'nullable|string|min:2|max:60',
+            'state' => 'nullable|string|min:2|max:60',
+            'address' => 'nullable|string|min:5|max:1000',
+            'gst_number' => [
+                'nullable', 'string', 'size:15',
+                'regex:/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/',
+                'unique:customers,gst_number,' . $this->customerId,
             ],
-            'contact_name' => 'nullable|string|max:80',
-            'email' => 'nullable|email|max:160',
-            'phone' => 'nullable|string|max:30',
-            'alt_phone' => 'nullable|string|max:30',
-            'city' => 'nullable|string|max:60',
-            'state' => 'nullable|string|max:60',
-            'address' => 'nullable|string|max:1000',
-            'gst_number' => 'nullable|string|max:20',
-            'pan_number' => 'nullable|string|max:15',
-            'billing_name' => 'nullable|string|max:160',
-            'billing_address' => 'nullable|string|max:1000',
-            'source' => 'nullable|string|max:60',
-            'industry' => 'nullable|string|max:60',
-            'sales_person_id' => 'nullable|integer|exists:sales_persons,id',
+            'pan_number' => [
+                'nullable', 'string', 'size:10',
+                'regex:/^[A-Z]{5}[0-9]{4}[A-Z]$/',
+                'unique:customers,pan_number,' . $this->customerId,
+            ],
+            'billing_name' => 'nullable|string|min:2|max:160',
+            'billing_address' => 'nullable|string|min:2|max:1000',
+            'source' => 'nullable|string|min:2|max:60',
+            'industry' => 'nullable|string|min:2|max:60',
+            'sales_person' => 'required|integer|exists:sales_persons,id',
             'status' => 'required|in:Active,On Hold,Completed,Churned',
-            'internal_notes' => 'nullable|string|max:4000',
+            'internal_notes' => 'nullable|string|min:2|max:4000',
+        ];
+    }
+
+    protected function validationAttributes(): array {
+        return [
+            'company' => 'Company Name',
+            'contact_name' => 'Contact Person',
+            'email' => 'Email',
+            'alt_phone' => 'Alternate Phone',
         ];
     }
 
     public function save(): void {
         // Normalize empty select values
-        if (empty($this->sales_person_id)) {
-            $this->sales_person_id = null;
+        if (empty($this->sales_person)) {
+            $this->sales_person = null;
         }
 
         $validated = $this->validate();

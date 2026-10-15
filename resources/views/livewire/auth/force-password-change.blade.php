@@ -1,0 +1,68 @@
+<div class="login-wrap flex items-center justify-center min-h-screen p-6"
+     style="background: linear-gradient(150deg, #06204d, #0b3d91 55%, #5aa236 165%);">
+
+    <div class="login-card bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
+        <div
+            class="login-logo-plate bg-white rounded-xl flex items-center justify-center p-3 max-w-55 mx-auto mb-5 shadow-sm">
+            <img class="h-10 w-auto" src="{{ asset('assets/logo.png') }}" alt="10X Agency">
+        </div>
+
+        <div class="login-title text-center text-lg font-bold text-[#0d1b34]">Set your own password</div>
+        <div class="login-sub text-center text-xs text-[#8894ac] uppercase tracking-wider mt-1">One required step</div>
+
+        <p class="text-xs text-[#4a5875] text-center mt-3 leading-relaxed">
+            Your admin assigned you a temporary password. Please set your permanent password to continue.
+        </p>
+
+        <form wire:submit="updatePassword" class="space-y-4 mt-6">
+            <div>
+                <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Current Password</label>
+                <input wire:model="current_password"
+                       type="password"
+                       class="i text-sm"
+                       placeholder="Temporary password from admin"
+                       autocomplete="current-password">
+                @error('current_password')
+                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
+                @enderror
+            </div>
+
+            <div>
+                <label class="text-xs font-bold text-gray-500 uppercase block mb-1">New Password</label>
+                <input wire:model="new_password"
+                       type="password"
+                       class="i text-sm"
+                       placeholder="Min 8 chars, 1 capital, 1 number"
+                       autocomplete="new-password">
+                @error('new_password')
+                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
+                @enderror
+            </div>
+
+            <div>
+                <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Confirm New Password</label>
+                <input wire:model="new_password_confirmation"
+                       type="password"
+                       class="i text-sm"
+                       placeholder="Repeat new password"
+                       autocomplete="new-password">
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full justify-center py-2.5 mt-2">
+                <svg viewBox="0 0 24 24" class="w-4 h-4">
+                    <circle cx="8" cy="15" r="4"/>
+                    <path d="M10.8 12.2L20 3M17 6l3 3M14 9l2 2"/>
+                </svg>
+                Save and continue
+            </button>
+        </form>
+
+        <div class="text-center mt-5">
+            <button type="button"
+                    wire:click="logout"
+                    class="text-xs font-semibold text-[#8894ac] hover:text-[#0b3d91] transition">
+                Sign out
+            </button>
+        </div>
+    </div>
+</div>
