@@ -3,6 +3,7 @@
 namespace App\Livewire\Settings;
 
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
@@ -126,16 +127,41 @@ class UserModal extends Component
             if (! empty($validated['password'])) {
                 $user->password = $validated['password'];
                 $user->must_change = true;
+                $user->fail_count = 0;
+                $user->locked_until = null;
+            }
+
+            if (($validated['status'] ?? '') === 'Active') {
+                $user->fail_count = 0;
+                $user->locked_until = null;
             }
 
             unset($validated['password']);
             $user->update($validated);
+
+            app(AuditNotificationService::class)->log(
+                auth()->id(),
+                'Updated User',
+                'User',
+                $user->id,
+                '',
+                "Updated user {$user->name} ({$user->role})"
+            );
         } else {
             $tempPass = ! empty($validated['password']) ? $validated['password'] : 'Welcome@10x';
             $validated['password'] = $tempPass;
             $validated['must_change'] = true;
             $validated['created_by'] = auth()->id();
-            User::create($validated);
+            $newUser = User::create($validated);
+
+            app(AuditNotificationService::class)->log(
+                auth()->id(),
+                'Created User',
+                'User',
+                $newUser->id,
+                '',
+                "Created user {$newUser->name} ({$newUser->role})"
+            );
         }
 
         $this->reset();

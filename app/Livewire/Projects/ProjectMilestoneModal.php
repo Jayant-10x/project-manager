@@ -4,6 +4,7 @@ namespace App\Livewire\Projects;
 
 use App\Models\Milestone;
 use App\Models\Project;
+use App\Services\AuditNotificationService;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -77,6 +78,15 @@ class ProjectMilestoneModal extends Component
         ];
     }
 
+    protected function validationAttributes(): array
+    {
+        return [
+            'items.*.name' => 'milestone name',
+            'items.*.dueDate' => 'due date',
+            'items.*.status' => 'status',
+        ];
+    }
+
     public function updated(string $propertyName): void
     {
         // Automatically sync checkbox status with dropdown
@@ -139,6 +149,15 @@ class ProjectMilestoneModal extends Component
         Milestone::where('project_id', $this->projectId)
             ->whereNotIn('id', $seenIds)
             ->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Updated Milestones',
+            'Project',
+            $project->id,
+            $project->code,
+            "Updated milestones for project {$project->name}"
+        );
 
         $this->dispatch('close-modal', 'project-milestone-modal');
         $this->dispatch('project-saved');

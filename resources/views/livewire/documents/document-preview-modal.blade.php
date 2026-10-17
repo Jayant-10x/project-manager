@@ -28,7 +28,7 @@
                 </svg>
                 Open in new tab
             </a>
-            <a class="btn btn-ghost btn-sm" href="{{ $url }}" download>
+            <a class="btn btn-ghost btn-sm" href="{{ $downloadUrl ?: $url }}" download="{{ $name }}">
                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                 </svg>

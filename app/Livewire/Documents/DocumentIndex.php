@@ -55,6 +55,9 @@ class DocumentIndex extends Component
             return;
         }
 
+        if (Storage::disk('uploads')->exists($doc->stored_as)) {
+            Storage::disk('uploads')->delete($doc->stored_as);
+        }
         Storage::disk('public')->delete($doc->stored_as);
         $doc->delete();
 

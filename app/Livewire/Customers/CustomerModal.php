@@ -4,6 +4,7 @@ namespace App\Livewire\Customers;
 
 use App\Models\Customer;
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use App\Services\CodeGeneratorService;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
@@ -154,13 +155,17 @@ class CustomerModal extends Component
         $codeService = app(CodeGeneratorService::class);
         $isEdit = (bool) $this->customerId;
 
+        $auditService = app(AuditNotificationService::class);
+
         if ($this->customerId) {
             $customer = Customer::findOrFail($this->customerId);
             $customer->update($validated);
+            $auditService->log(auth()->id(), 'Updated Customer', 'Customer', $customer->id, $customer->customer_code, "Updated customer {$customer->company}");
         } else {
             $validated['customer_code'] = $codeService->generate('customer', 'CUS-');
             $validated['created_by'] = auth()->id();
             $customer = Customer::create($validated);
+            $auditService->log(auth()->id(), 'Created Customer', 'Customer', $customer->id, $customer->customer_code, "Created customer {$customer->company}");
         }
 
         $this->reset();

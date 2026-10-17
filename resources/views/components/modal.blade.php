@@ -50,7 +50,9 @@
                     <p class="text-xs text-[#8894ac] mt-0.5">{{ $sub }}</p>
                 @endif
             </div>
-            <button type="button" @click="confirmClose()" class="text-[#8894ac] hover:text-[#0d1b34] text-lg font-bold">
+            <button type="button" @click="confirmClose()"
+                    class="w-9 h-9 flex items-center justify-center rounded-lg text-[#8894ac] hover:text-[#0d1b34] hover:bg-slate-100 text-lg font-bold transition"
+                    title="Close modal" aria-label="Close modal">
                 ✕
             </button>
         </div>

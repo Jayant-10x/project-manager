@@ -4,6 +4,7 @@ namespace App\Livewire\Settings;
 
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Attributes\Layout;
@@ -86,6 +87,15 @@ class SettingIndex extends Component
         Setting::query()->updateOrCreate(['key' => 'company_name'], ['value' => trim($validated['companyName'])]);
         Setting::query()->updateOrCreate(['key' => 'display_currency'], ['value' => $validated['displayCurrency']]);
 
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Updated Settings',
+            'Setting',
+            null,
+            '',
+            'Updated system alert days and company settings'
+        );
+
         $this->dispatch('toast', ['msg' => 'Settings saved successfully', 'type' => 'ok']);
     }
 
@@ -126,6 +136,15 @@ class SettingIndex extends Component
         $user->must_change = false;
         $user->save();
 
+        app(AuditNotificationService::class)->log(
+            $user->id,
+            'Changed Password',
+            'User',
+            $user->id,
+            '',
+            "User {$user->name} changed their password"
+        );
+
         $this->reset(['current_password', 'new_password', 'new_password_confirmation']);
         $this->resetValidation();
         $this->dispatch('toast', ['msg' => 'Password updated successfully', 'type' => 'ok']);
@@ -156,7 +175,20 @@ class SettingIndex extends Component
             }
         }
 
+        $name = $target->name;
+        $role = $target->role;
+
         $target->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted User',
+            'User',
+            $id,
+            '',
+            "Deleted user {$name} ({$role})"
+        );
+
         $this->dispatch('toast', ['msg' => 'User removed', 'type' => 'ok']);
     }
 

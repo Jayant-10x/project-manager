@@ -36,7 +36,8 @@ class ReportIndex extends Component
         $overdueCount = $overdueTerms->count();
 
         $collectionRate = $totalScheduled > 0 ? round(($totalReceived / $totalScheduled) * 100, 1) : 0;
-        $avgProjectValue = $projects->count() > 0 ? round($totalScheduled / $projects->count(), 2) : 0;
+        $totalContractValue = (float) $projects->sum('value');
+        $avgProjectValue = $projects->count() > 0 ? round($totalContractValue / $projects->count(), 2) : 0;
 
         // 2. 6-Month Collection Trend
         $months = [];

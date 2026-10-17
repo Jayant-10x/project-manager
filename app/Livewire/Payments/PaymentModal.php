@@ -111,6 +111,21 @@ class PaymentModal extends Component
         ];
     }
 
+    protected function validationAttributes(): array
+    {
+        return [
+            'project_id' => 'project',
+            'term_id' => 'payment installment',
+            'amount' => 'amount',
+            'tds' => 'TDS',
+            'paid_on' => 'payment date',
+            'mode' => 'payment mode',
+            'reference' => 'reference / UTR',
+            'bank' => 'bank name',
+            'note' => 'notes',
+        ];
+    }
+
     public function save(): void
     {
         // Normalize empty inputs and prevent null constraint violation on numeric columns

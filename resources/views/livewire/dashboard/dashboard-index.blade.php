@@ -138,7 +138,10 @@
                                     style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;margin-bottom:5px">
                                     <i style="width:8px;height:8px;border-radius:50%;background:{{ $c }};display:inline-block"></i>{{ $label }}
                                 </div>
-                                <div style="font-size:20px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</div>
+                                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                                    <span style="font-size:20px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
+                                    <span style="font-size:11px;font-weight:600;color:var(--muted)">{{ $p }}%</span>
+                                </div>
                                 <div class="bar" style="height:5px;margin-top:6px">
                                     <i style="width:{{ $p }}%;background:{{ $c }}"></i>
                                 </div>
@@ -158,17 +161,17 @@
                 </div>
                 <div class="card-body">
                     @php $maxVal = max(array_merge([1], array_column($trend, 'value'))); @endphp
-                    <div class="spark">
+                    <div class="spark-chart" style="display:flex;gap:6px;align-items:flex-end">
                         @foreach($trend as $t)
                             @php $barHeight = max(4, round(($t['value'] / $maxVal) * 100)); @endphp
-                            <i style="height:{{ $barHeight }}%"
-                               :title="'{{ $t['label'] }}: ' + $store.currency.format({{ (float)$t['value'] }}, false)"></i>
-                        @endforeach
-                    </div>
-                    <div style="display:flex;gap:6px;margin-top:8px">
-                        @foreach($trend as $t)
-                            <div
-                                style="flex:1;text-align:center;font-size:10.6px;color:var(--muted);font-weight:650">{{ $t['label'] }}</div>
+                            <div class="spark-col">
+                                <div class="spark-val" x-text="$store.currency.format({{ (float)$t['value'] }}, true)"></div>
+                                <div class="spark-bar-wrap">
+                                    <i style="height:{{ $barHeight }}%"
+                                       :title="'{{ $t['label'] }}: ' + $store.currency.format({{ (float)$t['value'] }}, false)"></i>
+                                </div>
+                                <div class="spark-label">{{ $t['label'] }}</div>
+                            </div>
                         @endforeach
                     </div>
                 </div>

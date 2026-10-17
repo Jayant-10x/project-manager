@@ -422,7 +422,9 @@
                         </div>
                         <span class="pill mr-2">{{ $doc->category }}</span>
                         @php
-                            $fileUrl = asset('storage/' . $doc->stored_as);
+                            $fileUrl = file_exists(public_path('uploads/' . $doc->stored_as))
+                                ? asset('uploads/' . $doc->stored_as)
+                                : asset('storage/' . $doc->stored_as);
                         @endphp
                         <button type="button"
                                 class="mini-btn mr-1"
@@ -433,6 +435,7 @@
                                         sizeKb: '{{ $doc->size_kb }}',
                                         category: '{{ $doc->category }}',
                                         url: '{{ $fileUrl }}',
+                                        downloadUrl: '{{ route('documents.download', $doc->id, absolute: false) }}',
                                         mime: '{{ $doc->mime }}'
                                     }
                                 })"
@@ -442,7 +445,7 @@
                                 <circle cx="12" cy="12" r="3"/>
                             </svg>
                         </button>
-                        <a href="{{ $fileUrl }}" target="_blank" download
+                        <a href="{{ route('documents.download', $doc->id, absolute: false) }}" download="{{ $doc->file_name }}"
                            class="mini-btn mr-1" title="Download">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>

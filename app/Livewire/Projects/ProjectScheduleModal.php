@@ -5,6 +5,7 @@ namespace App\Livewire\Projects;
 use App\Models\Milestone;
 use App\Models\PaymentTerm;
 use App\Models\Project;
+use App\Services\AuditNotificationService;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -140,6 +141,18 @@ class ProjectScheduleModal extends Component
         ];
     }
 
+    protected function validationAttributes(): array
+    {
+        return [
+            'terms.*.label' => 'installment label',
+            'terms.*.amount' => 'installment amount',
+            'terms.*.trigger' => 'trigger mode',
+            'terms.*.milestoneId' => 'milestone',
+            'terms.*.dueDate' => 'due date',
+            'terms.*.graceDays' => 'grace days',
+        ];
+    }
+
     public function updated(string $propertyName): void
     {
         // Sanitize numeric inputs if cleared
@@ -169,6 +182,19 @@ class ProjectScheduleModal extends Component
         $this->validate();
 
         $project = Project::findOrFail($this->projectId);
+
+        // ISS-031: Verify installment sum matches contracted project value (if contract value > 0)
+        $termsSum = array_sum(array_column($this->terms, 'amount'));
+        if ($project->value > 0 && abs($termsSum - (float) $project->value) >= 0.01) {
+            $diff = (float) $project->value - $termsSum;
+            $msg = $diff > 0
+                ? 'Installment sum is short by ₹'.number_format($diff, 2).'. Total installments must match contracted project value (₹'.number_format($project->value, 2).').'
+                : 'Installment sum exceeds contract value by ₹'.number_format(abs($diff), 2).'. Total installments must match contracted project value (₹'.number_format($project->value, 2).').';
+
+            $this->addError('terms', $msg);
+
+            return;
+        }
 
         // Find locked term IDs that have payments or TDS logged
         $lockedTerms = PaymentTerm::where('project_id', $this->projectId)
@@ -239,6 +265,15 @@ class ProjectScheduleModal extends Component
             ->whereNotIn('id', $activeIds)
             ->whereNotIn('id', $lockedTerms->keys()->toArray())
             ->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Updated Schedule',
+            'Project',
+            $project->id,
+            $project->code,
+            "Updated payment schedule for project {$project->name}"
+        );
 
         $this->dispatch('close-modal', 'project-schedule-modal');
         $this->dispatch('project-saved');

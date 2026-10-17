@@ -44,6 +44,28 @@ class NotificationDrawer extends Component
         $this->dispatch('toast', ['msg' => 'All marked as read', 'kind' => 'ok']);
     }
 
+    public function deleteNotification(int $id): void
+    {
+        Notification::where('user_id', auth()->id())
+            ->where('id', $id)
+            ->delete();
+
+        $unreadCount = Notification::where('user_id', auth()->id())
+            ->where('is_read', false)
+            ->count();
+
+        $this->dispatch('notification-updated', unreadCount: $unreadCount);
+        $this->dispatch('toast', ['msg' => 'Notification deleted', 'kind' => 'ok']);
+    }
+
+    public function clearAll(): void
+    {
+        Notification::where('user_id', auth()->id())->delete();
+
+        $this->dispatch('notification-updated', unreadCount: 0);
+        $this->dispatch('toast', ['msg' => 'All notifications cleared', 'kind' => 'ok']);
+    }
+
     public function openNotification(int $id)
     {
         $notif = Notification::where('user_id', auth()->id())->findOrFail($id);

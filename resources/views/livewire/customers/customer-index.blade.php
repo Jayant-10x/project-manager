@@ -140,8 +140,11 @@
                             <x-money :value="$due"/>
                         </td>
                         <td style="min-width:120px">
-                            <span class="badge dot {{ $payCls }}">{{ $payLbl }}</span>
-                            <div class="bar" style="height:5px;margin-top:6px">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                                <span class="badge dot {{ $payCls }}">{{ $payLbl }}</span>
+                                <span class="text-xs text-muted font-semibold" style="font-size:11px;color:var(--muted);font-weight:600">{{ $r }}%</span>
+                            </div>
+                            <div class="bar" style="height:5px">
                                 <i style="width:{{ $r }}%"></i>
                             </div>
                         </td>

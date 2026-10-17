@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\NotificationPollController;
+use App\Http\Controllers\DocumentDownloadController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Middleware\EnsurePasswordIsChanged;
 use App\Livewire\Audit\AuditIndex;
@@ -22,6 +23,7 @@ use App\Livewire\Settings\SettingIndex;
 use App\Livewire\Tasks\TaskIndex;
 use App\Livewire\Today\TodayWorkIndex;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::redirect('/', '/dashboard');
 
@@ -49,6 +51,7 @@ Route::middleware(['auth', 'verified', EnsurePasswordIsChanged::class])->group(f
 
     // 4. Records
     Route::get('/documents', DocumentIndex::class)->name('documents.index');
+    Route::get('/documents/{document}/download', [DocumentDownloadController::class, 'download'])->name('documents.download');
     Route::get('/follow-ups', FollowupIndex::class)->name('followups.index');
     Route::get('/sales-team', SalesIndex::class)->name('sales.index');
 
@@ -68,5 +71,16 @@ Route::middleware(['auth', 'verified', EnsurePasswordIsChanged::class])->group(f
     Route::get('/api/notifications/poll', [NotificationPollController::class, 'check'])
         ->name('api.notifications.poll');
 });
+
+// Direct file access route ensuring zero 403/symlink failures
+Route::get('/storage/{filename}', function (string $filename) {
+    if (file_exists(public_path('uploads/'.$filename))) {
+        return response()->file(public_path('uploads/'.$filename));
+    }
+    if (Storage::disk('public')->exists($filename)) {
+        return response()->file(Storage::disk('public')->path($filename));
+    }
+    abort(404);
+})->where('filename', '.*')->name('storage.file');
 
 require __DIR__.'/auth.php';
