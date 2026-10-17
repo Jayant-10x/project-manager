@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\PaymentTerm;
 use App\Models\Project;
 use App\Models\Setting;
+use App\Models\User;
 use App\Services\MoneyCalculationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -142,42 +143,28 @@ class DashboardIndex extends Component
         // 6. Sales-wise performance
         $salesRows = [];
         if ($user->role === 'Admin') {
-            $salesData = DB::table('customers')
-                ->leftJoin('projects', 'projects.customer_id', '=', 'customers.id')
-                ->whereNotNull('customers.sales_person_id')
-                ->leftJoin('users as sales_reps', 'sales_reps.id', '=', 'customers.sales_person_id')
-                ->select(
-                    'sales_reps.name',
-                    DB::raw('COUNT(DISTINCT customers.id) as customers_count'),
-                    DB::raw('COUNT(DISTINCT projects.id) as projects_count'),
-                    DB::raw('COALESCE(SUM(projects.value), 0) as total_val')
-                )
-                ->groupBy('sales_reps.name')
-                ->orderByDesc('total_val')
+            $salesPeople = User::where('role', 'Sales')
+                ->with(['salesProjects' => fn ($q) => $q->with(['terms', 'payments', 'customer'])])
+                ->orderBy('name')
                 ->get();
 
-            $salesReceipts = DB::table('payments')
-                ->join('customers', 'customers.id', '=', 'payments.customer_id')
-                ->whereNotNull('customers.sales_person_id')
-                ->leftJoin('users as sales_reps', 'sales_reps.id', '=', 'customers.sales_person_id')
-                ->groupBy('sales_reps.name')
-                ->select('sales_reps.name', DB::raw('COALESCE(SUM(payments.amount), 0) as received'))
-                ->pluck('received', 'name')
-                ->toArray();
-
-            foreach ($salesData as $sd) {
-                $recAmt = (float) ($salesReceipts[$sd->name] ?? 0);
-                $valAmt = (float) $sd->total_val;
+            foreach ($salesPeople as $sp) {
+                $projs = $sp->salesProjects;
+                $valAmt = (float) $projs->sum('value');
+                $recAmt = (float) $projs->flatMap->payments->sum('amount');
                 $rate = $valAmt > 0 ? round(($recAmt / $valAmt) * 100) : 0;
+
                 $salesRows[] = [
-                    'name' => $sd->name ?? 'Unassigned',
-                    'customers' => $sd->customers_count,
-                    'projects' => $sd->projects_count,
+                    'name' => $sp->name,
+                    'customers' => $projs->pluck('customer_id')->unique()->count(),
+                    'projects' => $projs->count(),
                     'value' => $valAmt,
                     'received' => $recAmt,
                     'rate' => min(100, $rate),
                 ];
             }
+
+            usort($salesRows, fn ($a, $b) => $b['value'] <=> $a['value']);
         }
 
         // 7. AMC / Renewal

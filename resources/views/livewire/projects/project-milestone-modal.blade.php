@@ -3,7 +3,7 @@
     <form wire:submit="save">
         <div class="space-y-3">
             @foreach($items as $i => $m)
-                <div class="ms-row flex items-center gap-3 p-2.5 border border-[#eef2f9] rounded-xl bg-slate-50/50">
+                <div wire:key="ms-item-{{ $i }}-{{ $m['id'] ?? 'new' }}" class="ms-row flex items-center gap-3 p-2.5 border border-[#eef2f9] rounded-xl bg-slate-50/50">
                     <span class="ms-dot {{ $m['done'] ? 'done' : '' }} shrink-0">
                         {{ $m['done'] ? '✓' : ($i + 1) }}
                     </span>
@@ -29,7 +29,8 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
-                        <button type="button" class="mini-btn danger" wire:click="removeRow({{ $i }})">
+                        <button type="button" class="mini-btn danger" wire:click="removeRow({{ $i }})"
+                                title="Remove milestone" aria-label="Remove milestone">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>

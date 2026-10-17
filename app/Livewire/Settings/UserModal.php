@@ -59,7 +59,7 @@ class UserModal extends Component
         } else {
             $this->role = 'Sales';
             $this->designation = 'Sales Person';
-            $this->status = 'Inactive';
+            $this->status = 'Active';
             $this->reporting_to = null;
         }
 

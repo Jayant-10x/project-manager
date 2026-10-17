@@ -78,7 +78,8 @@
                         Payment
                     </button>
                     <button type="button" class="btn btn-ghost btn-sm"
-                            @click="$dispatch('open-project-modal', { id: {{ $project->id }} })">
+                            @click="$dispatch('open-project-modal', { id: {{ $project->id }} })"
+                            title="Edit project" aria-label="Edit project">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M12 20h9"/>
                             <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
@@ -87,7 +88,7 @@
                     @if(auth()->user()->role === 'Admin')
                         <button type="button" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50"
                                 wire:confirm="Delete project and all associated milestones, schedule, and receipts?"
-                                wire:click="deleteProject" title="Delete project">
+                                wire:click="deleteProject" title="Delete project" aria-label="Delete project">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -98,25 +99,34 @@
             </div>
 
             <div class="money-grid">
-                <div class="money-cell">
+                <div class="money-cell cursor-pointer hover:bg-gray-50 transition rounded-xl p-1.5"
+                     wire:click="$set('activeTab', 'milestones')" title="View milestones">
                     <div class="k">Project Value</div>
                     <div class="v">
-                        <x-money :value="$project->money['scheduled']"/>
+                        <x-money :value="$project->value > 0 ? $project->value : $project->money['scheduled']"/>
                     </div>
+                    @if($project->value > 0 && abs((float)$project->value - (float)$project->money['scheduled']) > 0.01)
+                        <div class="text-[11px] text-[#8894ac] mt-0.5">
+                            Sched: <x-money :value="$project->money['scheduled']"/>
+                        </div>
+                    @endif
                 </div>
-                <div class="money-cell rec">
+                <div class="money-cell rec cursor-pointer hover:bg-green-50/50 transition rounded-xl p-1.5"
+                     wire:click="$set('activeTab', 'payments')" title="View receipts">
                     <div class="k">Received</div>
                     <div class="v text-[#5aa236]">
                         <x-money :value="$project->money['received']"/>
                     </div>
                 </div>
-                <div class="money-cell due">
+                <div class="money-cell due cursor-pointer hover:bg-amber-50/50 transition rounded-xl p-1.5"
+                     wire:click="$set('activeTab', 'schedule')" title="View payment schedule">
                     <div class="k">Due</div>
                     <div class="v text-[#e0a13a]">
                         <x-money :value="$project->money['due']"/>
                     </div>
                 </div>
-                <div class="money-cell over">
+                <div class="money-cell over cursor-pointer hover:bg-red-50/50 transition rounded-xl p-1.5"
+                     wire:click="$set('activeTab', 'schedule')" title="View overdue installments">
                     <div class="k">Overdue</div>
                     <div class="v text-[#d94b4b]">
                         <x-money :value="$project->money['overdue']"/>
@@ -297,9 +307,11 @@
                     </button>
                 </div>
                 @forelse($milestones as $idx => $m)
-                    <div class="ms-row flex items-center justify-between p-3 border border-[#e2e8f3] rounded-lg mb-2">
+                    <div wire:key="milestone-row-{{ $m->id }}" class="ms-row flex items-center justify-between p-3 border border-[#e2e8f3] rounded-lg mb-2">
                         <div class="flex items-center gap-3">
-                            <input type="checkbox" wire:click="toggleMilestone({{ $m->id }})"
+                            <input type="checkbox"
+                                   wire:key="milestone-chk-{{ $m->id }}-{{ $m->done ? 'done' : 'open' }}"
+                                   wire:click="toggleMilestone({{ $m->id }})"
                                    {{ $m->done ? 'checked' : '' }} class="h-4 w-4 rounded accent-[#0b3d91] cursor-pointer">
                             <div>
                                 <div
@@ -452,7 +464,13 @@
                                     <td class="num font-bold text-[#5aa236]">
                                         <x-money :value="$pay->amount"/>
                                     </td>
-                                    <td class="num muted">{{ $pay->tds > 0 ? number_format($pay->tds, 2) : '—' }}</td>
+                                    <td class="num muted">
+                                        @if($pay->tds > 0)
+                                            <x-money :value="$pay->tds"/>
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
                                     <td><span class="pill">{{ $pay->mode }}</span></td>
                                     <td class="muted"
                                         style="font-size:11.3px">{{ $pay->reference ?: '—' }} @if($pay->bank)
@@ -463,7 +481,8 @@
                                         <div class="row-actions">
                                             <button type="button" class="mini-btn danger"
                                                     wire:confirm="Remove this payment entry?"
-                                                    wire:click="deletePayment({{ $pay->id }})">
+                                                    wire:click="deletePayment({{ $pay->id }})"
+                                                    title="Delete payment" aria-label="Delete payment">
                                                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                                     <path
                                                         d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>

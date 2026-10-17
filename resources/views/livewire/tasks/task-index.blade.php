@@ -1,26 +1,32 @@
 <div>
-    <!-- Header with Live Count Summary -->
-    <div class="page-head mb-4">
+    <!-- Header with Live Count Summary & Add Task Action -->
+    <div class="page-head mb-4 flex items-center justify-between">
         <span class="info text-sm text-[#8894ac]">
             {{ $openCount }} pending · {{ $doneCount }} done
         </span>
+        <button type="button" class="btn btn-primary btn-sm" @click="$dispatch('open-modal', 'add-task-modal')">
+            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Add Task
+        </button>
     </div>
 
-    <!-- Task Creation Card -->
-    <div class="card mb-6 p-4">
-        <form wire:submit="addTask" novalidate class="space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                <div class="md:col-span-4">
-                    <label class="text-xs font-bold text-gray-500 uppercase block mb-1">What needs to be done *</label>
-                    <input wire:model.blur="title"
-                           class="i text-sm @error('title') border-red-500! bg-red-50/20! @enderror"
-                           placeholder="e.g. Send payment reminder to Blueleaf">
-                    @error('title')
-                    <span class="text-[11px] text-red-500 font-medium mt-1 block">{{ $message }}</span>
-                    @enderror
-                </div>
+    <!-- Task Creation Modal -->
+    <x-modal name="add-task-modal" title="Add New Task" sub="Personal execution checklist and scheduled follow-up">
+        <form wire:submit="addTask" novalidate class="space-y-4">
+            <div>
+                <label class="text-xs font-bold text-gray-500 uppercase block mb-1">What needs to be done *</label>
+                <input wire:model.blur="title"
+                       class="i text-sm @error('title') border-red-500! bg-red-50/20! @enderror"
+                       placeholder="e.g. Send payment reminder to Blueleaf">
+                @error('title')
+                <span class="text-[11px] text-red-500 font-medium mt-1 block">{{ $message }}</span>
+                @enderror
+            </div>
 
-                <div class="md:col-span-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
                     <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Project (optional)</label>
                     <select wire:model.live="project_id"
                             class="i text-sm @error('project_id') border-red-500! bg-red-50/20! @enderror">
@@ -34,7 +40,7 @@
                     @enderror
                 </div>
 
-                <div class="md:col-span-2">
+                <div>
                     <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Priority *</label>
                     <select wire:model.live="priority"
                             class="i text-sm @error('priority') border-red-500! bg-red-50/20! @enderror">
@@ -47,8 +53,10 @@
                     <span class="text-[11px] text-red-500 font-medium mt-1 block">{{ $message }}</span>
                     @enderror
                 </div>
+            </div>
 
-                <div class="md:col-span-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
                     <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Due Date</label>
                     <input wire:model.blur="due_date"
                            type="date"
@@ -59,7 +67,7 @@
                 </div>
 
                 @if(auth()->user()->role === 'Admin')
-                    <div class="md:col-span-3">
+                    <div>
                         <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Assign to</label>
                         <select wire:model.live="assigned_to"
                                 class="i text-sm @error('assigned_to') border-red-500! bg-red-50/20! @enderror">
@@ -72,18 +80,19 @@
                         @enderror
                     </div>
                 @endif
+            </div>
 
-                <div class="md:col-span-1">
-                    <button type="submit" class="btn btn-primary btn-sm h-[38px] w-full justify-center">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M12 5v14M5 12h14"/>
-                        </svg>
-                        Add
-                    </button>
-                </div>
+            <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
+                <button type="button" @click="$dispatch('close-modal', 'add-task-modal')" class="btn btn-ghost">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    Save Task
+                </button>
             </div>
         </form>
-    </div>
+    </x-modal>
 
     <!-- Task Execution List -->
     <div class="card p-4">
@@ -101,9 +110,10 @@
                         default  => 'b-grey',
                     };
                 @endphp
-                <div
+                <div wire:key="task-item-{{ $t->id }}"
                     class="mini-item flex items-center gap-3 p-3 border-b last:border-b-0 hover:bg-slate-50 transition">
                     <input type="checkbox"
+                           wire:key="task-chk-{{ $t->id }}-{{ $isDone ? 'done' : 'open' }}"
                            wire:click="toggleDone({{ $t->id }})"
                            {{ $isDone ? 'checked' : '' }}
                            class="w-4 h-4 rounded accent-[#0b3d91] cursor-pointer">

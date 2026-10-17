@@ -2,14 +2,14 @@
     <!-- 1. Top 4 KPI Blocks matching viewReports() -->
     <div class="kpis four mb-6">
         <x-kpi-card label="Collection rate" :value="$collectionRate . '%'"
-                    :sub="'₹' . number_format($totalReceived, 0) . ' of ₹' . number_format($totalScheduled, 0)"
-                    icon="chart" color="#5aa236" bg="#eef7e8"/>
+                    :sub="view('components.money', ['value' => $totalReceived])->render() . ' of ' . view('components.money', ['value' => $totalScheduled])->render()"
+                    icon="chart" color="#5aa236" bg="#eef7e8" :href="route('schedule.index')"/>
         <x-kpi-card label="Overdue" :value="$overdueAmt" :sub="$overdueCount . ' installments'" icon="alert"
-                    :ismoney="true" color="#d94b4b" bg="#fdeaea"/>
+                    :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
         <x-kpi-card label="TDS deducted" :value="$totalTds" sub="Received against invoices" icon="cash" color="#7a5af8"
-                    :ismoney="true" bg="#f0ecff"/>
-        <x-kpi-card label="Average project value" :value="$avgProjectValue" :sub="$projectsCount . ' projects'"
-                    :ismoney="true" icon="cash" color="#0b3d91" bg="#e8eefc"/>
+                    :ismoney="true" bg="#f0ecff" :href="route('payments.index')"/>
+        <x-kpi-card label="Average project value" :value="$avgProjectValue" :sub="$projectsCount . ' ' . \Illuminate\Support\Str::plural('project', $projectsCount)"
+                    :ismoney="true" icon="cash" color="#0b3d91" bg="#e8eefc" :href="route('projects.index')"/>
     </div>
 
     <!-- 2. Split Grid: Monthly Collection Trend & Payment Mode Breakdown -->
@@ -28,7 +28,7 @@
                     @foreach($trend as $t)
                         @php $barHeight = max(4, round(($t['value'] / $maxVal) * 100)); @endphp
                         <i style="height: {{ $barHeight }}%"
-                           title="{{ $t['label'] }}: ₹{{ number_format($t['value'], 0) }}"></i>
+                           :title="'{{ $t['label'] }}: ' + $store.currency.format({{ (float)$t['value'] }}, false)"></i>
                     @endforeach
                 </div>
                 <div class="flex gap-2 mt-2">

@@ -27,7 +27,7 @@
 
         <div class="space-y-3">
             @foreach($terms as $i => $t)
-                <div
+                <div wire:key="term-row-{{ $i }}-{{ $t['id'] ?? 'new' }}"
                     class="term {{ $t['locked'] ? 'paid opacity-90' : '' }} p-3 bg-slate-50 border rounded-xl @error('terms.'.$i.'.*') border-red-300 @enderror">
                     <div class="flex items-start gap-2">
                         <div class="term-no mt-6 text-xs font-bold text-gray-500 w-5 text-center">{{ $i + 1 }}</div>

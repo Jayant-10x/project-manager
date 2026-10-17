@@ -2,7 +2,7 @@
     <!-- Page Header Summary & Log Action -->
     <div class="page-head mb-4">
         <span class="info text-sm text-[#8894ac]">
-            {{ $totalCount }} follow-ups
+            {{ $totalCount }} {{ \Illuminate\Support\Str::plural('follow-up', $totalCount) }}
             @if($dueList->count() > 0)
                 · <b style="color:#d94b4b">{{ $dueList->count() }} pending</b>
             @endif

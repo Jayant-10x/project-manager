@@ -2,15 +2,15 @@
     <!-- 1. Top KPI Row (5 Blocks) -->
     <div class="kpis">
         <x-kpi-card label="Total Receivable" :value="$m['scheduled']" sub="Across all projects" icon="cash"
-                    :ismoney="true" color="#0b3d91" bg="#e8eefc"/>
+                    :ismoney="true" color="#0b3d91" bg="#e8eefc" :href="route('schedule.index')"/>
         <x-kpi-card label="Received" :value="$m['received']" :sub="$m['collectionRate'] . '% collected'" icon="check"
-                    :ismoney="true" color="#5aa236" bg="#eef7e8"/>
+                    :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('payments.index')"/>
         <x-kpi-card label="Due" :value="$m['due']" sub="Still to be collected" icon="clock" color="#e0a13a"
-                    :ismoney="true" bg="#fdf3e2"/>
+                    :ismoney="true" bg="#fdf3e2" :href="route('schedule.index')"/>
         <x-kpi-card label="Overdue" :value="$m['overdue']" :sub="$overdueCount . ' installments late'" icon="alert"
-                    :ismoney="true" color="#d94b4b" bg="#fdeaea"/>
+                    :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
         <x-kpi-card label="This Month" :value="$m['thisMonth']" sub="Collection this month" icon="cal" color="#2e75b6"
-                    :ismoney="true" bg="#e8f1fa"/>
+                    :ismoney="true" bg="#e8f1fa" :href="route('payments.index')"/>
     </div>
 
     <!-- 2. Main Split Grid: Today's Work Mini-Triage & Project Health / Trend -->
@@ -130,7 +130,10 @@
                                 $p = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
                                 $c = $colors[$label];
                             @endphp
-                            <div style="flex:1;min-width:110px">
+                            <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
+                               class="block p-2 rounded-xl transition hover:bg-gray-50 cursor-pointer"
+                               style="flex:1;min-width:110px;text-decoration:none;color:inherit"
+                               title="Filter {{ $label }} projects">
                                 <div
                                     style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;margin-bottom:5px">
                                     <i style="width:8px;height:8px;border-radius:50%;background:{{ $c }};display:inline-block"></i>{{ $label }}
@@ -139,7 +142,7 @@
                                 <div class="bar" style="height:5px;margin-top:6px">
                                     <i style="width:{{ $p }}%;background:{{ $c }}"></i>
                                 </div>
-                            </div>
+                            </a>
                         @endforeach
                     </div>
                 </div>
@@ -159,7 +162,7 @@
                         @foreach($trend as $t)
                             @php $barHeight = max(4, round(($t['value'] / $maxVal) * 100)); @endphp
                             <i style="height:{{ $barHeight }}%"
-                               title="{{ $t['label'] }}: ₹{{ number_format($t['value'], 0) }}"></i>
+                               :title="'{{ $t['label'] }}: ' + $store.currency.format({{ (float)$t['value'] }}, false)"></i>
                         @endforeach
                     </div>
                     <div style="display:flex;gap:6px;margin-top:8px">

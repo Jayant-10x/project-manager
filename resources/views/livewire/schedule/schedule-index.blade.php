@@ -18,14 +18,22 @@
     <!-- 4 KPI Blocks -->
     <div class="kpis four mb-6">
         <x-kpi-card label="Upcoming" :value="$upcomingSum" :sub="$upcomingCount . ' installments'" icon="cal"
-                    :ismoney="true" color="#0b3d91" bg="#e8eefc"/>
+                    :ismoney="true" color="#0b3d91" bg="#e8eefc"
+                    wire:click="setStatus('Upcoming')"
+                    :class="$status === 'Upcoming' ? 'ring-2 ring-[#0b3d91] bg-blue-50/50' : ''"/>
         <x-kpi-card label="Overdue" :value="$overdueSum" :sub="$overdueCount . ' installments'" icon="alert"
-                    :ismoney="true" color="#d94b4b" bg="#fdeaea"/>
+                    :ismoney="true" color="#d94b4b" bg="#fdeaea"
+                    wire:click="setStatus('Overdue')"
+                    :class="$status === 'Overdue' ? 'ring-2 ring-[#d94b4b] bg-red-50/50' : ''"/>
         <x-kpi-card label="Collected" :value="$collectedSum" :sub="$paidCount . ' fully paid'" icon="check"
-                    :ismoney="true" color="#5aa236" bg="#eef7e8"/>
+                    :ismoney="true" color="#5aa236" bg="#eef7e8"
+                    wire:click="setStatus('Paid')"
+                    :class="$status === 'Paid' ? 'ring-2 ring-[#5aa236] bg-green-50/50' : ''"/>
         <x-kpi-card label="Total scheduled" :value="$totalScheduledSum" sub="All active terms" icon="cash"
                     color="#7a5af8"
-                    :ismoney="true" bg="#f0ecff"/>
+                    :ismoney="true" bg="#f0ecff"
+                    wire:click="setStatus('')"
+                    :class="$status === '' ? 'ring-2 ring-[#7a5af8]' : ''"/>
     </div>
 
     <!-- Schedule Data Table -->

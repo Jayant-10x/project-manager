@@ -2,7 +2,7 @@
     <!-- Page Header Count Summary -->
     <div class="page-head mb-4">
         <span class="info text-sm text-[#8894ac]">
-            {{ $logs->total() }} recent entries
+            {{ $logs->total() }} recent {{ \Illuminate\Support\Str::plural('entry', $logs->total()) }}
         </span>
     </div>
 

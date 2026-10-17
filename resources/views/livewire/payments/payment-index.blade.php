@@ -98,7 +98,13 @@
                         <td class="num font-bold text-[#3d7a24]">
                             <x-money :value="$p->amount"/>
                         </td>
-                        <td class="num muted">{{ $p->tds > 0 ? number_format($p->tds, 2) : '—' }}</td>
+                        <td class="num muted">
+                            @if($p->tds > 0)
+                                <x-money :value="$p->tds"/>
+                            @else
+                                —
+                            @endif
+                        </td>
                         <td><span class="pill">{{ $p->mode }}</span></td>
                         <td class="muted" style="font-size:11.2px">
                             {{ $p->reference ?: '—' }}

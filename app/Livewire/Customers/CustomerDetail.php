@@ -102,7 +102,7 @@ class CustomerDetail extends Component
 
         $projectIds = $projects->pluck('id');
 
-        // Customer financial totals across assigned projects
+        $contractVal = (float) $projects->sum('value');
         $sched = (float) $projects->sum(fn ($p) => $p->money['scheduled']);
         $rec = (float) $projects->sum(fn ($p) => $p->money['received']);
         $tds = (float) $projects->sum(fn ($p) => $p->money['tds']);
@@ -127,6 +127,7 @@ class CustomerDetail extends Component
             'documents' => $this->customer->documents()->orderByDesc('id')->get(),
             'followups' => $this->customer->followups()->orderByDesc('happened_on')->get(),
             'money' => [
+                'contract' => $contractVal,
                 'scheduled' => $sched,
                 'received' => $rec,
                 'due' => $due,

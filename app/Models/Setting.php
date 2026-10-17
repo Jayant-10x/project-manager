@@ -20,6 +20,21 @@ class Setting extends Model
     {
         $record = static::query()->where('key', $key)->first();
 
-        return $record ? $record->v : $default;
+        if (! $record) {
+            return $default;
+        }
+
+        $val = $record->value ?? $record->v ?? null;
+
+        if ($val === null || $val === '') {
+            return $default;
+        }
+
+        // Prevent 0 from breaking alert day calculations if default is positive
+        if (str_ends_with($key, '_alert_days') && (int) $val <= 0 && is_numeric($default) && $default > 0) {
+            return $default;
+        }
+
+        return $val;
     }
 }

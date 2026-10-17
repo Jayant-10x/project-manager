@@ -1,6 +1,20 @@
-@props(['label', 'value', 'sub' => '', 'icon' => 'cash', 'color' => '#0b3d91', 'bg' => '#e8eefc','ismoney'=>false])
+@props(['label', 'value', 'sub' => '', 'icon' => 'cash', 'color' => '#0b3d91', 'bg' => '#e8eefc', 'ismoney' => false, 'href' => null, 'navigate' => true])
 
-<div class="kpi">
+@php
+    $tag = $href ? 'a' : 'div';
+    $attrs = $attributes->class([
+        'kpi block transition-all duration-150',
+        'hover:shadow-md hover:border-[#0b3d91]/30 cursor-pointer' => (bool) $href || $attributes->has('wire:click') || $attributes->has('@click') || $attributes->has('x-on:click'),
+    ]);
+@endphp
+
+<{{ $tag }}
+    @if($href)
+        href="{{ $href }}"
+        @if($navigate) wire:navigate @endif
+    @endif
+    {{ $attrs }}
+>
     <div class="kpi-top">
         <span class="kpi-ico" style="background: {{ $bg }}; color: {{ $color }};">
             @switch($icon)
@@ -43,6 +57,6 @@
         @endif
     </div>
     @if($sub)
-        <div class="kpi-foot">{{ $sub }}</div>
+        <div class="kpi-foot">{!! $sub !!}</div>
     @endif
-</div>
+</{{ $tag }}>

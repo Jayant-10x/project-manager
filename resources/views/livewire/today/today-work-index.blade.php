@@ -2,13 +2,15 @@
     <!-- Top 4 KPIs -->
     <div class="kpis four mb-6">
         <x-kpi-card label="Overdue" :value="$totalOverdue" :sub="$overdue->count() . ' installments'" icon="alert"
-                    color="#d94b4b" bg="#fdeaea" :ismoney="true"/>
+                    color="#d94b4b" bg="#fdeaea" :ismoney="true"
+                    :href="route('schedule.index', ['status' => 'Overdue'])"/>
         <x-kpi-card :label="'Due in ' . $alertDays . ' days'" :value="$totalSoon" :ismoney="true"
-                    :sub="$soon->count() . ' installments'" icon="clock" color="#e0a13a" bg="#fdf3e2"/>
+                    :sub="$soon->count() . ' installments'" icon="clock" color="#e0a13a" bg="#fdf3e2"
+                    :href="route('schedule.index', ['status' => 'Upcoming'])"/>
         <x-kpi-card label="Follow-ups" :value="$followups->count()" sub="Pending conversations" icon="chat"
-                    color="#0b3d91" bg="#e8eefc"/>
+                    color="#0b3d91" bg="#e8eefc" :href="route('followups.index')"/>
         <x-kpi-card label="My Open Tasks" :value="$openTasks" sub="In your checklist" icon="list" color="#5aa236"
-                    bg="#eef7e8"/>
+                    bg="#eef7e8" :href="route('tasks.index')"/>
     </div>
 
     <!-- Main Grid: Overdue Payments vs (Upcoming + Follow-ups) -->

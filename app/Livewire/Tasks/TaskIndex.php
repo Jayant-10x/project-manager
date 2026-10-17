@@ -103,6 +103,8 @@ class TaskIndex extends Component
         ]);
 
         $this->dispatch('task-saved');
+        $this->dispatch('close-modal', 'add-task-modal');
+        $this->dispatch('toast', ['msg' => 'Task added successfully', 'type' => 'ok']);
 
         $this->reset(['title', 'project_id']);
         $this->priority = 'Medium';

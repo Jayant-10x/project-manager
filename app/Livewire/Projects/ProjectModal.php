@@ -136,6 +136,16 @@ class ProjectModal extends Component
         ];
     }
 
+    protected function validationAttributes(): array
+    {
+        return [
+            'name' => 'project name',
+            'customer_id' => 'customer',
+            'sales_person_id' => 'salesperson',
+            'coordinator_id' => 'coordinator',
+        ];
+    }
+
     public function updated(string $propertyName): void
     {
         $this->validateOnly($propertyName);

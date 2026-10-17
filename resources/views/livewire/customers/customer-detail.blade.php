@@ -87,25 +87,34 @@
 
             <!-- Financial Strip -->
             <div class="money-grid">
-                <div class="money-cell">
+                <div class="money-cell cursor-pointer hover:bg-gray-50 transition rounded-xl p-1.5"
+                     wire:click="$set('activeTab', 'projects')" title="View projects">
                     <div class="k">Total Value</div>
                     <div class="v">
-                        <x-money :value="$money['scheduled']"/>
+                        <x-money :value="$money['contract'] > 0 ? $money['contract'] : $money['scheduled']"/>
                     </div>
+                    @if($money['contract'] > 0 && abs((float)$money['contract'] - (float)$money['scheduled']) > 0.01)
+                        <div class="text-[11px] text-[#8894ac] mt-0.5">
+                            Sched: <x-money :value="$money['scheduled']"/>
+                        </div>
+                    @endif
                 </div>
-                <div class="money-cell rec">
+                <div class="money-cell rec cursor-pointer hover:bg-green-50/50 transition rounded-xl p-1.5"
+                     wire:click="$set('activeTab', 'payments')" title="View payments">
                     <div class="k">Received</div>
                     <div class="v text-[#5aa236]">
                         <x-money :value="$money['received']"/>
                     </div>
                 </div>
-                <div class="money-cell due">
+                <div class="money-cell due cursor-pointer hover:bg-amber-50/50 transition rounded-xl p-1.5"
+                     wire:click="$set('activeTab', 'payments')" title="View installments due">
                     <div class="k">Due</div>
                     <div class="v text-[#e0a13a]">
                         <x-money :value="$money['due']"/>
                     </div>
                 </div>
-                <div class="money-cell over">
+                <div class="money-cell over cursor-pointer hover:bg-red-50/50 transition rounded-xl p-1.5"
+                     wire:click="$set('activeTab', 'payments')" title="View overdue installments">
                     <div class="k">Overdue</div>
                     <div class="v text-[#d94b4b]">
                         <x-money :value="$money['overdue']"/>
@@ -335,7 +344,7 @@
                 <div class="card-head" style="padding:0 0 12px;border:none">
                     <div>
                         <h3>Receipts</h3>
-                        <div class="sub">{{ $payments->count() }} payments ·
+                        <div class="sub">{{ $payments->count() }} {{ \Illuminate\Support\Str::plural('payment', $payments->count()) }} ·
                             <x-money :value="$payments->sum('amount')"/>
                         </div>
                     </div>
@@ -372,7 +381,8 @@
                                         <div class="row-actions">
                                             <button type="button" class="mini-btn danger"
                                                     wire:confirm="Remove this receipt entry?"
-                                                    wire:click="deletePayment({{ $pay->id }})">
+                                                    wire:click="deletePayment({{ $pay->id }})"
+                                                    title="Delete payment" aria-label="Delete payment">
                                                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                                     <path
                                                         d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>

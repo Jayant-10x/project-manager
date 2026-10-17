@@ -40,14 +40,20 @@
                 </div>
 
                 <div class="money-grid grid-cols-2 gap-2 my-2">
-                    <div class="money-cell p-2">
+                    <a href="{{ route('customers.index', ['sales' => $sp->id]) }}" wire:navigate
+                       class="money-cell p-2 block transition hover:bg-blue-50/50 cursor-pointer rounded-xl"
+                       style="text-decoration:none;color:inherit"
+                       title="View customers onboarded by {{ $sp->name }}">
                         <div class="k text-[10px]">Onboarded</div>
-                        <div class="v text-base">{{ $r['customers'] }}</div>
-                    </div>
-                    <div class="money-cell p-2">
+                        <div class="v text-base text-[#0b3d91] font-bold">{{ $r['customers'] }}</div>
+                    </a>
+                    <a href="{{ route('projects.index') }}" wire:navigate
+                       class="money-cell p-2 block transition hover:bg-blue-50/50 cursor-pointer rounded-xl"
+                       style="text-decoration:none;color:inherit"
+                       title="View projects">
                         <div class="k text-[10px]">Projects</div>
-                        <div class="v text-base">{{ $r['projects'] }}</div>
-                    </div>
+                        <div class="v text-base font-bold">{{ $r['projects'] }}</div>
+                    </a>
                 </div>
 
                 <div class="mt-3">
