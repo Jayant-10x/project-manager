@@ -61,6 +61,7 @@ class TaskIndex extends Component
 
         $task->done = ! $task->done;
         $task->save();
+        $this->dispatch('task-updated');
     }
 
     public function deleteTask(int $taskId): void
@@ -72,6 +73,7 @@ class TaskIndex extends Component
             ->findOrFail($taskId);
 
         $task->delete();
+        $this->dispatch('task-updated');
     }
 
     public function addTask(): void
@@ -99,6 +101,8 @@ class TaskIndex extends Component
             'created_by' => auth()->id(),
             'done' => false,
         ]);
+
+        $this->dispatch('task-saved');
 
         $this->reset(['title', 'project_id']);
         $this->priority = 'Medium';

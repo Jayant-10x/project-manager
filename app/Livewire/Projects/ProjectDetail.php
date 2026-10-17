@@ -56,6 +56,7 @@ class ProjectDetail extends Component
         }
         $term->delete();
         $this->project->load('terms');
+        $this->dispatch('project-saved');
     }
 
     public function deletePayment(int $paymentId): void
@@ -77,6 +78,7 @@ class ProjectDetail extends Component
         }
 
         $this->project->load(['payments', 'terms']);
+        $this->dispatch('payment-deleted');
     }
 
     public function deleteDocument(int $docId): void

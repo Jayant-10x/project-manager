@@ -1,17 +1,5 @@
 @php
     $user = auth()->user();
-    $assignedProjectsCount = \App\Models\Project::forUser($user)->count();
-    $totalCustomersCount = \App\Models\Customer::count();
-    $openTasksCount = \App\Models\Task::where('assigned_to', $user->id)->where('done', false)->count();
-
-    $assignedProjectIds = \App\Models\Project::forUser($user)->pluck('id');
-    $overdueCount = \App\Models\PaymentTerm::whereIn('project_id', $assignedProjectIds)->where('status', 'Overdue')->count();
-    $followupAlertDays = (int) \App\Models\Setting::getValue('followup_alert_days', 1);
-    $fupCount = \App\Models\Followup::whereNotNull('next_date')
-        ->where('next_date', '<=', now()->addDays($followupAlertDays)->toDateString())
-        ->count();
-    $todayCount = $overdueCount + $fupCount;
-    $unreadNotifications = \App\Models\Notification::where('user_id', $user->id)->where('is_read', false)->count();
 @endphp
 
 <aside class="sidebar"
@@ -42,9 +30,7 @@
             <span class="nav-ico"><svg viewBox="0 0 24 24"><path
                         d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg></span>
             <span class="lbl">Today's Work</span>
-            @if($todayCount > 0)
-                <span class="nav-count warn">{{ $todayCount }}</span>
-            @endif
+            <livewire:components.dynamic-counter type="today" :warn="true" :hideZero="true" />
         </a>
 
         <!-- 2. Customers -->
@@ -54,22 +40,20 @@
             <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle
                         cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/></svg></span>
             <span class="lbl">Customers</span>
-            <span class="nav-count">{{ $totalCustomersCount }}</span>
+            <livewire:components.dynamic-counter type="customers" />
         </a>
         <a href="{{ route('projects.index') }}" wire:navigate
            class="nav-item {{ request()->routeIs('projects.*') ? 'active' : '' }}" title="Projects">
             <span class="nav-ico"><svg viewBox="0 0 24 24"><path
                         d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg></span>
             <span class="lbl">Projects</span>
-            <span class="nav-count">{{ $assignedProjectsCount }}</span>
+            <livewire:components.dynamic-counter type="projects" />
         </a>
         <a href="{{ route('tasks.index') }}" wire:navigate
            class="nav-item {{ request()->routeIs('tasks.*') ? 'active' : '' }}" title="My Tasks">
             <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
             <span class="lbl">My Tasks</span>
-            @if($openTasksCount > 0)
-                <span class="nav-count">{{ $openTasksCount }}</span>
-            @endif
+            <livewire:components.dynamic-counter type="tasks" :hideZero="true" />
         </a>
 
         <!-- 3. Money -->
@@ -126,12 +110,7 @@
                         d="M13.7 21a2 2 0 01-3.4 0"/></svg>
             </span>
             <span class="lbl">Notifications</span>
-            <span class="nav-count warn"
-                  x-show="$store.notifications.unread > 0"
-                  x-text="$store.notifications.unread"
-                  style="{{ $unreadNotifications > 0 ? '' : 'display: none;' }}">
-                {{ $unreadNotifications }}
-            </span>
+            <livewire:components.dynamic-counter type="notifications" :warn="true" :hideZero="true" />
         </a>
         <a href="{{ route('audit.index') }}" wire:navigate
            class="nav-item {{ request()->routeIs('audit.*') ? 'active' : '' }}" title="Activity Log">

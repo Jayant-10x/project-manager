@@ -70,6 +70,8 @@ class CustomerDetail extends Component
                 $term->save();
             }
         }
+
+        $this->dispatch('payment-deleted');
     }
 
     public function deleteDocument(int $docId): void
