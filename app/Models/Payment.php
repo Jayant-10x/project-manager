@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Payment extends Model {
+class Payment extends Model
+{
     protected $guarded = ['id'];
 
     protected $casts = [
@@ -14,19 +15,23 @@ class Payment extends Model {
         'tds' => 'float',
     ];
 
-    public function customer(): BelongsTo {
+    public function customer(): BelongsTo
+    {
         return $this->belongsTo(Customer::class);
     }
 
-    public function project(): BelongsTo {
+    public function project(): BelongsTo
+    {
         return $this->belongsTo(Project::class);
     }
 
-    public function term(): BelongsTo {
+    public function term(): BelongsTo
+    {
         return $this->belongsTo(PaymentTerm::class, 'term_id');
     }
 
-    public function enteredBy(): BelongsTo {
+    public function enteredBy(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'created_by');
     }
 }

@@ -7,11 +7,13 @@ use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class NotificationPollController extends Controller {
-    public function check(Request $request): JsonResponse {
+class NotificationPollController extends Controller
+{
+    public function check(Request $request): JsonResponse
+    {
         $userId = $request->user()->id;
-        $afterId = (int)$request->query('after_id', 0);
-        $maxId = (int)(Notification::where('user_id', $userId)->max('id') ?? 0);
+        $afterId = (int) $request->query('after_id', 0);
+        $maxId = (int) (Notification::where('user_id', $userId)->max('id') ?? 0);
         $unreadCount = Notification::where('user_id', $userId)->where('is_read', false)->count();
 
         // 1. If database was cleared/truncated or client cursor is ahead of database reality,

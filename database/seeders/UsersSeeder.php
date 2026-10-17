@@ -6,11 +6,13 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
-class UsersSeeder extends Seeder {
+class UsersSeeder extends Seeder
+{
     /**
      * Run the database seeds.
      */
-    public function run(): void {
+    public function run(): void
+    {
         $passwordHash = Hash::make('Sample@1123');
 
         $users = [
@@ -51,11 +53,11 @@ class UsersSeeder extends Seeder {
                 'created_at' => now()->toDateString(),
             ],
             [
-                'name' => 'Lead Coordinator',
-                'email' => 'coordinator@the10xagency.in',
+                'name' => 'Sales Executive',
+                'email' => 'sales@the10xagency.in',
                 'phone' => '9876543291',
-                'role' => 'Coordinator',
-                'designation' => 'Project Coordinator',
+                'role' => 'Sales',
+                'designation' => 'Sales Representative',
                 'city' => 'Kanpur',
                 'status' => 'Active',
                 'password' => $passwordHash,

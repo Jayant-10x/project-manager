@@ -8,29 +8,40 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
-class UserModal extends Component {
+class UserModal extends Component
+{
     public ?int $userId = null;
+
     #[Validate]
     public string $name = '';
+
     #[Validate]
     public string $email = '';
+
     #[Validate]
     public string $phone = '';
+
     #[Validate]
     public string $role = '';
+
     #[Validate]
     public string $designation = '';
+
     #[Validate]
     public string $city = '';
+
     #[Validate]
     public string $status = '';
+
     #[Validate]
     public string $password = '';
+
     #[Validate]
     public ?int $reporting_to = null;
 
     #[On('open-user-modal')]
-    public function openModal(?int $id = null): void {
+    public function openModal(?int $id = null): void
+    {
         $this->resetValidation();
         $this->reset();
         $this->userId = $id;
@@ -55,34 +66,39 @@ class UserModal extends Component {
         $this->dispatch('open-modal', 'user-modal');
     }
 
-    protected function rules(): array {
+    protected function rules(): array
+    {
         return [
             'name' => 'required|string|min:2|max:200',
-            'email' => 'required|email|min:2|max:160|unique:customers,email,' . $this->userId,
-            'phone' => 'nullable|integer|digits_between:10,30|unique:customers,phone,' . $this->userId,
+            'email' => ['required', 'email', 'min:2', 'max:160', Rule::unique('users', 'email')->ignore($this->userId)],
+            'phone' => ['nullable', 'string', 'max:30', Rule::unique('users', 'phone')->ignore($this->userId)],
             'role' => 'required|string|in:Admin,Manager,Coordinator,Sales',
             'reporting_to' => 'nullable|integer|exists:users,id',
             'designation' => 'nullable|string|min:2|max:60',
             'city' => 'nullable|string|min:2|max:60',
             'status' => 'required|string|in:Active,Inactive',
-            'password' => ['required', 'string', 'min:8', 'max:200', 'regex:/[A-Z]/', 'regex:/[a-z]/', 'regex:/[0-9]/'],
+            'password' => [$this->userId ? 'nullable' : 'required', 'string', 'min:8', 'max:200', 'regex:/[A-Z]/', 'regex:/[a-z]/', 'regex:/[0-9]/'],
         ];
     }
 
-    protected function messages(): array {
+    protected function messages(): array
+    {
         return [
             'password.min' => 'Temporary password must be at least 8 characters.',
             'password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, and one number.',
         ];
     }
 
-    public function updated(string $propertyName): void {
+    public function updated(string $propertyName): void
+    {
         $this->validateOnly($propertyName);
     }
 
-    public function save(): void {
+    public function save(): void
+    {
         if (auth()->user()->role !== 'Admin') {
             $this->dispatch('toast', ['msg' => 'Only administrators can manage users.', 'type' => 'err']);
+
             return;
         }
 
@@ -102,11 +118,12 @@ class UserModal extends Component {
                 $activeAdminCount = User::where('role', 'Admin')->where('status', 'Active')->count();
                 if ($activeAdminCount <= 1) {
                     $this->dispatch('toast', ['msg' => 'Cannot demote or deactivate the last active Admin.', 'type' => 'err']);
+
                     return;
                 }
             }
 
-            if (!empty($validated['password'])) {
+            if (! empty($validated['password'])) {
                 $user->password = $validated['password'];
                 $user->must_change = true;
             }
@@ -114,7 +131,7 @@ class UserModal extends Component {
             unset($validated['password']);
             $user->update($validated);
         } else {
-            $tempPass = !empty($validated['password']) ? $validated['password'] : 'Welcome@10x';
+            $tempPass = ! empty($validated['password']) ? $validated['password'] : 'Welcome@10x';
             $validated['password'] = $tempPass;
             $validated['must_change'] = true;
             $validated['created_by'] = auth()->id();
@@ -128,10 +145,11 @@ class UserModal extends Component {
         $this->redirect(route('settings.index'), navigate: true);
     }
 
-    public function render() {
+    public function render()
+    {
         return view('livewire.settings.user-modal', [
             'supervisors' => User::where('status', 'Active')
-                ->when($this->userId, fn($q) => $q->where('id', '!=', $this->userId))
+                ->when($this->userId, fn ($q) => $q->where('id', '!=', $this->userId))
                 ->whereIn('role', ['Admin', 'Manager', 'Coordinator'])
                 ->orderBy('name')
                 ->get(),

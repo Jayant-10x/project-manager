@@ -3,16 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ActivityLog extends Model {
+class ActivityLog extends Model
+{
     protected $table = 'activity_logs';
+
     public $timestamps = false;
 
     protected $fillable = [
-        'who', 'action', 'entity', 'entity_id', 'entity_code', 'detail', 'at_time'
+        'user_id', 'action', 'entity', 'entity_id', 'entity_code', 'detail', 'at_time',
     ];
 
     protected $casts = [
         'at_time' => 'datetime',
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }

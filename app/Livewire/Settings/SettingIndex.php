@@ -11,33 +11,43 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
-class SettingIndex extends Component {
+class SettingIndex extends Component
+{
     // Alert & System Settings
     public ?int $paymentAlertDays = 7;
+
     public ?int $amcAlertDays = 7;
+
     public ?int $followupAlertDays = 1;
+
     public string $companyName = '10X Agency';
+
     public string $displayCurrency = 'INR';
 
     // Password Change Fields
     public string $current_password = '';
+
     public string $new_password = '';
+
     public string $new_password_confirmation = '';
 
-    public function mount(): void {
-        $this->paymentAlertDays = (int)Setting::getValue('payment_alert_days', 7);
-        $this->amcAlertDays = (int)Setting::getValue('amc_alert_days', 7);
-        $this->followupAlertDays = (int)Setting::getValue('followup_alert_days', 1);
-        $this->companyName = (string)Setting::getValue('company_name', '10X Agency');
-        $this->displayCurrency = (string)Setting::getValue('display_currency', 'INR');
+    public function mount(): void
+    {
+        $this->paymentAlertDays = (int) Setting::getValue('payment_alert_days', 7);
+        $this->amcAlertDays = (int) Setting::getValue('amc_alert_days', 7);
+        $this->followupAlertDays = (int) Setting::getValue('followup_alert_days', 1);
+        $this->companyName = (string) Setting::getValue('company_name', '10X Agency');
+        $this->displayCurrency = (string) Setting::getValue('display_currency', 'INR');
     }
 
     #[On('user-saved')]
-    public function refreshUsers(): void {
+    public function refreshUsers(): void
+    {
         // Re-renders the user account table
     }
 
-    protected function rules(): array {
+    protected function rules(): array
+    {
         return [
             'paymentAlertDays' => 'required|integer|min:1|max:180',
             'amcAlertDays' => 'required|integer|min:1|max:180',
@@ -47,23 +57,26 @@ class SettingIndex extends Component {
         ];
     }
 
-    public function updated(string $propertyName): void {
+    public function updated(string $propertyName): void
+    {
         if (in_array($propertyName, ['paymentAlertDays', 'amcAlertDays', 'followupAlertDays'])) {
-            $this->{$propertyName} = ($this->{$propertyName} === null || $this->{$propertyName} === '') ? null : (int)$this->{$propertyName};
+            $this->{$propertyName} = ($this->{$propertyName} === null || $this->{$propertyName} === '') ? null : (int) $this->{$propertyName};
         }
 
         $this->validateOnly($propertyName);
     }
 
-    public function saveSettings(): void {
+    public function saveSettings(): void
+    {
         if (auth()->user()->role !== 'Admin') {
             $this->dispatch('toast', ['msg' => 'Only administrators can update system settings.', 'type' => 'err']);
+
             return;
         }
 
-        $this->paymentAlertDays = ($this->paymentAlertDays === null || $this->paymentAlertDays === '') ? 7 : (int)$this->paymentAlertDays;
-        $this->amcAlertDays = ($this->amcAlertDays === null || $this->amcAlertDays === '') ? 7 : (int)$this->amcAlertDays;
-        $this->followupAlertDays = ($this->followupAlertDays === null || $this->followupAlertDays === '') ? 1 : (int)$this->followupAlertDays;
+        $this->paymentAlertDays = ($this->paymentAlertDays === null || $this->paymentAlertDays === '') ? 7 : (int) $this->paymentAlertDays;
+        $this->amcAlertDays = ($this->amcAlertDays === null || $this->amcAlertDays === '') ? 7 : (int) $this->amcAlertDays;
+        $this->followupAlertDays = ($this->followupAlertDays === null || $this->followupAlertDays === '') ? 1 : (int) $this->followupAlertDays;
 
         $validated = $this->validate();
 
@@ -76,7 +89,8 @@ class SettingIndex extends Component {
         $this->dispatch('toast', ['msg' => 'Settings saved successfully', 'type' => 'ok']);
     }
 
-    public function updatePassword(): void {
+    public function updatePassword(): void
+    {
         $user = auth()->user();
 
         $this->validate([
@@ -96,13 +110,15 @@ class SettingIndex extends Component {
             'new_password.regex' => 'Password must contain at least one uppercase letter, one lowercase letter, and one number.',
         ]);
 
-        if (!Hash::check($this->current_password, $user->getAuthPassword())) {
+        if (! Hash::check($this->current_password, $user->getAuthPassword())) {
             $this->addError('current_password', 'Your current password is incorrect.');
+
             return;
         }
 
         if ($this->current_password === $this->new_password) {
             $this->addError('new_password', 'The new password must be different from the current password.');
+
             return;
         }
 
@@ -115,14 +131,17 @@ class SettingIndex extends Component {
         $this->dispatch('toast', ['msg' => 'Password updated successfully', 'type' => 'ok']);
     }
 
-    public function deleteUser(int $id): void {
+    public function deleteUser(int $id): void
+    {
         if (auth()->user()->role !== 'Admin') {
             $this->dispatch('toast', ['msg' => 'Only administrators can manage user accounts.', 'type' => 'err']);
+
             return;
         }
 
         if (auth()->id() === $id) {
             $this->dispatch('toast', ['msg' => 'You cannot delete your own account.', 'type' => 'err']);
+
             return;
         }
 
@@ -132,6 +151,7 @@ class SettingIndex extends Component {
             $activeAdminCount = User::where('role', 'Admin')->where('status', 'Active')->count();
             if ($activeAdminCount <= 1) {
                 $this->dispatch('toast', ['msg' => 'Cannot delete the last active Admin account.', 'type' => 'err']);
+
                 return;
             }
         }
@@ -140,15 +160,25 @@ class SettingIndex extends Component {
         $this->dispatch('toast', ['msg' => 'User removed', 'type' => 'ok']);
     }
 
-    public function logout(): void {
+    public function logout(): void
+    {
+        $user = Auth::user();
+        if ($user) {
+            $user->update([
+                'is_online' => false,
+                'last_seen' => now(),
+            ]);
+        }
+
         Auth::logout();
         request()->session()->invalidate();
         request()->session()->regenerateToken();
         $this->redirect(route('login'), navigate: true);
     }
 
-    public function render() {
-        $users = User::orderByRaw('FIELD(role, "Admin", "Manager", "Coordinator", "Sales")')->orderBy('name')->get();
+    public function render()
+    {
+        $users = User::orderByRaw("CASE role WHEN 'Admin' THEN 1 WHEN 'Manager' THEN 2 WHEN 'Coordinator' THEN 3 WHEN 'Sales' THEN 4 ELSE 5 END")->orderBy('name')->get();
 
         return view('livewire.settings.setting-index', [
             'users' => $users,

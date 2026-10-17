@@ -112,14 +112,14 @@
 
             <label class="f">
                 <span>Onboarded by (salesperson)</span>
-                <select wire:model.live="sales_person"
-                        class="i @error('sales_person') border-red-500! bg-red-50/20! @enderror">
+                <select wire:model.live="sales_person_id"
+                        class="i @error('sales_person_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— select —</option>
                     @foreach($salesPeople as $sp)
                         <option value="{{ $sp->id }}">{{ $sp->name }}</option>
                     @endforeach
                 </select>
-                @error('sales_person')
+                @error('sales_person_id')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
                 <div class="hint">Attributed salesperson for performance reporting</div>

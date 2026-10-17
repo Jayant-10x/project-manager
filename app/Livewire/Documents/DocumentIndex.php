@@ -12,7 +12,8 @@ use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Layout('layouts.app')]
-class DocumentIndex extends Component {
+class DocumentIndex extends Component
+{
     use WithPagination;
 
     #[Url]
@@ -21,30 +22,36 @@ class DocumentIndex extends Component {
     #[Url]
     public string $category = '';
 
-    public function updatingSearch(): void {
+    public function updatingSearch(): void
+    {
         $this->resetPage();
     }
 
-    public function updatingCategory(): void {
+    public function updatingCategory(): void
+    {
         $this->resetPage();
     }
 
-    public function clearFilters(): void {
+    public function clearFilters(): void
+    {
         $this->reset(['search', 'category']);
         $this->resetPage();
     }
 
     #[On('document-saved')]
-    public function refreshDocuments(): void {
+    public function refreshDocuments(): void
+    {
         $this->resetPage();
     }
 
-    public function deleteDocument(int $id): void {
+    public function deleteDocument(int $id): void
+    {
         $user = auth()->user();
         $doc = Document::findOrFail($id);
 
         if ($user->role !== 'Admin' && $doc->uploaded_by !== $user->id) {
             $this->dispatch('toast', ['msg' => 'You can only remove files you uploaded.', 'type' => 'err']);
+
             return;
         }
 
@@ -54,7 +61,8 @@ class DocumentIndex extends Component {
         $this->dispatch('toast', ['msg' => 'Document removed', 'type' => 'ok']);
     }
 
-    public function render() {
+    public function render()
+    {
         $user = auth()->user();
         $projectIds = Project::forUser($user)->pluck('id');
 
@@ -64,15 +72,15 @@ class DocumentIndex extends Component {
                     ->orWhereNull('project_id');
             })
             ->with(['customer', 'project', 'uploadedBy'])
-            ->when($this->category, fn($q) => $q->where('category', $this->category))
+            ->when($this->category, fn ($q) => $q->where('category', $this->category))
             ->when($this->search, function ($q) {
-                $term = '%' . trim($this->search) . '%';
+                $term = '%'.trim($this->search).'%';
                 $q->where(function ($sub) use ($term) {
                     $sub->where('title', 'like', $term)
                         ->orWhere('file_name', 'like', $term)
                         ->orWhere('category', 'like', $term)
-                        ->orWhereHas('customer', fn($c) => $c->where('company', 'like', $term))
-                        ->orWhereHas('project', fn($p) => $p->where('name', 'like', $term)->orWhere('code', 'like', $term));
+                        ->orWhereHas('customer', fn ($c) => $c->where('company', 'like', $term))
+                        ->orWhereHas('project', fn ($p) => $p->where('name', 'like', $term)->orWhere('code', 'like', $term));
                 });
             })
             ->orderByDesc('id');

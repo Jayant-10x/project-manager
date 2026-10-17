@@ -3,19 +3,23 @@
 namespace App\Livewire\Customers;
 
 use App\Models\Customer;
-use App\Models\SalesPerson;
+use App\Models\User;
 use App\Services\CodeGeneratorService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-class CustomerImportModal extends Component {
+class CustomerImportModal extends Component
+{
     use WithFileUploads;
 
     public $csvFile;
+
     public string $pastedData = '';
+
     public ?int $defaultSalesPersonId = null;
 
-    public function import(CodeGeneratorService $codeService): void {
+    public function import(CodeGeneratorService $codeService): void
+    {
         $raw = trim($this->pastedData);
 
         if ($this->csvFile) {
@@ -24,14 +28,16 @@ class CustomerImportModal extends Component {
 
         if (empty($raw)) {
             $this->addError('pastedData', 'Please paste CSV data or choose a file.');
+
             return;
         }
 
         $lines = preg_split('/\r?\n/', $raw);
-        $lines = array_filter($lines, fn($l) => !empty(trim($l)));
+        $lines = array_filter($lines, fn ($l) => ! empty(trim($l)));
 
         if (count($lines) < 2) {
             $this->addError('pastedData', 'At least one header row and one data row are required.');
+
             return;
         }
 
@@ -46,7 +52,9 @@ class CustomerImportModal extends Component {
         foreach ($lines as $line) {
             $row = str_getcsv($line);
             $company = trim($row[$headerMap['company'] ?? 0] ?? '');
-            if (empty($company)) continue;
+            if (empty($company)) {
+                continue;
+            }
 
             // Prevent duplicate insertion
             if (Customer::whereRaw('LOWER(company) = ?', [strtolower($company)])->exists()) {
@@ -54,16 +62,20 @@ class CustomerImportModal extends Component {
             }
 
             Customer::create([
-                'code' => $codeService->generate('customer', 'CUS-'),
+                'customer_code' => $codeService->generate('customer', 'CUS-'),
                 'company' => $company,
                 'contact_name' => trim($row[$headerMap['contact'] ?? $headerMap['contactname'] ?? -1] ?? ''),
                 'phone' => trim($row[$headerMap['phone'] ?? $headerMap['mobile'] ?? -1] ?? ''),
                 'email' => trim($row[$headerMap['email'] ?? -1] ?? ''),
                 'city' => trim($row[$headerMap['city'] ?? -1] ?? ''),
                 'state' => trim($row[$headerMap['state'] ?? -1] ?? ''),
-                'gst_number' => strtoupper(trim($row[$headerMap['gst_number'] ?? $headerMap['gst'] ?? -1] ?? '')),
-                'source' => trim($row[$headerMap['source'] ?? -1] ?? ''),
-                'sales_person' => $this->defaultSalesPersonId,
+                'gst_number' => strtoupper(trim($row[$headerMap['gstnumber'] ?? $headerMap['gst'] ?? -1] ?? '')) ?: null,
+                'pan_number' => strtoupper(trim($row[$headerMap['pannumber'] ?? $headerMap['pan'] ?? -1] ?? '')) ?: null,
+                'address' => trim($row[$headerMap['address'] ?? -1] ?? '') ?: null,
+                'industry' => trim($row[$headerMap['industry'] ?? -1] ?? '') ?: null,
+                'source' => trim($row[$headerMap['source'] ?? -1] ?? '') ?: null,
+                'internal_notes' => trim($row[$headerMap['internalnotes'] ?? $headerMap['notes'] ?? -1] ?? '') ?: null,
+                'sales_person_id' => $this->defaultSalesPersonId,
                 'status' => 'Active',
                 'created_by' => auth()->id(),
             ]);
@@ -72,12 +84,15 @@ class CustomerImportModal extends Component {
 
         $this->reset();
         $this->dispatch('close-modal');
+        $this->dispatch('customer-saved');
+        $this->dispatch('toast', ['msg' => "Successfully imported {$created} customer(s).", 'type' => 'ok']);
         $this->redirect(route('customers.index'), navigate: true);
     }
 
-    public function render() {
+    public function render()
+    {
         return view('livewire.customers.customer-import-modal', [
-            'salesPeople' => SalesPerson::where('status', 'Active')->orderBy('name')->get()
+            'salesPeople' => User::where('role', 'Sales')->where('status', 'Active')->orderBy('name')->get(),
         ]);
     }
 }

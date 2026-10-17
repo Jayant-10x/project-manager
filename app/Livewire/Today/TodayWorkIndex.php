@@ -13,19 +13,23 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
-class TodayWorkIndex extends Component {
+class TodayWorkIndex extends Component
+{
     #[On('payment-saved')]
     #[On('payment-deleted')]
     #[On('project-saved')]
     #[On('task-saved')]
-    public function refreshWorkQueue(): void {
+    #[On('followup-saved')]
+    public function refreshWorkQueue(): void
+    {
         // Re-renders the operational triage queue
     }
 
-    public function render() {
+    public function render()
+    {
         $user = auth()->user();
         $today = Carbon::today()->toDateString();
-        $alertDays = (int)Setting::getValue('payment_alert_days', 7);
+        $alertDays = (int) Setting::getValue('payment_alert_days', 7);
         $soonDate = Carbon::today()->addDays($alertDays)->toDateString();
         $followupSoon = Carbon::today()->addDays(7)->toDateString();
 
@@ -71,8 +75,8 @@ class TodayWorkIndex extends Component {
             ->get();
 
         // Financial totals
-        $totalOverdue = (float)$overdue->sum(fn($t) => max(0, (float)$t->amount - (float)$t->received - (float)$t->tds));
-        $totalSoon = (float)$soon->sum(fn($t) => max(0, (float)$t->amount - (float)$t->received - (float)$t->tds));
+        $totalOverdue = (float) $overdue->sum(fn ($t) => max(0, (float) $t->amount - (float) $t->received - (float) $t->tds));
+        $totalSoon = (float) $soon->sum(fn ($t) => max(0, (float) $t->amount - (float) $t->received - (float) $t->tds));
         $openTasksCount = Task::where('assigned_to', $user->id)->where('done', false)->count();
 
         return view('livewire.today.today-work-index', [

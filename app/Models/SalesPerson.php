@@ -5,15 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class SalesPerson extends Model {
+class SalesPerson extends Model
+{
     protected $table = 'sales_persons';
+
     protected $guarded = ['id'];
 
     protected $casts = [
         'target' => 'float',
     ];
 
-    public function customers(): HasMany {
+    public function customers(): HasMany
+    {
         return $this->hasMany(Customer::class, 'sales_person_id');
     }
 }

@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Followup extends Model {
+class Followup extends Model
+{
     protected $guarded = ['id'];
 
     protected $casts = [
@@ -13,15 +14,18 @@ class Followup extends Model {
         'next_date' => 'date',
     ];
 
-    public function customer(): BelongsTo {
+    public function customer(): BelongsTo
+    {
         return $this->belongsTo(Customer::class);
     }
 
-    public function project(): BelongsTo {
+    public function project(): BelongsTo
+    {
         return $this->belongsTo(Project::class);
     }
 
-    public function createdBy(): BelongsTo {
+    public function createdBy(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'created_by');
     }
 }

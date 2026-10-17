@@ -1,7 +1,7 @@
-@props(['name', 'title', 'sub' => null, 'wide' => false])
+@props(['name', 'show' => false, 'focusable' => false, 'title' => null, 'sub' => null, 'wide' => false])
 
 <div x-data="{
-        show: false,
+        show: @js($show),
         isDirty: false,
         confirmClose() {
             if (this.isDirty) {
@@ -31,6 +31,7 @@
             forceClose();
         }
      "
+     x-on:close.stop="forceClose()"
      x-on:keydown.escape.window="if (show) confirmClose()"
      style="display: none;"
      class="overlay fixed inset-0 bg-[#08142a]/60 backdrop-blur-sm flex items-start justify-center p-6 z-50 overflow-y-auto">
@@ -41,6 +42,7 @@
         @input="isDirty = true"
         @change="isDirty = true">
 
+        @if($title)
         <div class="modal-head flex items-center justify-between p-5 border-b border-[#eef2f9]">
             <div>
                 <h3 class="text-base font-bold text-[#0d1b34]">{{ $title }}</h3>
@@ -52,6 +54,7 @@
                 ✕
             </button>
         </div>
+        @endif
 
         <div class="modal-body p-6 max-h-[75vh] overflow-y-auto">
             {{ $slot }}

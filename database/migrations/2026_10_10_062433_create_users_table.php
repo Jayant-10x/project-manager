@@ -4,12 +4,15 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
-    public function up(): void {
+return new class extends Migration
+{
+    public function up(): void
+    {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('email', 160)->unique('email');
+            $table->timestamp('email_verified_at')->nullable()->default(null);
             $table->string('phone', 30)->nullable()->default(null)->unique('phone');
             $table->enum('role', ['Admin', 'Manager', 'Coordinator', 'Sales'])->default('Coordinator');
             $table->enum('status', ['Active', 'Inactive'])->default('Inactive');
@@ -36,7 +39,8 @@ return new class extends Migration {
         });
     }
 
-    public function down(): void {
+    public function down(): void
+    {
         Schema::dropIfExists('users');
     }
 };

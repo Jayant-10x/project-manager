@@ -6,14 +6,16 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class EnsurePasswordIsChanged {
-    public function handle(Request $request, Closure $next): Response {
+class EnsurePasswordIsChanged
+{
+    public function handle(Request $request, Closure $next): Response
+    {
         $user = $request->user();
 
         if ($user && $user->must_change) {
             $exemptRoutes = ['password.change', 'logout'];
 
-            if (!$request->routeIs($exemptRoutes)) {
+            if (! $request->routeIs($exemptRoutes)) {
                 return redirect()->route('password.change');
             }
         }

@@ -8,11 +8,22 @@ use App\Models\User;
 use Carbon\Carbon;
 use Throwable;
 
-class AuditNotificationService {
-    public function log(string $who, string $action, string $entity, ?int $entityId = null, string $code = '', string $detail = ''): void {
+class AuditNotificationService
+{
+    public function log(string|int|null $who, string $action, string $entity, ?int $entityId = null, string $code = '', string $detail = ''): void
+    {
         try {
+            $userId = null;
+            if (is_numeric($who)) {
+                $userId = (int) $who;
+            } elseif (! empty($who)) {
+                $userId = User::where('email', $who)->orWhere('name', $who)->value('id') ?? auth()->id();
+            } else {
+                $userId = auth()->id();
+            }
+
             ActivityLog::query()->create([
-                'who' => mb_substr($who, 0, 80),
+                'user_id' => $userId,
                 'action' => mb_substr($action, 0, 60),
                 'entity' => mb_substr($entity, 0, 40),
                 'entity_id' => $entityId,
@@ -25,14 +36,20 @@ class AuditNotificationService {
         }
     }
 
-    public function notify(string $email, string $kind, string $title, string $body, string $linkType = '', ?int $linkId = null): void {
-        if (empty($email)) {
+    public function notify(string|int|null $recipient, string $kind, string $title, string $body, string $linkType = '', ?int $linkId = null): void
+    {
+        if (empty($recipient)) {
             return;
         }
 
         try {
+            $userId = is_numeric($recipient) ? (int) $recipient : User::where('email', $recipient)->value('id');
+            if (! $userId) {
+                return;
+            }
+
             Notification::query()->create([
-                'user_email' => mb_substr($email, 0, 160),
+                'user_id' => $userId,
                 'type' => mb_substr($kind, 0, 40),
                 'title' => mb_substr($title, 0, 200),
                 'body' => mb_substr($body, 0, 300),
@@ -45,11 +62,12 @@ class AuditNotificationService {
         }
     }
 
-    public function notifyCoordinators(string $kind, string $title, string $body, string $linkType = '', ?int $linkId = null): void {
+    public function notifyCoordinators(string $kind, string $title, string $body, string $linkType = '', ?int $linkId = null): void
+    {
         try {
-            $emails = User::query()->where('status', 'Active')->pluck('email');
-            foreach ($emails as $email) {
-                $this->notify($email, $kind, $title, $body, $linkType, $linkId);
+            $userIds = User::query()->where('status', 'Active')->pluck('id');
+            foreach ($userIds as $userId) {
+                $this->notify($userId, $kind, $title, $body, $linkType, $linkId);
             }
         } catch (Throwable) {
             // Non-blocking

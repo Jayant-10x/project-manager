@@ -10,25 +10,28 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
-class ScheduleIndex extends Component {
+class ScheduleIndex extends Component
+{
     #[On('payment-saved')]
     #[On('payment-deleted')]
-    public function refreshSchedule(): void {
+    public function refreshSchedule(): void
+    {
         // Re-renders the component and recalculates KPIs
     }
 
-    public function exportCsv() {
+    public function exportCsv()
+    {
         $user = auth()->user();
         $projectIds = Project::forUser($user)->pluck('id');
 
         $terms = PaymentTerm::query()
             ->whereIn('project_id', $projectIds)
             ->with(['project.customer'])
-            ->orderByRaw('FIELD(status, "Overdue", "Pending", "Partial", "Paid", "Cancelled")')
+            ->orderByRaw("CASE status WHEN 'Overdue' THEN 1 WHEN 'Pending' THEN 2 WHEN 'Partial' THEN 3 WHEN 'Paid' THEN 4 WHEN 'Cancelled' THEN 5 ELSE 6 END")
             ->orderBy('due_date')
             ->get();
 
-        $filename = 'payment-schedule-' . now()->toDateString() . '.csv';
+        $filename = 'payment-schedule-'.now()->toDateString().'.csv';
 
         return response()->streamDownload(function () use ($terms) {
             $handle = fopen('php://output', 'w');
@@ -36,7 +39,7 @@ class ScheduleIndex extends Component {
             fputcsv($handle, ['Customer', 'Project Code', 'Project', '#', 'Installment', 'Trigger', 'Amount', 'Received', 'TDS', 'Balance', 'Due Date', 'Status']);
 
             foreach ($terms as $t) {
-                $bal = max(0, (float)$t->amount - (float)$t->received - (float)$t->tds);
+                $bal = max(0, (float) $t->amount - (float) $t->received - (float) $t->tds);
                 $triggerLabel = match ($t->trigger_type) {
                     'milestone' => 'Milestone linked',
                     'recurring' => 'Recurring monthly',
@@ -64,7 +67,8 @@ class ScheduleIndex extends Component {
         }, $filename, ['Content-Type' => 'text/csv; charset=utf-8']);
     }
 
-    public function render() {
+    public function render()
+    {
         $user = auth()->user();
         $today = Carbon::today()->toDateString();
         $projectsQuery = Project::forUser($user);
@@ -74,21 +78,21 @@ class ScheduleIndex extends Component {
         $terms = PaymentTerm::query()
             ->whereIn('project_id', $projectIds)
             ->with(['project.customer'])
-            ->orderByRaw('FIELD(status, "Overdue", "Pending", "Partial", "Paid", "Cancelled")')
-            ->orderByRaw('due_date IS NULL, due_date ASC')
+            ->orderByRaw("CASE status WHEN 'Overdue' THEN 1 WHEN 'Pending' THEN 2 WHEN 'Partial' THEN 3 WHEN 'Paid' THEN 4 WHEN 'Cancelled' THEN 5 ELSE 6 END")
+            ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC')
             ->get();
 
         // 4 KPI metrics
         $upcomingTerms = $terms->whereIn('status', ['Pending', 'Partial']);
-        $upcomingSum = (float)$upcomingTerms->sum(fn($t) => max(0, (float)$t->amount - (float)$t->received - (float)$t->tds));
+        $upcomingSum = (float) $upcomingTerms->sum(fn ($t) => max(0, (float) $t->amount - (float) $t->received - (float) $t->tds));
 
         $overdueTerms = $terms->where('status', 'Overdue');
-        $overdueSum = (float)$overdueTerms->sum(fn($t) => max(0, (float)$t->amount - (float)$t->received - (float)$t->tds));
+        $overdueSum = (float) $overdueTerms->sum(fn ($t) => max(0, (float) $t->amount - (float) $t->received - (float) $t->tds));
 
         $paidTerms = $terms->where('status', 'Paid');
-        $collectedSum = (float)$terms->sum('received');
+        $collectedSum = (float) $terms->sum('received');
 
-        $totalScheduledSum = (float)$terms->where('status', '!=', 'Cancelled')->sum('amount');
+        $totalScheduledSum = (float) $terms->where('status', '!=', 'Cancelled')->sum('amount');
 
         return view('livewire.schedule.schedule-index', [
             'terms' => $terms,

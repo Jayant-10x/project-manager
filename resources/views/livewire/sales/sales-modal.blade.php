@@ -6,7 +6,7 @@
             <label class="f full">
                 <span>Name *</span>
                 <input wire:model.blur="name"
-                       class="i @error('name') !order-red-500! bg-red-50/20! @enderror"
+                       class="i @error('name') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Rahul Sharma"
                        maxlength="80">
                 @error('name')

@@ -2,14 +2,19 @@
 
 namespace App\Models;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Project extends Model {
+class Project extends Model
+{
     protected $guarded = ['id'];
+
+    public function getCodeAttribute(): string
+    {
+        return $this->project_code ?? '';
+    }
 
     protected $casts = [
         'start_date' => 'date',
@@ -28,7 +33,8 @@ class Project extends Model {
     /**
      * Local query scope for role-based coordinator data isolation.
      */
-    public function scopeForUser(Builder $query, ?User $user = null): Builder {
+    public function scopeForUser(Builder $query, ?User $user = null): Builder
+    {
         $user = $user ?? auth()->user();
 
         // If the user is not an Admin, restrict to assigned projects
@@ -39,39 +45,47 @@ class Project extends Model {
         return $query;
     }
 
-    public function customer(): BelongsTo {
+    public function customer(): BelongsTo
+    {
         return $this->belongsTo(Customer::class);
     }
 
-    public function coordinator(): BelongsTo {
+    public function coordinator(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'coordinator_id');
     }
 
-    public function terms(): HasMany {
+    public function terms(): HasMany
+    {
         return $this->hasMany(PaymentTerm::class)->orderBy('seq');
     }
 
-    public function payments(): HasMany {
+    public function payments(): HasMany
+    {
         return $this->hasMany(Payment::class)->orderByDesc('paid_on');
     }
 
-    public function milestones(): HasMany {
+    public function milestones(): HasMany
+    {
         return $this->hasMany(Milestone::class)->orderBy('sort_order');
     }
 
-    public function documents(): HasMany {
+    public function documents(): HasMany
+    {
         return $this->hasMany(Document::class)->orderByDesc('id');
     }
 
-    public function tasks(): HasMany {
+    public function tasks(): HasMany
+    {
         return $this->hasMany(Task::class);
     }
 
-    public function getMoneyAttribute(): array {
-        $scheduled = (float)$this->terms->where('status', '!=', 'Cancelled')->sum('amount');
-        $received = (float)$this->payments->sum('amount');
-        $tds = (float)$this->payments->sum('tds');
-        $overdue = (float)$this->terms->where('status', 'Overdue')->sum(fn($t) => max(0, $t->amount - $t->received - $t->tds));
+    public function getMoneyAttribute(): array
+    {
+        $scheduled = (float) $this->terms->where('status', '!=', 'Cancelled')->sum('amount');
+        $received = (float) $this->payments->sum('amount');
+        $tds = (float) $this->payments->sum('tds');
+        $overdue = (float) $this->terms->where('status', 'Overdue')->sum(fn ($t) => max(0, $t->amount - $t->received - $t->tds));
 
         return [
             'scheduled' => $scheduled,

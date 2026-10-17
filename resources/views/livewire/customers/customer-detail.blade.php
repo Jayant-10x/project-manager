@@ -57,7 +57,7 @@
                         Edit
                     </button>
                     <button type="button" class="btn btn-ghost btn-sm"
-                            @click="$dispatch('open-modal', 'followup-modal')">
+                            @click="Livewire.dispatch('open-followup-modal', { customerId: {{ $customer->id }} })">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
                         </svg>
@@ -395,7 +395,7 @@
             @elseif($activeTab === 'documents')
                 <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
                     <button type="button" class="btn btn-primary btn-sm"
-                            @click="$dispatch('open-modal', 'document-upload-modal')">
+                            @click="Livewire.dispatch('open-document-upload-modal', { customerId: {{ $customer->id }} })">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M12 19V5M5 12l7-7 7 7"/>
                         </svg>
@@ -411,7 +411,28 @@
                                 · {{ $doc->created_at->format('d M H:i') }}</div>
                         </div>
                         <span class="pill mr-2">{{ $doc->category }}</span>
-                        <a href="{{ asset('storage/' . $doc->stored_as) }}" target="_blank" download
+                        @php
+                            $fileUrl = asset('storage/' . $doc->stored_as);
+                        @endphp
+                        <button type="button"
+                                class="mini-btn mr-1"
+                                @click="Livewire.dispatch('open-document-preview', {
+                                    data: {
+                                        title: '{{ addslashes($doc->title) }}',
+                                        name: '{{ addslashes($doc->file_name) }}',
+                                        sizeKb: '{{ $doc->size_kb }}',
+                                        category: '{{ $doc->category }}',
+                                        url: '{{ $fileUrl }}',
+                                        mime: '{{ $doc->mime }}'
+                                    }
+                                })"
+                                title="Preview">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                        <a href="{{ $fileUrl }}" target="_blank" download
                            class="mini-btn mr-1" title="Download">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
@@ -441,7 +462,7 @@
             @elseif($activeTab === 'followups')
                 <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
                     <button type="button" class="btn btn-primary btn-sm"
-                            @click="$dispatch('open-modal', 'followup-modal')">
+                            @click="Livewire.dispatch('open-followup-modal', { customerId: {{ $customer->id }} })">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M12 5v14M5 12h14"/>
                         </svg>
@@ -489,4 +510,7 @@
             @endif
         </div>
     </div>
+
+    <!-- Modals -->
+    <livewire:documents.document-upload-modal/>
 </div>

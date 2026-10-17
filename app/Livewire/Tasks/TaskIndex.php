@@ -10,19 +10,26 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
-class TaskIndex extends Component {
+class TaskIndex extends Component
+{
     public string $title = '';
-    public ?int $project_id = null;
-    public string $priority = 'Medium';
-    public ?string $due_date = null;
-    public ?int $assigned_to_id = null;
 
-    public function mount(): void {
+    public ?int $project_id = null;
+
+    public string $priority = 'Medium';
+
+    public ?string $due_date = null;
+
+    public ?int $assigned_to = null;
+
+    public function mount(): void
+    {
         $this->assigned_to = auth()->id();
         $this->due_date = now()->toDateString();
     }
 
-    protected function rules(): array {
+    protected function rules(): array
+    {
         return [
             'title' => 'required|string|max:200',
             'project_id' => 'nullable|integer|exists:projects,id',
@@ -32,7 +39,8 @@ class TaskIndex extends Component {
         ];
     }
 
-    public function updated(string $propertyName): void {
+    public function updated(string $propertyName): void
+    {
         if ($propertyName === 'project_id' && empty($this->project_id)) {
             $this->project_id = null;
         }
@@ -43,18 +51,20 @@ class TaskIndex extends Component {
         $this->validateOnly($propertyName);
     }
 
-    public function toggleDone(int $taskId): void {
+    public function toggleDone(int $taskId): void
+    {
         $task = Task::query()
             ->when(auth()->user()->role !== 'Admin', function ($q) {
                 $q->where('assigned_to', auth()->id());
             })
             ->findOrFail($taskId);
 
-        $task->done = !$task->done;
+        $task->done = ! $task->done;
         $task->save();
     }
 
-    public function deleteTask(int $taskId): void {
+    public function deleteTask(int $taskId): void
+    {
         $task = Task::query()
             ->when(auth()->user()->role !== 'Admin', function ($q) {
                 $q->where('assigned_to', auth()->id());
@@ -64,11 +74,12 @@ class TaskIndex extends Component {
         $task->delete();
     }
 
-    public function addTask(): void {
+    public function addTask(): void
+    {
         // Sanitize empty strings into null before validation
-        $this->project_id = !empty($this->project_id) ? (int)$this->project_id : null;
-        $this->assigned_to = !empty($this->assigned_to) ? (int)$this->assigned_to : auth()->id();
-        $this->due_date = !empty($this->due_date) ? $this->due_date : null;
+        $this->project_id = ! empty($this->project_id) ? (int) $this->project_id : null;
+        $this->assigned_to = ! empty($this->assigned_to) ? (int) $this->assigned_to : auth()->id();
+        $this->due_date = ! empty($this->due_date) ? $this->due_date : null;
         $this->title = trim($this->title);
 
         $this->validate();
@@ -96,12 +107,13 @@ class TaskIndex extends Component {
         $this->resetValidation();
     }
 
-    public function render() {
+    public function render()
+    {
         $user = auth()->user();
         $today = Carbon::today()->toDateString();
 
         $query = Task::query()
-            ->when($user->role !== 'Admin', fn($q) => $q->where('assigned_to', $user->id))
+            ->when($user->role !== 'Admin', fn ($q) => $q->where('assigned_to', $user->id))
             ->with(['project.customer', 'customer', 'assignedTo'])
             ->orderBy('done')
             ->orderByRaw('due_date IS NULL, due_date ASC');

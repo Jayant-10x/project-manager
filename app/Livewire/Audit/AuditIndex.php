@@ -8,10 +8,12 @@ use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Layout('layouts.app')]
-class AuditIndex extends Component {
+class AuditIndex extends Component
+{
     use WithPagination;
 
-    public function render() {
+    public function render()
+    {
         $logs = ActivityLog::with('user')
             ->orderByDesc('id')
             ->paginate(30);

@@ -69,4 +69,4 @@ Route::middleware(['auth', 'verified', EnsurePasswordIsChanged::class])->group(f
         ->name('api.notifications.poll');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

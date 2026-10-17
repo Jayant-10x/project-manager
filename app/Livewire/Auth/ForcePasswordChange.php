@@ -8,12 +8,16 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('layouts.guest')]
-class ForcePasswordChange extends Component {
+class ForcePasswordChange extends Component
+{
     public string $current_password = '';
+
     public string $new_password = '';
+
     public string $new_password_confirmation = '';
 
-    protected function rules(): array {
+    protected function rules(): array
+    {
         return [
             'current_password' => ['required', 'string'],
             'new_password' => [
@@ -29,25 +33,29 @@ class ForcePasswordChange extends Component {
         ];
     }
 
-    protected function messages(): array {
+    protected function messages(): array
+    {
         return [
             'new_password.min' => 'Password must be at least 8 characters.',
             'new_password.regex' => 'Password must contain at least 1 uppercase letter, 1 lowercase letter, and 1 number.',
         ];
     }
 
-    public function updatePassword() {
+    public function updatePassword()
+    {
         $this->validate();
 
         $user = auth()->user();
 
-        if (!Hash::check($this->current_password, $user->getAuthPassword())) {
+        if (! Hash::check($this->current_password, $user->getAuthPassword())) {
             $this->addError('current_password', 'The current password is incorrect.');
+
             return;
         }
 
         if ($this->current_password === $this->new_password) {
             $this->addError('new_password', 'The new password must be different from the current password.');
+
             return;
         }
 
@@ -60,7 +68,8 @@ class ForcePasswordChange extends Component {
         return $this->redirect(route('dashboard'), navigate: true);
     }
 
-    public function logout() {
+    public function logout()
+    {
         Auth::logout();
         request()->session()->invalidate();
         request()->session()->regenerateToken();
@@ -68,7 +77,8 @@ class ForcePasswordChange extends Component {
         return $this->redirect(route('login'), navigate: true);
     }
 
-    public function render() {
+    public function render()
+    {
         return view('livewire.auth.force-password-change');
     }
 }

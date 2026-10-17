@@ -38,7 +38,7 @@
 </head>
 <body class="bg-[#f5f7fb] text-[#0d1b34] font-sans antialiased"
       x-data="{
-          collapsed: localStorage.getItem('pjt_sidebar_collapsed') === 'true',
+          collapsed: window.innerWidth > 860 ? (localStorage.getItem('pjt_sidebar_collapsed') === 'true') : false,
           mobileOpen: false,
           toggleSidebar() {
               if (window.innerWidth <= 860) {
@@ -49,7 +49,7 @@
               }
           }
       }"
-      @notification-updated.window="if ($event.detail && typeof$event.detail.unreadCount !== 'undefined') $store.notifications.setCount($event.detail.unreadCount)"
+      @notification-updated.window="if ($event.detail && typeof $event.detail.unreadCount !== 'undefined') $store.notifications.setCount($event.detail.unreadCount)"
       x-init="
         Alpine.store('currency', {
             cur: localStorage.getItem('pjt_cur') || 'INR',
@@ -79,6 +79,18 @@
       ">
 
 <div class="app">
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div class="sidebar-backdrop"
+         x-show="mobileOpen"
+         x-transition:enter="transition-opacity ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="mobileOpen = false"
+         style="display: none;"></div>
+
     <!-- Complete Responsive Sidebar -->
     @include('layouts.partials.sidebar')
 
@@ -86,7 +98,7 @@
     <div class="main">
         <header class="topbar">
             <!-- Burger Button: Toggles 70px icon-rail on desktop or off-canvas drawer on mobile -->
-            <button class="icon-sq" id="burger" type="button" @click="toggleSidebar()" title="Toggle Sidebar">
+            <button class="icon-sq" id="burger" type="button" @click.stop="toggleSidebar()" title="Toggle Sidebar">
                 <svg viewBox="0 0 24 24">
                     <path d="M3 12h18M3 6h18M3 18h18"/>
                 </svg>
@@ -114,7 +126,7 @@
                     <svg viewBox="0 0 24 24" class="w-4 h-4">
                         <path d="M12 5v14M5 12h14"/>
                     </svg>
-                    New Customer
+                    <span class="btn-lbl">New Customer</span>
                 </button>
             </div>
         </header>
@@ -133,6 +145,8 @@
 <livewire:customers.customer-modal/>
 <livewire:projects.project-modal/>
 <livewire:payments.payment-modal/>
+<livewire:followups.followup-modal/>
+<livewire:documents.document-preview-modal/>
 
 @livewireScripts
 
@@ -142,7 +156,7 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('browserNotifier', (userId) => ({
-            pollInterval: 30000, // 30 seconds
+            pollInterval: 5000, // 30 seconds
             timer: null,
             storageKey: `crm_last_seen_notif_${userId}`,
             lastSeenId: 0,
@@ -230,9 +244,9 @@
                     notification.close();
 
                     if (item.link_type === 'project' && item.link_id) {
-                        window.location.href = `/projects/${item.link_id}`;
+                        window.location.href = `/project/${item.link_id}`;
                     } else if (item.link_type === 'customer' && item.link_id) {
-                        window.location.href = `/customers/${item.link_id}`;
+                        window.location.href = `/customer/${item.link_id}`;
                     } else {
                         window.location.href = `/notifications/${item.id}`;
                     }

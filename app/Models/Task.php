@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Task extends Model {
+class Task extends Model
+{
     protected $guarded = ['id'];
 
     protected $casts = [
@@ -13,19 +14,23 @@ class Task extends Model {
         'done' => 'boolean',
     ];
 
-    public function customer(): BelongsTo {
+    public function customer(): BelongsTo
+    {
         return $this->belongsTo(Customer::class);
     }
 
-    public function project(): BelongsTo {
+    public function project(): BelongsTo
+    {
         return $this->belongsTo(Project::class);
     }
 
-    public function assignedTo(): BelongsTo {
+    public function assignedTo(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
-    public function createdBy(): BelongsTo {
+    public function createdBy(): BelongsTo
+    {
         return $this->belongsTo(User::class, 'created_by');
     }
 }

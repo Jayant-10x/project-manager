@@ -12,7 +12,8 @@ use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Layout('layouts.app')]
-class PaymentIndex extends Component {
+class PaymentIndex extends Component
+{
     use WithPagination;
 
     #[Url]
@@ -21,33 +22,39 @@ class PaymentIndex extends Component {
     #[Url]
     public string $mode = '';
 
-    public function updatingSearch(): void {
+    public function updatingSearch(): void
+    {
         $this->resetPage();
     }
 
-    public function updatingMode(): void {
+    public function updatingMode(): void
+    {
         $this->resetPage();
     }
 
-    public function clearFilters(): void {
+    public function clearFilters(): void
+    {
         $this->reset(['search', 'mode']);
         $this->resetPage();
     }
 
     #[On('payment-saved')]
-    public function refreshPayments(): void {
+    public function refreshPayments(): void
+    {
         $this->resetPage();
     }
 
-    public function deletePayment(int $id): void {
+    public function deletePayment(int $id): void
+    {
         $user = auth()->user();
         $payment = Payment::query()
-            ->whereHas('project', fn($q) => $q->forUser($user))
+            ->whereHas('project', fn ($q) => $q->forUser($user))
             ->findOrFail($id);
 
         // Coordinators can only delete their own entries unless Admin
         if ($user->role !== 'Admin' && $payment->created_by !== $user->id) {
             $this->dispatch('toast', ['msg' => 'You can only remove receipts you entered.', 'type' => 'err']);
+
             return;
         }
 
@@ -57,8 +64,8 @@ class PaymentIndex extends Component {
         if ($termId) {
             $term = PaymentTerm::find($termId);
             if ($term) {
-                $remPaid = (float)Payment::where('term_id', $termId)->sum('amount');
-                $remTds = (float)Payment::where('term_id', $termId)->sum('tds');
+                $remPaid = (float) Payment::where('term_id', $termId)->sum('amount');
+                $remTds = (float) Payment::where('term_id', $termId)->sum('tds');
                 $term->received = $remPaid;
                 $term->tds = $remTds;
 
@@ -78,15 +85,16 @@ class PaymentIndex extends Component {
         $this->dispatch('payment-deleted');
     }
 
-    public function exportCsv() {
+    public function exportCsv()
+    {
         $user = auth()->user();
         $payments = Payment::query()
-            ->whereHas('project', fn($q) => $q->forUser($user))
+            ->whereHas('project', fn ($q) => $q->forUser($user))
             ->with(['project.customer', 'customer', 'term', 'enteredBy'])
             ->orderByDesc('paid_on')
             ->get();
 
-        $filename = 'payments-' . now()->toDateString() . '.csv';
+        $filename = 'payments-'.now()->toDateString().'.csv';
 
         return response()->streamDownload(function () use ($payments) {
             $handle = fopen('php://output', 'w');
@@ -113,11 +121,12 @@ class PaymentIndex extends Component {
         }, $filename, ['Content-Type' => 'text/csv; charset=utf-8']);
     }
 
-    public function render() {
+    public function render()
+    {
         $user = auth()->user();
 
         $query = Payment::query()
-            ->whereHas('project', fn($q) => $q->forUser($user))
+            ->whereHas('project', fn ($q) => $q->forUser($user))
             ->with(['project.customer', 'customer', 'term', 'enteredBy'])
             ->when($user->role === 'Coordinator', function ($q) {
                 // Coordinators only see payments with active due balances
@@ -125,13 +134,13 @@ class PaymentIndex extends Component {
                     $t->whereIn('status', ['Pending', 'Partial', 'Overdue']);
                 });
             })
-            ->when($this->mode, fn($q) => $q->where('mode', $this->mode))
+            ->when($this->mode, fn ($q) => $q->where('mode', $this->mode))
             ->orderByDesc('paid_on')
             ->orderByDesc('id');
 
         $allMatching = (clone $query)->get();
-        $totalAmount = (float)$allMatching->sum('amount');
-        $totalTds = (float)$allMatching->sum('tds');
+        $totalAmount = (float) $allMatching->sum('amount');
+        $totalTds = (float) $allMatching->sum('tds');
 
         return view('livewire.payments.payment-index', [
             'payments' => $query->paginate(15),

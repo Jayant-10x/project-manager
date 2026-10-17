@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Dashboard;
 
-use App\Models\Customer;
 use App\Models\Followup;
 use App\Models\Payment;
 use App\Models\PaymentTerm;
@@ -16,23 +15,26 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
-class DashboardIndex extends Component {
+class DashboardIndex extends Component
+{
     #[On('payment-saved')]
     #[On('payment-deleted')]
     #[On('project-saved')]
     #[On('customer-saved')]
-    public function refreshDashboard(): void {
+    public function refreshDashboard(): void
+    {
         // Re-renders the dashboard reactively
     }
 
-    public function render(MoneyCalculationService $moneyService) {
+    public function render(MoneyCalculationService $moneyService)
+    {
         $user = auth()->user();
         $moneyService->refreshOverdueStatus();
 
         $today = Carbon::today()->toDateString();
-        $alertDays = (int)Setting::getValue('payment_alert_days', 7);
+        $alertDays = (int) Setting::getValue('payment_alert_days', 7);
         $soonDate = Carbon::today()->addDays($alertDays)->toDateString();
-        $followupAlertDays = (int)Setting::getValue('followup_alert_days', 1);
+        $followupAlertDays = (int) Setting::getValue('followup_alert_days', 1);
         $followupSoon = Carbon::today()->addDays($followupAlertDays)->toDateString();
 
         // Strict role scoping
@@ -40,22 +42,22 @@ class DashboardIndex extends Component {
         $projectIds = (clone $projectsQuery)->pluck('id');
 
         // 1. Money metrics
-        $sched = (float)PaymentTerm::whereIn('project_id', $projectIds)
+        $sched = (float) PaymentTerm::whereIn('project_id', $projectIds)
             ->where('status', '!=', 'Cancelled')
             ->sum('amount');
 
-        $rec = (float)Payment::whereIn('project_id', $projectIds)->sum('amount');
-        $tds = (float)Payment::whereIn('project_id', $projectIds)->sum('tds');
+        $rec = (float) Payment::whereIn('project_id', $projectIds)->sum('amount');
+        $tds = (float) Payment::whereIn('project_id', $projectIds)->sum('tds');
         $due = round(max(0, $sched - $rec - $tds), 2);
 
         $overdueTermsQuery = PaymentTerm::query()
             ->whereIn('project_id', $projectIds)
             ->where('status', 'Overdue');
 
-        $overdueSum = (float)(clone $overdueTermsQuery)->selectRaw('COALESCE(SUM(amount - received - tds), 0) as val')->value('val');
+        $overdueSum = (float) (clone $overdueTermsQuery)->selectRaw('COALESCE(SUM(amount - received - tds), 0) as val')->value('val');
         $overdueCount = (clone $overdueTermsQuery)->count();
 
-        $thisMonthRec = (float)Payment::whereIn('project_id', $projectIds)
+        $thisMonthRec = (float) Payment::whereIn('project_id', $projectIds)
             ->where('paid_on', '>=', Carbon::now()->startOfMonth()->toDateString())
             ->sum('amount');
 
@@ -127,7 +129,7 @@ class DashboardIndex extends Component {
             $startM = $monthObj->copy()->startOfMonth()->toDateString();
             $endM = $monthObj->copy()->endOfMonth()->toDateString();
 
-            $val = (float)Payment::whereIn('project_id', $projectIds)
+            $val = (float) Payment::whereIn('project_id', $projectIds)
                 ->whereBetween('paid_on', [$startM, $endM])
                 ->sum('amount');
 
@@ -143,29 +145,29 @@ class DashboardIndex extends Component {
             $salesData = DB::table('customers')
                 ->leftJoin('projects', 'projects.customer_id', '=', 'customers.id')
                 ->whereNotNull('customers.sales_person_id')
-                ->leftJoin('sales_persons', 'sales_persons.id', '=', 'customers.sales_person_id')
+                ->leftJoin('users as sales_reps', 'sales_reps.id', '=', 'customers.sales_person_id')
                 ->select(
-                    'sales_persons.name',
+                    'sales_reps.name',
                     DB::raw('COUNT(DISTINCT customers.id) as customers_count'),
                     DB::raw('COUNT(DISTINCT projects.id) as projects_count'),
                     DB::raw('COALESCE(SUM(projects.value), 0) as total_val')
                 )
-                ->groupBy('sales_persons.name')
+                ->groupBy('sales_reps.name')
                 ->orderByDesc('total_val')
                 ->get();
 
             $salesReceipts = DB::table('payments')
                 ->join('customers', 'customers.id', '=', 'payments.customer_id')
                 ->whereNotNull('customers.sales_person_id')
-                ->leftJoin('sales_persons', 'sales_persons.id', '=', 'customers.sales_person_id')
-                ->groupBy('sales_persons.name')
-                ->select('sales_persons.name', DB::raw('COALESCE(SUM(payments.amount), 0) as received'))
+                ->leftJoin('users as sales_reps', 'sales_reps.id', '=', 'customers.sales_person_id')
+                ->groupBy('sales_reps.name')
+                ->select('sales_reps.name', DB::raw('COALESCE(SUM(payments.amount), 0) as received'))
                 ->pluck('received', 'name')
                 ->toArray();
 
             foreach ($salesData as $sd) {
-                $recAmt = (float)($salesReceipts[$sd->name] ?? 0);
-                $valAmt = (float)$sd->total_val;
+                $recAmt = (float) ($salesReceipts[$sd->name] ?? 0);
+                $valAmt = (float) $sd->total_val;
                 $rate = $valAmt > 0 ? round(($recAmt / $valAmt) * 100) : 0;
                 $salesRows[] = [
                     'name' => $sd->name ?? 'Unassigned',
@@ -179,11 +181,16 @@ class DashboardIndex extends Component {
         }
 
         // 7. AMC / Renewal
+        $isSqlite = DB::getDriverName() === 'sqlite';
+        $amcExpr = $isSqlite
+            ? "amc_end <= date('now', '+' || coalesce(renew_alert_days, 7) || ' days')"
+            : 'amc_end <= DATE_ADD(CURDATE(), INTERVAL COALESCE(renew_alert_days, 7) DAY)';
+
         $amcProjects = Project::query()
             ->forUser($user)
             ->where('amc_required', 1)
             ->whereNotNull('amc_end')
-            ->whereRaw('amc_end <= DATE_ADD(CURDATE(), INTERVAL COALESCE(renew_alert_days, 7) DAY)')
+            ->whereRaw($amcExpr)
             ->with('customer')
             ->orderBy('amc_end')
             ->limit(6)
@@ -202,7 +209,7 @@ class DashboardIndex extends Component {
         $ageing = ['0-30' => 0.0, '31-60' => 0.0, '61-90' => 0.0, '90+' => 0.0];
         $allOverdue = (clone $overdueTermsQuery)->get(['amount', 'received', 'tds', 'due_date']);
         foreach ($allOverdue as $ot) {
-            $bal = max(0, (float)$ot->amount - (float)$ot->received - (float)$ot->tds);
+            $bal = max(0, (float) $ot->amount - (float) $ot->received - (float) $ot->tds);
             $days = $ot->due_date ? Carbon::parse($today)->diffInDays(Carbon::parse($ot->due_date), false) : 0;
             $overDays = abs($days);
             if ($overDays <= 30) {

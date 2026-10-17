@@ -7,13 +7,17 @@ use App\Models\Project;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
-class ProjectMilestoneModal extends Component {
+class ProjectMilestoneModal extends Component
+{
     public ?int $projectId = null;
+
     public string $projectCode = '';
+
     public array $items = [];
 
     #[On('open-milestone-modal')]
-    public function load(int $projectId): void {
+    public function load(int $projectId): void
+    {
         $this->resetValidation();
         $this->projectId = $projectId;
         $project = Project::findOrFail($projectId);
@@ -30,19 +34,20 @@ class ProjectMilestoneModal extends Component {
                 ['id' => null, 'name' => 'Live / delivery', 'dueDate' => $deliveryDate, 'status' => 'Pending', 'done' => false],
             ];
         } else {
-            $this->items = $dbItems->map(fn($m) => [
+            $this->items = $dbItems->map(fn ($m) => [
                 'id' => $m->id,
                 'name' => $m->name,
                 'dueDate' => $m->due_date?->toDateString() ?? '',
                 'status' => $m->status ?? 'Pending',
-                'done' => (bool)$m->done,
+                'done' => (bool) $m->done,
             ])->toArray();
         }
 
         $this->dispatch('open-modal', 'project-milestone-modal');
     }
 
-    public function addRow(): void {
+    public function addRow(): void
+    {
         $this->items[] = [
             'id' => null,
             'name' => '',
@@ -52,7 +57,8 @@ class ProjectMilestoneModal extends Component {
         ];
     }
 
-    public function removeRow(int $index): void {
+    public function removeRow(int $index): void
+    {
         if (isset($this->items[$index])) {
             unset($this->items[$index]);
             $this->items = array_values($this->items);
@@ -60,7 +66,8 @@ class ProjectMilestoneModal extends Component {
         }
     }
 
-    protected function rules(): array {
+    protected function rules(): array
+    {
         return [
             'items' => 'required|array|min:1',
             'items.*.name' => 'required|string|max:160',
@@ -70,7 +77,8 @@ class ProjectMilestoneModal extends Component {
         ];
     }
 
-    public function updated(string $propertyName): void {
+    public function updated(string $propertyName): void
+    {
         // Automatically sync checkbox status with dropdown
         if (str_ends_with($propertyName, '.done')) {
             $parts = explode('.', $propertyName);
@@ -89,10 +97,11 @@ class ProjectMilestoneModal extends Component {
         $this->validateOnly($propertyName);
     }
 
-    public function save(): void {
+    public function save(): void
+    {
         // Normalize empty string dates to null before validation
         foreach ($this->items as $idx => $m) {
-            $this->items[$idx]['dueDate'] = !empty($m['dueDate']) ? $m['dueDate'] : null;
+            $this->items[$idx]['dueDate'] = ! empty($m['dueDate']) ? $m['dueDate'] : null;
             $this->items[$idx]['name'] = trim($m['name'] ?? '');
         }
 
@@ -102,7 +111,7 @@ class ProjectMilestoneModal extends Component {
         $seenIds = [];
 
         foreach ($this->items as $idx => $m) {
-            $done = !empty($m['done']) || ($m['status'] === 'Done');
+            $done = ! empty($m['done']) || ($m['status'] === 'Done');
             $status = $done ? 'Done' : ($m['status'] ?? 'Pending');
 
             $payload = [
@@ -114,7 +123,7 @@ class ProjectMilestoneModal extends Component {
                 'sort_order' => $idx + 1,
             ];
 
-            if (!empty($m['id'])) {
+            if (! empty($m['id'])) {
                 $milestone = Milestone::where('project_id', $this->projectId)->find($m['id']);
                 if ($milestone) {
                     $milestone->update($payload);
@@ -136,7 +145,8 @@ class ProjectMilestoneModal extends Component {
         $this->redirect(route('projects.show', $this->projectId), navigate: true);
     }
 
-    public function render() {
+    public function render()
+    {
         return view('livewire.projects.project-milestone-modal');
     }
 }

@@ -11,8 +11,10 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
-class ReportIndex extends Component {
-    public function render() {
+class ReportIndex extends Component
+{
+    public function render()
+    {
         $user = auth()->user();
         $today = Carbon::today()->toDateString();
         // Automatically aggregates downline projects via updated scopeForUser()
@@ -21,16 +23,16 @@ class ReportIndex extends Component {
         $projectIds = $projects->pluck('id');
 
         // 1. KPI Aggregates
-        $totalReceived = (float)Payment::whereIn('project_id', $projectIds)->sum('amount');
-        $totalScheduled = (float)PaymentTerm::whereIn('project_id', $projectIds)
+        $totalReceived = (float) Payment::whereIn('project_id', $projectIds)->sum('amount');
+        $totalScheduled = (float) PaymentTerm::whereIn('project_id', $projectIds)
             ->where('status', '!=', 'Cancelled')
             ->sum('amount');
-        $totalTds = (float)Payment::whereIn('project_id', $projectIds)->sum('tds');
+        $totalTds = (float) Payment::whereIn('project_id', $projectIds)->sum('tds');
 
         $overdueTerms = PaymentTerm::whereIn('project_id', $projectIds)
             ->where('status', 'Overdue')
             ->get();
-        $overdueAmt = (float)$overdueTerms->sum(fn($t) => max(0, $t->amount - $t->received - $t->tds));
+        $overdueAmt = (float) $overdueTerms->sum(fn ($t) => max(0, $t->amount - $t->received - $t->tds));
         $overdueCount = $overdueTerms->count();
 
         $collectionRate = $totalScheduled > 0 ? round(($totalReceived / $totalScheduled) * 100, 1) : 0;
@@ -43,7 +45,7 @@ class ReportIndex extends Component {
             $startM = $monthObj->copy()->startOfMonth()->toDateString();
             $endM = $monthObj->copy()->endOfMonth()->toDateString();
 
-            $amt = (float)Payment::whereIn('project_id', $projectIds)
+            $amt = (float) Payment::whereIn('project_id', $projectIds)
                 ->whereBetween('paid_on', [$startM, $endM])
                 ->sum('amount');
 
@@ -59,14 +61,14 @@ class ReportIndex extends Component {
 
         $modes = [];
         foreach ($modeData as $mName => $mAmt) {
-            $modes[] = ['label' => $mName, 'value' => (float)$mAmt];
+            $modes[] = ['label' => $mName, 'value' => (float) $mAmt];
         }
-        usort($modes, fn($a, $b) => $b['value'] <=> $a['value']);
+        usort($modes, fn ($a, $b) => $b['value'] <=> $a['value']);
 
         // 4. Payment Ageing Breakdown (0-30, 31-60, 61-90, 90+)
         $ageing = ['0-30' => 0.0, '31-60' => 0.0, '61-90' => 0.0, '90+' => 0.0];
         foreach ($overdueTerms as $ot) {
-            $bal = max(0, (float)$ot->amount - (float)$ot->received - (float)$ot->tds);
+            $bal = max(0, (float) $ot->amount - (float) $ot->received - (float) $ot->tds);
             $days = $ot->due_date ? abs(Carbon::parse($today)->diffInDays($ot->due_date, false)) : 0;
             if ($days <= 30) {
                 $ageing['0-30'] += $bal;
@@ -94,8 +96,8 @@ class ReportIndex extends Component {
             $doneMs = $p->milestones->where('done', true)->count();
             $msPct = $totMs > 0 ? min(100, round(($doneMs / $totMs) * 100)) : 0;
 
-            $pSched = (float)$p->money['scheduled'];
-            $pRec = (float)$p->money['received'];
+            $pSched = (float) $p->money['scheduled'];
+            $pRec = (float) $p->money['received'];
             $moneyPct = $pSched > 0 ? min(100, round(($pRec / $pSched) * 100)) : 0;
 
             $gap = $msPct - $moneyPct;
@@ -105,12 +107,12 @@ class ReportIndex extends Component {
                 'msPct' => $msPct,
                 'moneyPct' => $moneyPct,
                 'gap' => $gap,
-                'due' => (float)$p->money['due'],
+                'due' => (float) $p->money['due'],
                 'health' => $p->health,
             ];
         }
 
-        usort($varianceRows, fn($a, $b) => $b['gap'] <=> $a['gap']);
+        usort($varianceRows, fn ($a, $b) => $b['gap'] <=> $a['gap']);
 
         return view('livewire.reports.report-index', [
             'totalReceived' => $totalReceived,

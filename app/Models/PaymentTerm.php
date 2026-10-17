@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class PaymentTerm extends Model {
+class PaymentTerm extends Model
+{
     protected $guarded = ['id'];
 
     protected $casts = [
@@ -18,11 +19,13 @@ class PaymentTerm extends Model {
         'seq' => 'integer',
     ];
 
-    public function project(): BelongsTo {
+    public function project(): BelongsTo
+    {
         return $this->belongsTo(Project::class);
     }
 
-    public function milestone(): BelongsTo {
+    public function milestone(): BelongsTo
+    {
         return $this->belongsTo(Milestone::class);
     }
 }

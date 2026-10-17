@@ -125,10 +125,16 @@
                                 <div class="t">{{ $f->customer?->company ?? '—' }}</div>
                                 <div class="s">{{ $f->next_note ?: $f->summary }}</div>
                             </div>
-                            <div class="r">
+                            <div class="r flex items-center gap-1.5">
                                 <span class="badge {{ $isOverdueFup ? 'b-red' : 'b-navy' }}">
                                     {{ $fDate ? $fDate->format('d M') : '—' }}
                                 </span>
+                                <button type="button" class="mini-btn" title="Log Follow-up"
+                                        @click.stop="Livewire.dispatch('open-followup-modal', { customerId: {{ $f->customer_id }}, projectId: {{ $f->project_id ?? 'null' }} })">
+                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                        <path d="M12 5v14M5 12h14"/>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
                     @empty

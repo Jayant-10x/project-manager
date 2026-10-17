@@ -6,19 +6,23 @@ use App\Models\Notification;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
-class NotificationDrawer extends Component {
+class NotificationDrawer extends Component
+{
     public string $filter = 'all';
 
     #[On('notification-updated')]
-    public function refreshDrawer(): void {
+    public function refreshDrawer(): void
+    {
         // Re-renders the drawer when notifications change
     }
 
-    public function setFilter(string $filter): void {
+    public function setFilter(string $filter): void
+    {
         $this->filter = $filter;
     }
 
-    public function markAsRead(int $id): void {
+    public function markAsRead(int $id): void
+    {
         Notification::where('user_id', auth()->id())
             ->where('id', $id)
             ->update(['is_read' => true]);
@@ -30,7 +34,8 @@ class NotificationDrawer extends Component {
         $this->dispatch('notification-updated', unreadCount: $unreadCount);
     }
 
-    public function markAllAsRead(): void {
+    public function markAllAsRead(): void
+    {
         Notification::where('user_id', auth()->id())
             ->where('is_read', false)
             ->update(['is_read' => true]);
@@ -39,10 +44,11 @@ class NotificationDrawer extends Component {
         $this->dispatch('toast', ['msg' => 'All marked as read', 'kind' => 'ok']);
     }
 
-    public function openNotification(int $id) {
+    public function openNotification(int $id)
+    {
         $notif = Notification::where('user_id', auth()->id())->findOrFail($id);
 
-        if (!$notif->is_read) {
+        if (! $notif->is_read) {
             $notif->update(['is_read' => true]);
             $unreadCount = Notification::where('user_id', auth()->id())
                 ->where('is_read', false)
@@ -61,7 +67,8 @@ class NotificationDrawer extends Component {
         return $this->redirect(route('notifications.show', $notif->id), navigate: true);
     }
 
-    public function render() {
+    public function render()
+    {
         $userId = auth()->id();
 
         $query = Notification::where('user_id', $userId)

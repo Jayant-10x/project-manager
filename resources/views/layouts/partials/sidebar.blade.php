@@ -16,17 +16,19 @@
 
 <aside class="sidebar"
        id="sb"
-       :class="{ 'collapsed': collapsed, 'open': mobileOpen }"
-       @click.outside="if (window.innerWidth <= 860) mobileOpen = false">
+       :class="{ 'collapsed': collapsed, 'open': mobileOpen }">
 
     <div class="sb-head">
         <div class="logo-plate">
             <img src="{{ asset('assets/logo.png') }}" alt="10X Agency">
         </div>
+        <button type="button" class="sb-close-btn" @click="mobileOpen = false" title="Close Menu">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
     </div>
     <div class="sb-name">PJT CRM</div>
 
-    <nav class="nav" id="nav">
+    <nav class="nav" id="nav" @click="if (window.innerWidth <= 860 && $event.target.closest('a')) mobileOpen = false">
         <!-- 1. Overview -->
         <div class="nav-label">Overview</div>
         <a href="{{ route('dashboard') }}" wire:navigate

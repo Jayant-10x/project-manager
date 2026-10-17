@@ -203,8 +203,13 @@
                                 default => '#5aa236',
                             };
                         @endphp
-                        <div class="avatar" style="background: {{ $avatarBg }}">
-                            {{ strtoupper(substr($u->name, 0, 2)) }}
+                        <div class="relative flex-shrink-0">
+                            <div class="avatar" style="background: {{ $avatarBg }}">
+                                {{ strtoupper(substr($u->name, 0, 2)) }}
+                            </div>
+                            @if($u->is_online)
+                                <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" title="Online now"></span>
+                            @endif
                         </div>
 
                         <div style="flex:1;min-width:0">

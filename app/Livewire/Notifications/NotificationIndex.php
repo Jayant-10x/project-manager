@@ -8,10 +8,12 @@ use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Layout('layouts.app')]
-class NotificationIndex extends Component {
+class NotificationIndex extends Component
+{
     use WithPagination;
 
-    public function markAllAsRead(): void {
+    public function markAllAsRead(): void
+    {
         Notification::where('user_id', auth()->id())
             ->where('is_read', false)
             ->update(['is_read' => true]);
@@ -19,10 +21,11 @@ class NotificationIndex extends Component {
         $this->dispatch('toast', ['msg' => 'All marked as read', 'type' => 'ok']);
     }
 
-    public function openNotification(int $id) {
+    public function openNotification(int $id)
+    {
         $notif = Notification::where('user_id', auth()->id())->findOrFail($id);
 
-        if (!$notif->is_read) {
+        if (! $notif->is_read) {
             $notif->update(['is_read' => true]);
         }
 
@@ -37,7 +40,8 @@ class NotificationIndex extends Component {
         return $this->redirect(route('notifications.show', $notif->id), navigate: true);
     }
 
-    public function render() {
+    public function render()
+    {
         $user = auth()->user();
 
         $notifications = Notification::where('user_id', $user->id)

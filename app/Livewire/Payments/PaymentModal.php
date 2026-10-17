@@ -5,30 +5,42 @@ namespace App\Livewire\Payments;
 use App\Models\Payment;
 use App\Models\PaymentTerm;
 use App\Models\Project;
+use App\Services\AuditNotificationService;
 use App\Services\CodeGeneratorService;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
-class PaymentModal extends Component {
+class PaymentModal extends Component
+{
     public ?int $project_id = null;
+
     public ?int $term_id = null;
+
     public ?float $amount = null;
+
     public ?float $tds = 0.0;
+
     public string $paid_on = '';
+
     public string $mode = 'NEFT';
+
     public string $reference = '';
+
     public string $bank = '';
+
     public string $note = '';
 
     // Sub-header dynamic information
     public string $projectSub = '';
 
-    public function mount(): void {
+    public function mount(): void
+    {
         $this->paid_on = now()->toDateString();
     }
 
     #[On('open-payment-modal')]
-    public function openPaymentModal(?int $projectId = null, ?int $termId = null): void {
+    public function openPaymentModal(?int $projectId = null, ?int $termId = null): void
+    {
         $this->resetValidation();
         $this->reset(['project_id', 'term_id', 'amount', 'tds', 'reference', 'bank', 'note']);
         $this->paid_on = now()->toDateString();
@@ -47,7 +59,8 @@ class PaymentModal extends Component {
         $this->dispatch('open-modal', 'payment-modal');
     }
 
-    public function updated(string $propertyName): void {
+    public function updated(string $propertyName): void
+    {
         if ($propertyName === 'project_id') {
             $this->term_id = null;
             $this->updateProjectContext();
@@ -58,29 +71,33 @@ class PaymentModal extends Component {
         $this->validateOnly($propertyName);
     }
 
-    private function updateProjectContext(): void {
+    private function updateProjectContext(): void
+    {
         if ($this->project_id) {
             $project = Project::with('customer')->find($this->project_id);
             if ($project) {
                 $dueFormatted = number_format($project->money['due'], 0);
-                $this->projectSub = ($project->customer ? $project->customer->company . ' · ' : '') . 'due ₹' . $dueFormatted;
+                $this->projectSub = ($project->customer ? $project->customer->company.' · ' : '').'due ₹'.$dueFormatted;
+
                 return;
             }
         }
         $this->projectSub = 'Log verified settlement to ledger';
     }
 
-    private function updateTermAmount(): void {
+    private function updateTermAmount(): void
+    {
         if ($this->term_id) {
             $term = PaymentTerm::find($this->term_id);
             if ($term) {
-                $bal = max(0, (float)$term->amount - (float)$term->received - (float)$term->tds);
+                $bal = max(0, (float) $term->amount - (float) $term->received - (float) $term->tds);
                 $this->amount = $bal > 0 ? $bal : null;
             }
         }
     }
 
-    protected function rules(): array {
+    protected function rules(): array
+    {
         return [
             'project_id' => 'required|integer|exists:projects,id',
             'term_id' => 'nullable|integer|exists:payment_terms,id',
@@ -94,12 +111,13 @@ class PaymentModal extends Component {
         ];
     }
 
-    public function save(): void {
+    public function save(): void
+    {
         // Normalize empty inputs and prevent null constraint violation on numeric columns
-        $this->project_id = $this->project_id ? (int)$this->project_id : null;
-        $this->term_id = $this->term_id ? (int)$this->term_id : null;
-        $this->amount = ($this->amount === null || $this->amount === '') ? null : (float)$this->amount;
-        $this->tds = ($this->tds === null || $this->tds === '') ? 0.0 : (float)$this->tds;
+        $this->project_id = $this->project_id ? (int) $this->project_id : null;
+        $this->term_id = $this->term_id ? (int) $this->term_id : null;
+        $this->amount = ($this->amount === null || $this->amount === '') ? null : (float) $this->amount;
+        $this->tds = ($this->tds === null || $this->tds === '') ? 0.0 : (float) $this->tds;
         $this->reference = trim($this->reference);
         $this->bank = trim($this->bank);
         $this->note = trim($this->note);
@@ -113,26 +131,48 @@ class PaymentModal extends Component {
         $validated['customer_id'] = $project->customer_id;
         $validated['created_by'] = auth()->id();
 
-        Payment::create($validated);
+        $payment = Payment::create($validated);
 
-        if (!empty($validated['term_id'])) {
+        if (! empty($validated['term_id'])) {
             $term = PaymentTerm::find($validated['term_id']);
             if ($term) {
-                $term->received += (float)$validated['amount'];
-                $term->tds += (float)$validated['tds'];
+                $term->received += (float) $validated['amount'];
+                $term->tds += (float) $validated['tds'];
                 $term->status = ($term->received + $term->tds >= $term->amount - 0.01) ? 'Paid' : 'Partial';
                 $term->save();
             }
+        }
+
+        $auditService = app(AuditNotificationService::class);
+        $auditService->log(
+            auth()->id(),
+            'Created Payment',
+            'Payment',
+            $payment->id,
+            $validated['code'],
+            "Received ₹{$validated['amount']} for {$project->name}"
+        );
+
+        if ($project->coordinator_id && $project->coordinator_id !== auth()->id()) {
+            $auditService->notify(
+                $project->coordinator_id,
+                'Payment Received',
+                "Payment {$validated['code']} recorded",
+                "₹{$validated['amount']} received for {$project->name}",
+                'project',
+                $project->id
+            );
         }
 
         $this->reset(['project_id', 'term_id', 'amount', 'tds', 'reference', 'bank', 'note']);
         $this->paid_on = now()->toDateString();
         $this->dispatch('payment-saved');
         $this->dispatch('close-modal', 'payment-modal');
-        $this->redirect(route('payments.index'), navigate: true);
+        $this->dispatch('toast', ['msg' => 'Payment receipt recorded successfully', 'type' => 'ok']);
     }
 
-    public function render() {
+    public function render()
+    {
         $user = auth()->user();
         $projects = Project::query()->forUser($user)->with(['terms', 'customer'])->orderBy('name')->get();
         $terms = $this->project_id
