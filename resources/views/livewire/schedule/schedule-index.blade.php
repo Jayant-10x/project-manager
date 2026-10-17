@@ -36,6 +36,54 @@
                     :class="$status === '' ? 'ring-2 ring-[#7a5af8]' : ''"/>
     </div>
 
+    <!-- Filterbar -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="filterbar">
+                <div class="gsearch" style="width:230px">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="7"/>
+                        <path d="M21 21l-4.3-4.3"/>
+                    </svg>
+                    <input wire:model.live.debounce.300ms="search" placeholder="Term, customer, project...">
+                </div>
+
+                <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
+                    <option value="">All customers</option>
+                    @foreach($customers as $c)
+                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                    @endforeach
+                </select>
+
+                <select wire:model.live="status" class="i" style="width:auto">
+                    <option value="">All statuses</option>
+                    <option value="Upcoming">Upcoming (Pending/Partial)</option>
+                    <option value="Overdue">Overdue</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Partial">Partial</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select>
+
+                <select wire:model.live="trigger_type" class="i" style="width:auto">
+                    <option value="">All triggers</option>
+                    <option value="fixed">Fixed date</option>
+                    <option value="milestone">Milestone linked</option>
+                    <option value="recurring">Recurring monthly</option>
+                </select>
+
+                @if($search !== '' || $status !== '' || $customer_id !== '' || $trigger_type !== '')
+                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        Clear
+                    </button>
+                @endif
+            </div>
+        </div>
+    </div>
+
     <!-- Schedule Data Table -->
     <div class="card">
         <div class="card-head p-4 border-b border-[#eef2f9]">

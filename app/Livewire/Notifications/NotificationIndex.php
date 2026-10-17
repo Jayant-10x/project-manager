@@ -4,6 +4,7 @@ namespace App\Livewire\Notifications;
 
 use App\Models\Notification;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -11,6 +12,36 @@ use Livewire\WithPagination;
 class NotificationIndex extends Component
 {
     use WithPagination;
+
+    #[Url]
+    public string $type = '';
+
+    #[Url]
+    public string $status = ''; // 'unread', 'read'
+
+    #[Url]
+    public string $search = '';
+
+    public function updatingType(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingStatus(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function clearFilters(): void
+    {
+        $this->reset(['type', 'status', 'search']);
+        $this->resetPage();
+    }
 
     public function markAllAsRead(): void
     {
@@ -45,6 +76,16 @@ class NotificationIndex extends Component
         $user = auth()->user();
 
         $notifications = Notification::where('user_id', $user->id)
+            ->when($this->type, fn ($q) => $q->where('type', $this->type))
+            ->when($this->status === 'unread', fn ($q) => $q->where('is_read', false))
+            ->when($this->status === 'read', fn ($q) => $q->where('is_read', true))
+            ->when($this->search, function ($q) {
+                $term = '%'.trim($this->search).'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('title', 'like', $term)
+                        ->orWhere('body', 'like', $term);
+                });
+            })
             ->orderByDesc('id')
             ->paginate(30);
 

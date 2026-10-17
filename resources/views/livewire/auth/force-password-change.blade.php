@@ -19,11 +19,11 @@
                 <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Current Password</label>
                 <input wire:model="current_password"
                        type="password"
-                       class="i text-sm"
+                       class="i text-sm @error('current_password') border-red-500! bg-red-50/20! @enderror"
                        placeholder="Temporary password from admin"
                        autocomplete="current-password">
                 @error('current_password')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
+                <span class="text-xs text-red-500! block mt-1">{{ $message }}</span>
                 @enderror
             </div>
 
@@ -31,11 +31,11 @@
                 <label class="text-xs font-bold text-gray-500 uppercase block mb-1">New Password</label>
                 <input wire:model="new_password"
                        type="password"
-                       class="i text-sm"
+                       class="i text-sm @error('new_password') border-red-500! bg-red-50/20! @enderror"
                        placeholder="Min 8 chars, 1 capital, 1 number"
                        autocomplete="new-password">
                 @error('new_password')
-                <span class="text-xs text-red-500 block mt-1">{{ $message }}</span>
+                <span class="text-xs text-red-500! block mt-1">{{ $message }}</span>
                 @enderror
             </div>
 
@@ -43,9 +43,12 @@
                 <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Confirm New Password</label>
                 <input wire:model="new_password_confirmation"
                        type="password"
-                       class="i text-sm"
+                       class="i text-sm @error('new_password_confirmation') border-red-500! bg-red-50/20! @enderror"
                        placeholder="Repeat new password"
                        autocomplete="new-password">
+                @error('new_password_confirmation')
+                <span class="text-xs text-red-500! block mt-1">{{ $message }}</span>
+                @enderror
             </div>
 
             <button type="submit" class="btn btn-primary w-full justify-center py-2.5 mt-2">

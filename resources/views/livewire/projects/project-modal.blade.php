@@ -5,7 +5,7 @@
     <form wire:submit="save" novalidate>
         <div class="form-grid">
             <label class="f full">
-                <span>Project name *</span>
+                <span>Project name <span class="text-red-500"> *</span></span>
                 <input wire:model.blur="name"
                        class="i @error('name') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. E-commerce Website Redesign">
@@ -14,7 +14,7 @@
             </label>
 
             <label class="f">
-                <span>Customer *</span>
+                <span>Customer <span class="text-red-500"> *</span></span>
                 <select wire:model.blur="customer_id"
                         class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— Select Customer —</option>
@@ -36,7 +36,7 @@
             </label>
 
             <label class="f">
-                <span>Project value (₹) *</span>
+                <span>Project value (₹) <span class="text-red-500"> *</span></span>
                 <input wire:model.blur="value"
                        type="number" step="0.01" min="0"
                        class="i @error('value') border-red-500! bg-red-50/20! @enderror">
@@ -68,7 +68,7 @@
             </label>
 
             <label class="f">
-                <span>Salesperson *</span>
+                <span>Salesperson <span class="text-red-500"> *</span></span>
                 <select wire:model.blur="sales_person_id"
                         class="i @error('sales_person_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— Select Salesperson —</option>
@@ -82,7 +82,7 @@
             </label>
 
             <label class="f">
-                <span>Status *</span>
+                <span>Status <span class="text-red-500"> *</span></span>
                 <select wire:model.blur="status"
                         class="i @error('status') border-red-500! bg-red-50/20! @enderror">
                     <option value="Onboarding">Onboarding</option>
@@ -96,7 +96,7 @@
             </label>
 
             <label class="f">
-                <span>Health *</span>
+                <span>Health <span class="text-red-500"> *</span></span>
                 <select wire:model.blur="health"
                         class="i @error('health') border-red-500! bg-red-50/20! @enderror">
                     <option value="On Track">On Track</option>
@@ -123,7 +123,7 @@
                        type="date"
                        class="i @error('start_date') border-red-500! bg-red-50/20! @enderror">
                 @error('start_date') <span
-                    class="text-xs !text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                    class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
 
             <label class="f">
@@ -132,7 +132,7 @@
                        type="date"
                        class="i @error('delivery_date') border-red-500! bg-red-50/20! @enderror">
                 @error('delivery_date') <span
-                    class="text-xs !text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                    class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
 
             <label class="f full">
@@ -141,7 +141,7 @@
                           class="i @error('description') border-red-500! bg-red-50/20! @enderror"
                           style="min-height:56px"></textarea>
                 @error('description') <span
-                    class="text-xs !text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                    class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
         </div>
 
@@ -161,28 +161,28 @@
 
             @if($amc_required)
                 <label class="f">
-                    <span>AMC start *</span>
+                    <span>AMC start <span class="text-red-500"> *</span></span>
                     <input wire:model.blur="amc_start"
                            type="date"
                            class="i @error('amc_start') border-red-500! bg-red-50/20! @enderror">
                     @error('amc_start') <span
-                        class="text-xs !text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                        class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
                 </label>
                 <label class="f">
-                    <span>AMC end *</span>
+                    <span>AMC end <span class="text-red-500"> *</span></span>
                     <input wire:model.blur="amc_end"
                            type="date"
                            class="i @error('amc_end') border-red-500! bg-red-50/20! @enderror">
                     @error('amc_end') <span
-                        class="text-xs !text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                        class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
                 </label>
                 <label class="f">
-                    <span>AMC amount (₹) *</span>
+                    <span>AMC amount (₹) <span class="text-red-500"> *</span></span>
                     <input wire:model.blur="amc_amount"
                            type="number" step="0.01" min="0"
                            class="i @error('amc_amount') border-red-500! bg-red-50/20! @enderror">
                     @error('amc_amount') <span
-                        class="text-xs !text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                        class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
                 </label>
                 <label class="f">
                     <span>Alert how many days before</span>
@@ -190,7 +190,7 @@
                            type="number" min="1" max="180"
                            class="i @error('renew_alert_days') border-red-500! bg-red-50/20! @enderror">
                     @error('renew_alert_days') <span
-                        class="text-xs !text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                        class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
                 </label>
             @endif
         </div>

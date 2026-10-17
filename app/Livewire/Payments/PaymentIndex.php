@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Payments;
 
+use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\PaymentTerm;
 use App\Services\AuditNotificationService;
@@ -23,6 +24,15 @@ class PaymentIndex extends Component
     #[Url]
     public string $mode = '';
 
+    #[Url]
+    public string $customer_id = '';
+
+    #[Url]
+    public string $date_from = '';
+
+    #[Url]
+    public string $date_to = '';
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -33,9 +43,24 @@ class PaymentIndex extends Component
         $this->resetPage();
     }
 
+    public function updatingCustomerId(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingDateFrom(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingDateTo(): void
+    {
+        $this->resetPage();
+    }
+
     public function clearFilters(): void
     {
-        $this->reset(['search', 'mode']);
+        $this->reset(['search', 'mode', 'customer_id', 'date_from', 'date_to']);
         $this->resetPage();
     }
 
@@ -101,6 +126,25 @@ class PaymentIndex extends Component
         $payments = Payment::query()
             ->whereHas('project', fn ($q) => $q->forUser($user))
             ->with(['project.customer', 'customer', 'term', 'enteredBy'])
+            ->when($user->role === 'Coordinator', function ($q) {
+                $q->whereHas('project.terms', function ($t) {
+                    $t->whereIn('status', ['Pending', 'Partial', 'Overdue']);
+                });
+            })
+            ->when($this->mode, fn ($q) => $q->where('mode', $this->mode))
+            ->when($this->customer_id, fn ($q) => $q->where('customer_id', $this->customer_id))
+            ->when($this->date_from, fn ($q) => $q->whereDate('paid_on', '>=', $this->date_from))
+            ->when($this->date_to, fn ($q) => $q->whereDate('paid_on', '<=', $this->date_to))
+            ->when($this->search, function ($q) {
+                $term = '%'.trim($this->search).'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('code', 'like', $term)
+                        ->orWhere('reference', 'like', $term)
+                        ->orWhere('bank', 'like', $term)
+                        ->orWhereHas('customer', fn ($c) => $c->where('company', 'like', $term))
+                        ->orWhereHas('project', fn ($p) => $p->where('name', 'like', $term)->orWhere('project_code', 'like', $term));
+                });
+            })
             ->orderByDesc('paid_on')
             ->get();
 
@@ -145,6 +189,9 @@ class PaymentIndex extends Component
                 });
             })
             ->when($this->mode, fn ($q) => $q->where('mode', $this->mode))
+            ->when($this->customer_id, fn ($q) => $q->where('customer_id', $this->customer_id))
+            ->when($this->date_from, fn ($q) => $q->whereDate('paid_on', '>=', $this->date_from))
+            ->when($this->date_to, fn ($q) => $q->whereDate('paid_on', '<=', $this->date_to))
             ->when($this->search, function ($q) {
                 $term = '%'.trim($this->search).'%';
                 $q->where(function ($sub) use ($term) {
@@ -162,8 +209,14 @@ class PaymentIndex extends Component
         $totalAmount = (float) $allMatching->sum('amount');
         $totalTds = (float) $allMatching->sum('tds');
 
+        $customers = Customer::query()
+            ->whereHas('projects', fn ($q) => $q->forUser($user))
+            ->orderBy('company')
+            ->get();
+
         return view('livewire.payments.payment-index', [
             'payments' => $query->paginate(15),
+            'customers' => $customers,
             'totalAmount' => $totalAmount,
             'totalTds' => $totalTds,
         ])->layoutData([

@@ -2,7 +2,7 @@
     <form wire:submit="save" novalidate>
         <div class="form-grid">
             <label class="f full">
-                <span>Target Project *</span>
+                <span>Target Project<span class="text-red-500"> *</span></span>
                 <select wire:model.live="project_id"
                         class="i @error('project_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— Select Assigned Project —</option>
@@ -13,7 +13,7 @@
                     @endforeach
                 </select>
                 @error('project_id') <span
-                    class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                    class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
 
             @if($terms->isNotEmpty())
@@ -33,17 +33,17 @@
                         @endforeach
                     </select>
                     @error('term_id') <span
-                        class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                        class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
                 </label>
             @endif
 
             <label class="f">
-                <span>Amount received (₹) *</span>
+                <span>Amount received (₹)<span class="text-red-500"> *</span></span>
                 <input wire:model.blur="amount"
                        type="number" step="0.01" min="0.01"
                        class="i @error('amount') border-red-500! bg-red-50/20! @enderror">
                 @error('amount') <span
-                    class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                    class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
 
             <label class="f">
@@ -51,21 +51,21 @@
                 <input wire:model.blur="tds"
                        type="number" step="0.01" min="0"
                        class="i @error('tds') border-red-500! bg-red-50/20! @enderror">
-                @error('tds') <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                @error('tds') <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
                 <div class="hint text-xs text-[#8894ac] mt-1">Enter this if the customer deducted TDS</div>
             </label>
 
             <label class="f">
-                <span>Payment date *</span>
+                <span>Payment date<span class="text-red-500"> *</span></span>
                 <input wire:model.blur="paid_on"
                        type="date"
                        class="i @error('paid_on') border-red-500! bg-red-50/20! @enderror">
                 @error('paid_on') <span
-                    class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                    class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
 
             <label class="f">
-                <span>Mode *</span>
+                <span>Mode<span class="text-red-500"> *</span></span>
                 <select wire:model.blur="mode"
                         class="i @error('mode') border-red-500! bg-red-50/20! @enderror">
                     <option value="NEFT">NEFT</option>
@@ -76,7 +76,8 @@
                     <option value="Card">Card</option>
                     <option value="Other">Other</option>
                 </select>
-                @error('mode') <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                @error('mode') <span
+                    class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
 
             <label class="f">
@@ -85,7 +86,7 @@
                        class="i @error('reference') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. UTR8891234001">
                 @error('reference') <span
-                    class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                    class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
 
             <label class="f">
@@ -93,7 +94,8 @@
                 <input wire:model.blur="bank"
                        class="i @error('bank') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. HDFC Bank">
-                @error('bank') <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                @error('bank') <span
+                    class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
 
             <label class="f full">
@@ -101,7 +103,8 @@
                 <input wire:model.blur="note"
                        class="i @error('note') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Advance against PO 4412">
-                @error('note') <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span> @enderror
+                @error('note') <span
+                    class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
         </div>
 

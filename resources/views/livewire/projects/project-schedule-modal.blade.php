@@ -22,44 +22,45 @@
         </div>
 
         @error('terms')
-        <span class="text-xs text-red-500 font-medium block mb-2">{{ $message }}</span>
+        <span class="text-xs text-red-500! font-medium block mb-2">{{ $message }}</span>
         @enderror
 
         <div class="space-y-3">
             @foreach($terms as $i => $t)
                 <div wire:key="term-row-{{ $i }}-{{ $t['id'] ?? 'new' }}"
-                    class="term {{ $t['locked'] ? 'paid opacity-90' : '' }} p-3 bg-slate-50 border rounded-xl @error('terms.'.$i.'.*') border-red-300 @enderror">
+                     class="term {{ $t['locked'] ? 'paid opacity-90' : '' }} p-3 bg-slate-50 border rounded-xl @error('terms.'.$i.'.*') border-red-300 @enderror">
                     <div class="flex items-start gap-2">
                         <div class="term-no mt-6 text-xs font-bold text-gray-500 w-5 text-center">{{ $i + 1 }}</div>
 
                         <div class="flex-1 grid grid-cols-1 md:grid-cols-5 gap-2">
                             <div>
-                                <label class="text-[10px] font-bold text-gray-400 uppercase block mb-1">Label *</label>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase block mb-1">Label<span
+                                        class="text-red-500"> *</span></label>
                                 <input wire:model.blur="terms.{{ $i }}.label"
                                        class="i text-sm @error('terms.'.$i.'.label') border-red-500! bg-red-50/20! @enderror"
                                        placeholder="e.g. Advance"
                                     {{ $t['locked'] ? 'disabled' : '' }}>
                                 @error('terms.'.$i.'.label')
-                                <span class="text-[11px] text-red-500 font-medium mt-0.5 block">{{ $message }}</span>
+                                <span class="text-[11px] text-red-500! font-medium mt-0.5 block">{{ $message }}</span>
                                 @enderror
                             </div>
 
                             <div>
                                 <label class="text-[10px] font-bold text-gray-400 uppercase block mb-1">Amount (₹)
-                                    *</label>
+                                    <span class="text-red-500"> *</span></label>
                                 <input type="number" step="0.01" min="0.01"
                                        wire:model.live.debounce.400ms="terms.{{ $i }}.amount"
                                        class="i text-sm @error('terms.'.$i.'.amount') border-red-500! bg-red-50/20! @enderror"
                                        placeholder="0.00"
                                     {{ $t['locked'] ? 'disabled' : '' }}>
                                 @error('terms.'.$i.'.amount')
-                                <span class="text-[11px] text-red-500 font-medium mt-0.5 block">{{ $message }}</span>
+                                <span class="text-[11px] text-red-500! font-medium mt-0.5 block">{{ $message }}</span>
                                 @enderror
                             </div>
 
                             <div>
                                 <label class="text-[10px] font-bold text-gray-400 uppercase block mb-1">Trigger Mode
-                                    *</label>
+                                    <span class="text-red-500"> *</span></label>
                                 <select wire:model.live="terms.{{ $i }}.trigger"
                                         class="i text-sm @error('terms.'.$i.'.trigger') border-red-500! bg-red-50/20! @enderror"
                                     {{ $t['locked'] ? 'disabled' : '' }}>
@@ -68,7 +69,7 @@
                                     <option value="recurring">Recurring</option>
                                 </select>
                                 @error('terms.'.$i.'.trigger')
-                                <span class="text-[11px] text-red-500 font-medium mt-0.5 block">{{ $message }}</span>
+                                <span class="text-[11px] text-red-500! font-medium mt-0.5 block">{{ $message }}</span>
                                 @enderror
                             </div>
 
@@ -81,14 +82,14 @@
                                        class="i text-sm @error('terms.'.$i.'.dueDate') border-red-500! bg-red-50/20! @enderror"
                                     {{ $t['locked'] ? 'disabled' : '' }}>
                                 @error('terms.'.$i.'.dueDate')
-                                <span class="text-[11px] text-red-500 font-medium mt-0.5 block">{{ $message }}</span>
+                                <span class="text-[11px] text-red-500! font-medium mt-0.5 block">{{ $message }}</span>
                                 @enderror
                             </div>
 
                             <div>
                                 @if(($t['trigger'] ?? '') === 'milestone')
                                     <label class="text-[10px] font-bold text-gray-400 uppercase block mb-1">Milestone
-                                        *</label>
+                                        <span class="text-red-500"> *</span></label>
                                     <select wire:model.blur="terms.{{ $i }}.milestoneId"
                                             class="i text-sm @error('terms.'.$i.'.milestoneId') border-red-500! bg-red-50/20! @enderror"
                                         {{ $t['locked'] ? 'disabled' : '' }}>
@@ -99,7 +100,7 @@
                                     </select>
                                     @error('terms.'.$i.'.milestoneId')
                                     <span
-                                        class="text-[11px] text-red-500 font-medium mt-0.5 block">{{ $message }}</span>
+                                        class="text-[11px] text-red-500! font-medium mt-0.5 block">{{ $message }}</span>
                                     @enderror
                                 @else
                                     <label class="text-[10px] font-bold text-gray-400 uppercase block mb-1">Grace
@@ -110,7 +111,7 @@
                                         {{ $t['locked'] ? 'disabled' : '' }}>
                                     @error('terms.'.$i.'.graceDays')
                                     <span
-                                        class="text-[11px] text-red-500 font-medium mt-0.5 block">{{ $message }}</span>
+                                        class="text-[11px] text-red-500! font-medium mt-0.5 block">{{ $message }}</span>
                                     @enderror
                                 @endif
                             </div>
@@ -135,7 +136,7 @@
                     </div>
 
                     @error("terms.{$i}.locked")
-                    <span class="text-xs text-red-500 font-medium mt-1 block">{{ $message }}</span>
+                    <span class="text-xs text-red-500! font-medium mt-1 block">{{ $message }}</span>
                     @enderror
                 </div>
             @endforeach

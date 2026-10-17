@@ -24,6 +24,22 @@
                     <input wire:model.live.debounce.300ms="search" placeholder="Title, file, customer...">
                 </div>
 
+                <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
+                    <option value="">All customers</option>
+                    @foreach($customers as $c)
+                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                    @endforeach
+                </select>
+
+                @if($projects->isNotEmpty())
+                    <select wire:model.live="project_id" class="i" style="width:auto; max-width: 180px;">
+                        <option value="">All projects</option>
+                        @foreach($projects as $p)
+                            <option value="{{ $p->id }}">{{ $p->code ?? $p->project_code }} — {{ $p->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+
                 <select wire:model.live="category" class="i" style="width:auto">
                     <option value="">All categories</option>
                     @foreach($categories as $cat)
@@ -31,12 +47,14 @@
                     @endforeach
                 </select>
 
-                <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
-                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                    Clear
-                </button>
+                @if($search !== '' || $category !== '' || $customer_id !== '' || $project_id !== '')
+                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        Clear
+                    </button>
+                @endif
             </div>
         </div>
     </div>

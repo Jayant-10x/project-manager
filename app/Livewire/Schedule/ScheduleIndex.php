@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Schedule;
 
+use App\Models\Customer;
 use App\Models\PaymentTerm;
 use App\Models\Project;
 use Carbon\Carbon;
@@ -16,9 +17,23 @@ class ScheduleIndex extends Component
     #[Url]
     public string $status = '';
 
+    #[Url]
+    public string $search = '';
+
+    #[Url]
+    public string $customer_id = '';
+
+    #[Url]
+    public string $trigger_type = '';
+
     public function setStatus(string $status): void
     {
         $this->status = ($this->status === $status) ? '' : $status;
+    }
+
+    public function clearFilters(): void
+    {
+        $this->reset(['status', 'search', 'customer_id', 'trigger_type']);
     }
 
     #[On('payment-saved')]
@@ -104,16 +119,39 @@ class ScheduleIndex extends Component
         $totalScheduledSum = (float) $allTerms->where('status', '!=', 'Cancelled')->sum('amount');
 
         // Filtered terms for the table
-        $terms = $allTerms->when($this->status, function ($collection) {
-            if ($this->status === 'Upcoming') {
-                return $collection->whereIn('status', ['Pending', 'Partial']);
-            }
+        $terms = $allTerms
+            ->when($this->status, function ($collection) {
+                if ($this->status === 'Upcoming') {
+                    return $collection->whereIn('status', ['Pending', 'Partial']);
+                }
 
-            return $collection->where('status', $this->status);
-        });
+                return $collection->where('status', $this->status);
+            })
+            ->when($this->trigger_type, function ($collection) {
+                return $collection->where('trigger_type', $this->trigger_type);
+            })
+            ->when($this->customer_id, function ($collection) {
+                return $collection->where('project.customer_id', (int) $this->customer_id);
+            })
+            ->when($this->search, function ($collection) {
+                $term = strtolower(trim($this->search));
+
+                return $collection->filter(function ($t) use ($term) {
+                    return str_contains(strtolower($t->label ?? ''), $term) ||
+                           str_contains(strtolower($t->project?->name ?? ''), $term) ||
+                           str_contains(strtolower($t->project?->code ?? ''), $term) ||
+                           str_contains(strtolower($t->project?->customer?->company ?? ''), $term);
+                });
+            });
+
+        $customers = Customer::query()
+            ->whereHas('projects', fn ($q) => $q->forUser($user))
+            ->orderBy('company')
+            ->get();
 
         return view('livewire.schedule.schedule-index', [
             'terms' => $terms,
+            'customers' => $customers,
             'totalProjectsCount' => $totalProjectsCount,
             'upcomingSum' => $upcomingSum,
             'upcomingCount' => $upcomingTerms->count(),

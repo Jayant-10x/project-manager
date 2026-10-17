@@ -16,12 +16,13 @@
     <x-modal name="add-task-modal" title="Add New Task" sub="Personal execution checklist and scheduled follow-up">
         <form wire:submit="addTask" novalidate class="space-y-4">
             <div>
-                <label class="text-xs font-bold text-gray-500 uppercase block mb-1">What needs to be done *</label>
+                <label class="text-xs font-bold text-gray-500 uppercase block mb-1">What needs to be done<span
+                        class="text-red-500"> *</span></label>
                 <input wire:model.blur="title"
                        class="i text-sm @error('title') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Send payment reminder to Blueleaf">
                 @error('title')
-                <span class="text-[11px] text-red-500 font-medium mt-1 block">{{ $message }}</span>
+                <span class="text-[11px] text-red-500! font-medium mt-1 block">{{ $message }}</span>
                 @enderror
             </div>
 
@@ -36,12 +37,13 @@
                         @endforeach
                     </select>
                     @error('project_id')
-                    <span class="text-[11px] text-red-500 font-medium mt-1 block">{{ $message }}</span>
+                    <span class="text-[11px] text-red-500! font-medium mt-1 block">{{ $message }}</span>
                     @enderror
                 </div>
 
                 <div>
-                    <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Priority *</label>
+                    <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Priority<span
+                            class="text-red-500"> *</span></label>
                     <select wire:model.live="priority"
                             class="i text-sm @error('priority') border-red-500! bg-red-50/20! @enderror">
                         <option value="Low">Low</option>
@@ -50,7 +52,7 @@
                         <option value="Urgent">Urgent</option>
                     </select>
                     @error('priority')
-                    <span class="text-[11px] text-red-500 font-medium mt-1 block">{{ $message }}</span>
+                    <span class="text-[11px] text-red-500! font-medium mt-1 block">{{ $message }}</span>
                     @enderror
                 </div>
             </div>
@@ -62,7 +64,7 @@
                            type="date"
                            class="i text-sm @error('due_date') border-red-500! bg-red-50/20! @enderror">
                     @error('due_date')
-                    <span class="text-[11px] text-red-500 font-medium mt-1 block">{{ $message }}</span>
+                    <span class="text-[11px] text-red-500! font-medium mt-1 block">{{ $message }}</span>
                     @enderror
                 </div>
 
@@ -76,14 +78,15 @@
                             @endforeach
                         </select>
                         @error('assigned_to')
-                        <span class="text-[11px] text-red-500 font-medium mt-1 block">{{ $message }}</span>
+                        <span class="text-[11px] text-red-500! font-medium mt-1 block">{{ $message }}</span>
                         @enderror
                     </div>
                 @endif
             </div>
 
             <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
-                <button type="button" @click="$dispatch('close-modal', 'add-task-modal')" class="btn btn-ghost">Cancel</button>
+                <button type="button" @click="$dispatch('close-modal', 'add-task-modal')" class="btn btn-ghost">Cancel
+                </button>
                 <button type="submit" class="btn btn-primary">
                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                         <path d="M12 5v14M5 12h14"/>
@@ -93,6 +96,62 @@
             </div>
         </form>
     </x-modal>
+
+    <!-- Filterbar -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="filterbar">
+                <div class="gsearch" style="width:230px">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="7"/>
+                        <path d="M21 21l-4.3-4.3"/>
+                    </svg>
+                    <input wire:model.live.debounce.300ms="filterSearch" placeholder="Task, customer, project...">
+                </div>
+
+                <select wire:model.live="filterStatus" class="i" style="width:auto">
+                    <option value="">All statuses</option>
+                    <option value="open">Pending only</option>
+                    <option value="done">Completed only</option>
+                </select>
+
+                <select wire:model.live="filterPriority" class="i" style="width:auto">
+                    <option value="">All priorities</option>
+                    <option value="Urgent">Urgent</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                </select>
+
+                @if($projects->isNotEmpty())
+                    <select wire:model.live="filterProjectId" class="i" style="width:auto; max-width: 180px;">
+                        <option value="">All projects</option>
+                        @foreach($projects as $p)
+                            <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+
+                @if(auth()->user()->role === 'Admin' && $users->isNotEmpty())
+                    <select wire:model.live="filterAssignedTo" class="i" style="width:auto; max-width: 160px;">
+                        <option value="">All assignees</option>
+                        @foreach($users as $u)
+                            <option value="{{ $u->id }}">{{ $u->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+
+                @if($filterSearch !== '' || $filterStatus !== '' || $filterPriority !== '' || $filterProjectId !== '' || $filterAssignedTo !== '')
+                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        Clear
+                    </button>
+                @endif
+            </div>
+        </div>
+    </div>
 
     <!-- Task Execution List -->
     <div class="card p-4">
@@ -111,7 +170,7 @@
                     };
                 @endphp
                 <div wire:key="task-item-{{ $t->id }}"
-                    class="mini-item flex items-center gap-3 p-3 border-b last:border-b-0 hover:bg-slate-50 transition">
+                     class="mini-item flex items-center gap-3 p-3 border-b last:border-b-0 hover:bg-slate-50 transition">
                     <input type="checkbox"
                            wire:key="task-chk-{{ $t->id }}-{{ $isDone ? 'done' : 'open' }}"
                            wire:click="toggleDone({{ $t->id }})"

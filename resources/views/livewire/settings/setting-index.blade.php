@@ -6,7 +6,8 @@
                 <h3 class="font-bold text-sm text-[#0d1b34]">My Profile</h3>
                 <div class="text-xs text-[#8894ac]">How you appear in the workspace</div>
             </div>
-            <button type="button" wire:click="logout" wire:confirm="Are you sure want to logout?" class="btn btn-danger btn-sm">
+            <button type="button" wire:click="logout" wire:confirm="Are you sure want to logout?"
+                    class="btn btn-danger btn-sm">
                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                     <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
                 </svg>
@@ -34,7 +35,7 @@
                 <form wire:submit="updatePassword" novalidate>
                     <div class="form-grid">
                         <label class="f">
-                            <span>Current password *</span>
+                            <span>Current password<span class="text-red-500"> *</span></span>
                             <input wire:model.blur="current_password"
                                    type="password"
                                    class="i @error('current_password') border-red-500! bg-red-50/20! @enderror"
@@ -45,7 +46,7 @@
                         </label>
 
                         <label class="f">
-                            <span>New password *</span>
+                            <span>New password<span class="text-red-500"> *</span></span>
                             <input wire:model.blur="new_password"
                                    type="password"
                                    class="i @error('new_password') border-red-500! bg-red-50/20! @enderror"
@@ -56,7 +57,7 @@
                         </label>
 
                         <label class="f">
-                            <span>Confirm new password *</span>
+                            <span>Confirm new password<span class="text-red-500"> *</span></span>
                             <input wire:model.blur="new_password_confirmation"
                                    type="password"
                                    class="i @error('new_password_confirmation') border-red-500! bg-red-50/20! @enderror"
@@ -208,7 +209,9 @@
                                 {{ strtoupper(substr($u->name, 0, 2)) }}
                             </div>
                             @if($u->is_online)
-                                <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" title="Online now"></span>
+                                <span
+                                    class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"
+                                    title="Online now"></span>
                             @endif
                         </div>
 
@@ -216,6 +219,10 @@
                             <div class="t font-semibold text-sm text-[#0d1b34]">{{ $u->name }}</div>
                             <div class="s text-xs text-[#8894ac] mt-0.5">
                                 {{ $u->email }} · {{ $u->designation ?? $u->role }}
+                                @if($u->reportingTo)
+                                    · <span
+                                        class="text-indigo-600 font-medium">Reports to {{ $u->reportingTo->name }}</span>
+                                @endif
                             </div>
                         </div>
 

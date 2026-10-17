@@ -18,6 +18,47 @@
         @endif
     </div>
 
+    <!-- Filterbar -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="filterbar">
+                <div class="gsearch" style="width:230px">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="7"/>
+                        <path d="M21 21l-4.3-4.3"/>
+                    </svg>
+                    <input wire:model.live.debounce.300ms="search" placeholder="Title, alert message...">
+                </div>
+
+                <select wire:model.live="status" class="i" style="width:auto">
+                    <option value="">All status</option>
+                    <option value="unread">Unread only</option>
+                    <option value="read">Read only</option>
+                </select>
+
+                <select wire:model.live="type" class="i" style="width:auto">
+                    <option value="">All types</option>
+                    <option value="payment">Payment</option>
+                    <option value="overdue">Overdue</option>
+                    <option value="milestone">Milestone</option>
+                    <option value="project">Project</option>
+                    <option value="amc">AMC</option>
+                    <option value="followup">Follow-up</option>
+                    <option value="notification">General</option>
+                </select>
+
+                @if($search !== '' || $status !== '' || $type !== '')
+                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        Clear
+                    </button>
+                @endif
+            </div>
+        </div>
+    </div>
+
     <!-- Notifications List Card -->
     <div class="card overflow-hidden">
         <div class="card-body p-0">

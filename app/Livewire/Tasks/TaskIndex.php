@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\AuditNotificationService;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
@@ -22,6 +23,26 @@ class TaskIndex extends Component
     public ?string $due_date = null;
 
     public ?int $assigned_to = null;
+
+    #[Url]
+    public string $filterSearch = '';
+
+    #[Url]
+    public string $filterPriority = '';
+
+    #[Url]
+    public string $filterStatus = ''; // 'open', 'done'
+
+    #[Url]
+    public string $filterProjectId = '';
+
+    #[Url]
+    public string $filterAssignedTo = '';
+
+    public function clearFilters(): void
+    {
+        $this->reset(['filterSearch', 'filterPriority', 'filterStatus', 'filterProjectId', 'filterAssignedTo']);
+    }
 
     public function mount(): void
     {
@@ -154,13 +175,29 @@ class TaskIndex extends Component
         $query = Task::query()
             ->when($user->role !== 'Admin', fn ($q) => $q->where('assigned_to', $user->id))
             ->with(['project.customer', 'customer', 'assignedTo'])
+            ->when($this->filterPriority, fn ($q) => $q->where('priority', $this->filterPriority))
+            ->when($this->filterProjectId, fn ($q) => $q->where('project_id', $this->filterProjectId))
+            ->when($this->filterAssignedTo, fn ($q) => $q->where('assigned_to', $this->filterAssignedTo))
+            ->when($this->filterStatus === 'open', fn ($q) => $q->where('done', false))
+            ->when($this->filterStatus === 'done', fn ($q) => $q->where('done', true))
+            ->when($this->filterSearch, function ($q) {
+                $term = '%'.trim($this->filterSearch).'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('title', 'like', $term)
+                        ->orWhereHas('project', fn ($p) => $p->where('name', 'like', $term)->orWhere('code', 'like', $term))
+                        ->orWhereHas('customer', fn ($c) => $c->where('company', 'like', $term));
+                });
+            })
             ->orderBy('done')
             ->orderByRaw('due_date IS NULL, due_date ASC');
 
         $tasks = $query->get();
 
-        $openCount = $tasks->where('done', false)->count();
-        $doneCount = $tasks->where('done', true)->count();
+        $baseTasks = Task::query()
+            ->when($user->role !== 'Admin', fn ($q) => $q->where('assigned_to', $user->id))
+            ->get();
+        $openCount = $baseTasks->where('done', false)->count();
+        $doneCount = $baseTasks->where('done', true)->count();
 
         $projects = Project::query()->forUser($user)->orderBy('name')->get();
         $users = User::where('status', 'Active')->orderBy('name')->get();

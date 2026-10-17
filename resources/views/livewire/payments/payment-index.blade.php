@@ -39,6 +39,13 @@
                     <input wire:model.live.debounce.300ms="search" placeholder="Receipt, customer, UTR...">
                 </div>
 
+                <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 200px;">
+                    <option value="">All customers</option>
+                    @foreach($customers as $c)
+                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                    @endforeach
+                </select>
+
                 <select wire:model.live="mode" class="i" style="width:auto">
                     <option value="">All modes</option>
                     <option value="Cash">Cash</option>
@@ -50,12 +57,21 @@
                     <option value="Other">Other</option>
                 </select>
 
-                <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
-                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                    Clear
-                </button>
+                <div class="flex items-center gap-1.5 text-xs text-[#8894ac]">
+                    <span>From</span>
+                    <input type="date" wire:model.live="date_from" class="i" style="width:auto; padding: 4px 8px; font-size: 12px;">
+                    <span>To</span>
+                    <input type="date" wire:model.live="date_to" class="i" style="width:auto; padding: 4px 8px; font-size: 12px;">
+                </div>
+
+                @if($search !== '' || $mode !== '' || $customer_id !== '' || $date_from !== '' || $date_to !== '')
+                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        Clear
+                    </button>
+                @endif
             </div>
         </div>
     </div>

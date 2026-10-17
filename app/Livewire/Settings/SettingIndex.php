@@ -210,7 +210,7 @@ class SettingIndex extends Component
 
     public function render()
     {
-        $users = User::orderByRaw("CASE role WHEN 'Admin' THEN 1 WHEN 'Manager' THEN 2 WHEN 'Coordinator' THEN 3 WHEN 'Sales' THEN 4 ELSE 5 END")->orderBy('name')->get();
+        $users = User::with('reportingTo')->orderByRaw("CASE role WHEN 'Admin' THEN 1 WHEN 'Manager' THEN 2 WHEN 'Coordinator' THEN 3 WHEN 'Sales' THEN 4 ELSE 5 END")->orderBy('name')->get();
 
         return view('livewire.settings.setting-index', [
             'users' => $users,

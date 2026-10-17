@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Followups;
 
+use App\Models\Customer;
 use App\Models\Followup;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
@@ -13,6 +14,52 @@ use Livewire\WithPagination;
 class FollowupIndex extends Component
 {
     use WithPagination;
+
+    #[Url]
+    public string $search = '';
+
+    #[Url]
+    public string $type = '';
+
+    #[Url]
+    public string $customer_id = '';
+
+    #[Url]
+    public string $date_from = '';
+
+    #[Url]
+    public string $date_to = '';
+
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingType(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingCustomerId(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingDateFrom(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingDateTo(): void
+    {
+        $this->resetPage();
+    }
+
+    public function clearFilters(): void
+    {
+        $this->reset(['search', 'type', 'customer_id', 'date_from', 'date_to']);
+        $this->resetPage();
+    }
 
     #[On('followup-saved')]
     public function refreshList(): void
@@ -41,6 +88,20 @@ class FollowupIndex extends Component
         $today = Carbon::today()->toDateString();
 
         $followupsQuery = Followup::with(['customer', 'project', 'createdBy'])
+            ->when($this->type, fn ($q) => $q->where('type', $this->type))
+            ->when($this->customer_id, fn ($q) => $q->where('customer_id', $this->customer_id))
+            ->when($this->date_from, fn ($q) => $q->whereDate('happened_on', '>=', $this->date_from))
+            ->when($this->date_to, fn ($q) => $q->whereDate('happened_on', '<=', $this->date_to))
+            ->when($this->search, function ($q) {
+                $term = '%'.trim($this->search).'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('summary', 'like', $term)
+                        ->orWhere('detail', 'like', $term)
+                        ->orWhere('next_note', 'like', $term)
+                        ->orWhereHas('customer', fn ($c) => $c->where('company', 'like', $term))
+                        ->orWhereHas('project', fn ($p) => $p->where('name', 'like', $term)->orWhere('project_code', 'like', $term));
+                });
+            })
             ->orderByDesc('happened_on');
 
         $totalCount = (clone $followupsQuery)->count();
@@ -52,8 +113,14 @@ class FollowupIndex extends Component
             ->orderBy('next_date')
             ->get();
 
+        $customers = Customer::query()
+            ->whereHas('followups')
+            ->orderBy('company')
+            ->get();
+
         return view('livewire.followups.followup-index', [
             'followups' => $followupsQuery->paginate(20),
+            'customers' => $customers,
             'totalCount' => $totalCount,
             'dueList' => $dueList,
             'today' => $today,

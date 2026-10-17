@@ -29,6 +29,13 @@
                     <input wire:model.live.debounce.300ms="search" placeholder="Project, customer, code...">
                 </div>
 
+                <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
+                    <option value="">All customers</option>
+                    @foreach($customers as $c)
+                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                    @endforeach
+                </select>
+
                 <select wire:model.live="health" class="i" style="width:auto">
                     <option value="">Any health</option>
                     <option value="On Track">On Track</option>
@@ -46,12 +53,32 @@
                     <option value="Cancelled">Cancelled</option>
                 </select>
 
-                <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
-                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                    Clear
-                </button>
+                @if($coordinators->isNotEmpty())
+                    <select wire:model.live="coordinator_id" class="i" style="width:auto; max-width: 160px;">
+                        <option value="">All coordinators</option>
+                        @foreach($coordinators as $coord)
+                            <option value="{{ $coord->id }}">{{ $coord->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+
+                @if($projectTypes->isNotEmpty())
+                    <select wire:model.live="project_type" class="i" style="width:auto">
+                        <option value="">All types</option>
+                        @foreach($projectTypes as $pType)
+                            <option value="{{ $pType }}">{{ $pType }}</option>
+                        @endforeach
+                    </select>
+                @endif
+
+                @if($search !== '' || $health !== '' || $status !== '' || $customer_id !== '' || $coordinator_id !== '' || $project_type !== '')
+                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        Clear
+                    </button>
+                @endif
             </div>
         </div>
     </div>

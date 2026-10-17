@@ -7,7 +7,7 @@
             <label class="f full">
                 <span>Company name <span class="text-red-500">*</span></span>
                 <input wire:model.live.blur="company"
-                       class="i @error('company') border-red-700! @enderror"
+                       class="i @error('company') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Sunrise Mart Pvt Ltd">
                 @error('company')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>

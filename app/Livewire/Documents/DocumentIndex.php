@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Documents;
 
+use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Project;
 use Illuminate\Support\Facades\Storage;
@@ -22,6 +23,12 @@ class DocumentIndex extends Component
     #[Url]
     public string $category = '';
 
+    #[Url]
+    public string $customer_id = '';
+
+    #[Url]
+    public string $project_id = '';
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -32,9 +39,19 @@ class DocumentIndex extends Component
         $this->resetPage();
     }
 
+    public function updatingCustomerId(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingProjectId(): void
+    {
+        $this->resetPage();
+    }
+
     public function clearFilters(): void
     {
-        $this->reset(['search', 'category']);
+        $this->reset(['search', 'category', 'customer_id', 'project_id']);
         $this->resetPage();
     }
 
@@ -76,6 +93,8 @@ class DocumentIndex extends Component
             })
             ->with(['customer', 'project', 'uploadedBy'])
             ->when($this->category, fn ($q) => $q->where('category', $this->category))
+            ->when($this->customer_id, fn ($q) => $q->where('customer_id', $this->customer_id))
+            ->when($this->project_id, fn ($q) => $q->where('project_id', $this->project_id))
             ->when($this->search, function ($q) {
                 $term = '%'.trim($this->search).'%';
                 $q->where(function ($sub) use ($term) {
@@ -88,8 +107,21 @@ class DocumentIndex extends Component
             })
             ->orderByDesc('id');
 
+        $customers = Customer::query()
+            ->whereHas('documents')
+            ->orderBy('company')
+            ->get();
+
+        $projects = Project::query()
+            ->forUser($user)
+            ->whereHas('documents')
+            ->orderBy('name')
+            ->get();
+
         return view('livewire.documents.document-index', [
             'documents' => $query->paginate(20),
+            'customers' => $customers,
+            'projects' => $projects,
             'categories' => ['Contract', 'KYC/GST', 'Invoice', 'Proposal', 'Quotation', 'Delivery Proof', 'AMC', 'Other'],
         ])->layoutData([
             'header' => 'Documents',

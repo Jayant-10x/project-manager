@@ -34,6 +34,53 @@
         </div>
     @endif
 
+    <!-- Filterbar -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="filterbar">
+                <div class="gsearch" style="width:230px">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="7"/>
+                        <path d="M21 21l-4.3-4.3"/>
+                    </svg>
+                    <input wire:model.live.debounce.300ms="search" placeholder="Summary, detail, customer...">
+                </div>
+
+                <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
+                    <option value="">All customers</option>
+                    @foreach($customers as $c)
+                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                    @endforeach
+                </select>
+
+                <select wire:model.live="type" class="i" style="width:auto">
+                    <option value="">All types</option>
+                    <option value="Call">Call</option>
+                    <option value="Email">Email</option>
+                    <option value="Meeting">Meeting</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Note">Note</option>
+                </select>
+
+                <div class="flex items-center gap-1.5 text-xs text-[#8894ac]">
+                    <span>From</span>
+                    <input type="date" wire:model.live="date_from" class="i" style="width:auto; padding: 4px 8px; font-size: 12px;">
+                    <span>To</span>
+                    <input type="date" wire:model.live="date_to" class="i" style="width:auto; padding: 4px 8px; font-size: 12px;">
+                </div>
+
+                @if($search !== '' || $type !== '' || $customer_id !== '' || $date_from !== '' || $date_to !== '')
+                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        Clear
+                    </button>
+                @endif
+            </div>
+        </div>
+    </div>
+
     <!-- Follow-ups History Card -->
     <div class="card">
         <div class="card-body p-0">

@@ -3,14 +3,15 @@
     <form wire:submit="save">
         <div class="space-y-3">
             @foreach($items as $i => $m)
-                <div wire:key="ms-item-{{ $i }}-{{ $m['id'] ?? 'new' }}" class="ms-row flex items-center gap-3 p-2.5 border border-[#eef2f9] rounded-xl bg-slate-50/50">
+                <div wire:key="ms-item-{{ $i }}-{{ $m['id'] ?? 'new' }}"
+                     class="ms-row flex items-center gap-3 p-2.5 border border-[#eef2f9] rounded-xl bg-slate-50/50">
                     <span class="ms-dot {{ $m['done'] ? 'done' : '' }} shrink-0">
                         {{ $m['done'] ? '✓' : ($i + 1) }}
                     </span>
                     <div class="flex-1 grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
                         <div class="md:col-span-2">
                             <label class="text-[10px] font-bold text-gray-400 uppercase block mb-1">Milestone Name
-                                *</label>
+                                <span class="text-red-500"> *</span></label>
                             <input wire:model="items.{{ $i }}.name" class="i text-sm"
                                    placeholder="Milestone description">
                         </div>

@@ -4,13 +4,13 @@
     <form wire:submit="save" novalidate>
         <div class="form-grid">
             <label class="f full">
-                <span>Name *</span>
+                <span>Name<span class="text-red-500"> *</span></span>
                 <input wire:model.blur="name"
                        class="i @error('name') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Rahul Sharma"
                        maxlength="80">
                 @error('name')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
 
@@ -21,7 +21,7 @@
                        placeholder="+91 ..."
                        maxlength="30">
                 @error('phone')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
 
@@ -33,12 +33,12 @@
                        placeholder="rahul@the10xagency.in"
                        maxlength="160">
                 @error('email')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
 
             <label class="f">
-                <span>Monthly target (₹) *</span>
+                <span>Monthly target (₹)<span class="text-red-500"> *</span></span>
                 <input wire:model.blur="target"
                        type="number"
                        step="0.01"
@@ -46,19 +46,19 @@
                        class="i @error('target') border-red-500! bg-red-50/20! @enderror"
                        placeholder="0.00">
                 @error('target')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
 
             <label class="f">
-                <span>Status *</span>
+                <span>Status<span class="text-red-500"> *</span></span>
                 <select wire:model.blur="status"
                         class="i @error('status') border-red-500! bg-red-50/20! @enderror">
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                 </select>
                 @error('status')
-                <span class="text-xs text-red-500 mt-1 font-medium block">{{ $message }}</span>
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
         </div>

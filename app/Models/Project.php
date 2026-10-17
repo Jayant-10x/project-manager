@@ -37,12 +37,21 @@ class Project extends Model
     {
         $user = $user ?? auth()->user();
 
-        // If the user is not an Admin, restrict to assigned projects
-        if ($user && $user->role !== 'Admin') {
-            return $query->where('coordinator_id', $user->id);
+        if (! $user) {
+            return $query;
         }
 
-        return $query;
+        if ($user->role === 'Admin') {
+            return $query;
+        }
+
+        if ($user->role === 'Manager') {
+            $downlineIds = $user->getDownlineUserIds();
+
+            return $query->whereIn('coordinator_id', $downlineIds);
+        }
+
+        return $query->where('coordinator_id', $user->id);
     }
 
     public function customer(): BelongsTo

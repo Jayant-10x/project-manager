@@ -6,6 +6,48 @@
         </span>
     </div>
 
+    <!-- Filterbar -->
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            <div class="filterbar">
+                <div class="gsearch" style="width:230px">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="7"/>
+                        <path d="M21 21l-4.3-4.3"/>
+                    </svg>
+                    <input wire:model.live.debounce.300ms="search" placeholder="Action, entity, detail...">
+                </div>
+
+                @if($actions->isNotEmpty())
+                    <select wire:model.live="action" class="i" style="width:auto">
+                        <option value="">All actions</option>
+                        @foreach($actions as $act)
+                            <option value="{{ $act }}">{{ $act }}</option>
+                        @endforeach
+                    </select>
+                @endif
+
+                @if($users->isNotEmpty())
+                    <select wire:model.live="user_id" class="i" style="width:auto; max-width: 180px;">
+                        <option value="">All users</option>
+                        @foreach($users as $u)
+                            <option value="{{ $u->id }}">{{ $u->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+
+                @if($search !== '' || $action !== '' || $user_id !== '')
+                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        Clear
+                    </button>
+                @endif
+            </div>
+        </div>
+    </div>
+
     <!-- Activity Feed Card -->
     <div class="card">
         <div class="card-body p-5">

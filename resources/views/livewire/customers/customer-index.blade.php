@@ -71,12 +71,14 @@
                     <option value="Churned">Churned</option>
                 </select>
 
-                <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
-                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                    Clear
-                </button>
+                @if($search !== '' || $sales !== '' || $city !== '' || $pay !== '' || $status !== '')
+                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                            <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                        Clear
+                    </button>
+                @endif
             </div>
         </div>
     </div>
