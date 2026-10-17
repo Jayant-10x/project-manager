@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
@@ -17,12 +18,15 @@ class ProjectDetail extends Component
 {
     public Project $project;
 
+    #[Url(as: 'tab')]
     public string $activeTab = 'overview';
 
     #[On('payment-saved')]
-    public function refreshPayments(): void
+    #[On('project-saved')]
+    #[On('document-saved')]
+    public function refreshProjectData(): void
     {
-        $this->project->load(['payments', 'terms']);
+        $this->project->load(['payments', 'terms', 'milestones', 'documents']);
     }
 
     public function mount(Project $project): void

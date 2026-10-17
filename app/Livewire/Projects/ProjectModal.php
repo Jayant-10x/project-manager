@@ -163,6 +163,7 @@ class ProjectModal extends Component
 
         $validated = $this->validate();
         $codeService = app(CodeGeneratorService::class);
+        $isEdit = (bool) $this->projectId;
 
         if ($this->projectId) {
             $project = Project::findOrFail($this->projectId);
@@ -173,13 +174,17 @@ class ProjectModal extends Component
             if (auth()->check() && auth()->user()->role !== 'Admin' && empty($validated['coordinator_id'])) {
                 $validated['coordinator_id'] = auth()->id();
             }
-            Project::create($validated);
+            $project = Project::create($validated);
         }
 
         $this->reset();
         $this->dispatch('project-saved');
         $this->dispatch('close-modal', 'project-modal');
-        $this->redirect(route('projects.index'), navigate: true);
+        $this->dispatch('toast', ['msg' => 'Project saved successfully', 'type' => 'ok']);
+
+        if (! $isEdit) {
+            $this->redirect(route('projects.show', $project->id), navigate: true);
+        }
     }
 
     public function render()

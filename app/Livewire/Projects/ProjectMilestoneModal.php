@@ -142,7 +142,7 @@ class ProjectMilestoneModal extends Component
 
         $this->dispatch('close-modal', 'project-milestone-modal');
         $this->dispatch('project-saved');
-        $this->redirect(route('projects.show', $this->projectId), navigate: true);
+        $this->dispatch('toast', ['msg' => 'Milestones updated successfully', 'type' => 'ok']);
     }
 
     public function render()

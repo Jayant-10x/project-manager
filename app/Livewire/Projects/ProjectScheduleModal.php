@@ -242,7 +242,7 @@ class ProjectScheduleModal extends Component
 
         $this->dispatch('close-modal', 'project-schedule-modal');
         $this->dispatch('project-saved');
-        $this->redirect(route('projects.show', $this->projectId), navigate: true);
+        $this->dispatch('toast', ['msg' => 'Payment schedule saved successfully', 'type' => 'ok']);
     }
 
     public function render()

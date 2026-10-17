@@ -152,6 +152,7 @@ class CustomerModal extends Component
 
         $validated = $this->validate();
         $codeService = app(CodeGeneratorService::class);
+        $isEdit = (bool) $this->customerId;
 
         if ($this->customerId) {
             $customer = Customer::findOrFail($this->customerId);
@@ -159,13 +160,17 @@ class CustomerModal extends Component
         } else {
             $validated['customer_code'] = $codeService->generate('customer', 'CUS-');
             $validated['created_by'] = auth()->id();
-            Customer::create($validated);
+            $customer = Customer::create($validated);
         }
 
         $this->reset();
         $this->dispatch('customer-saved');
-        $this->dispatch('close-modal');
-        $this->redirect(route('customers.index'), navigate: true);
+        $this->dispatch('close-modal', 'customer-modal');
+        $this->dispatch('toast', ['msg' => 'Customer saved successfully', 'type' => 'ok']);
+
+        if (! $isEdit) {
+            $this->redirect(route('customers.show', $customer->id), navigate: true);
+        }
     }
 
     public function render()

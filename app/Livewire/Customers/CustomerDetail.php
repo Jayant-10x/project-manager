@@ -8,6 +8,7 @@ use App\Models\PaymentTerm;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
@@ -15,13 +16,17 @@ class CustomerDetail extends Component
 {
     public Customer $customer;
 
+    #[Url(as: 'tab')]
     public string $activeTab = 'overview';
 
     #[On('payment-saved')]
     #[On('followup-saved')]
+    #[On('customer-saved')]
+    #[On('document-saved')]
     public function refreshDetails(): void
     {
-        $this->customer->load(['payments', 'followups']);
+        $this->customer->refresh();
+        $this->customer->load(['payments', 'followups', 'projects', 'documents']);
     }
 
     public function mount(Customer $customer): void

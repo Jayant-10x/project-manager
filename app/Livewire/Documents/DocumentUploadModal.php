@@ -97,7 +97,6 @@ class DocumentUploadModal extends Component
         $this->dispatch('document-saved');
         $this->dispatch('close-modal', 'document-upload-modal');
         $this->dispatch('toast', ['msg' => 'Document uploaded successfully', 'type' => 'ok']);
-        $this->redirect(request()->header('Referer') ?: route('documents.index'), navigate: true);
     }
 
     public function render()

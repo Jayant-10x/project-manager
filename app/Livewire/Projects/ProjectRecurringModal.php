@@ -87,7 +87,7 @@ class ProjectRecurringModal extends Component
 
         $this->dispatch('close-modal', 'project-recurring-modal');
         $this->dispatch('project-saved');
-        $this->redirect(route('projects.show', $this->projectId), navigate: true);
+        $this->dispatch('toast', ['msg' => 'Recurring installments generated successfully', 'type' => 'ok']);
     }
 
     public function render()
