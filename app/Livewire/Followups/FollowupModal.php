@@ -5,6 +5,7 @@ namespace App\Livewire\Followups;
 use App\Models\Customer;
 use App\Models\Followup;
 use App\Models\Project;
+use App\Services\AuditNotificationService;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -37,6 +38,19 @@ class FollowupModal extends Component
         ];
     }
 
+    protected function validationAttributes(): array
+    {
+        return [
+            'customer_id' => 'customer',
+            'project_id' => 'project',
+            'type' => 'interaction type',
+            'summary' => 'summary',
+            'detail' => 'discussion details',
+            'next_date' => 'next follow-up date',
+            'next_note' => 'next action note',
+        ];
+    }
+
     #[On('open-followup-modal')]
     public function openModal(?int $customerId = null, ?int $projectId = null): void
     {
@@ -65,7 +79,7 @@ class FollowupModal extends Component
 
         $validated = $this->validate();
 
-        Followup::create([
+        $fu = Followup::create([
             'customer_id' => $validated['customer_id'],
             'project_id' => $validated['project_id'],
             'type' => $validated['type'],
@@ -76,6 +90,16 @@ class FollowupModal extends Component
             'next_note' => ! empty($validated['next_note']) ? $validated['next_note'] : null,
             'created_by' => auth()->id(),
         ]);
+
+        $cust = Customer::find($validated['customer_id']);
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Logged Follow-up',
+            'Followup',
+            $fu->id,
+            $cust?->customer_code ?? '',
+            "Logged {$validated['type']} for {$cust?->company}: {$validated['summary']}"
+        );
 
         $this->reset(['customer_id', 'project_id', 'summary', 'detail', 'next_date', 'next_note']);
         $this->type = 'Call';

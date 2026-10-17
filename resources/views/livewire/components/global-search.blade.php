@@ -6,7 +6,8 @@
         </svg>
         <input wire:model.live.debounce.300ms="query"
                @focus="open = true"
-               placeholder="Search (Ctrl + K)..."
+               :placeholder="window.innerWidth <= 640 ? 'Search...' : 'Search (Ctrl + K)...'"
+               placeholder="Search..."
                id="gsearch">
     </div>
 

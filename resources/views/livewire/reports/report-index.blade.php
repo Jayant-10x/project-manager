@@ -4,7 +4,7 @@
         <x-kpi-card label="Collection rate" :value="$collectionRate . '%'"
                     :sub="view('components.money', ['value' => $totalReceived])->render() . ' of ' . view('components.money', ['value' => $totalScheduled])->render()"
                     icon="chart" color="#5aa236" bg="#eef7e8" :href="route('schedule.index')"/>
-        <x-kpi-card label="Overdue" :value="$overdueAmt" :sub="$overdueCount . ' installments'" icon="alert"
+        <x-kpi-card label="Overdue" :value="$overdueAmt" :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount)" icon="alert"
                     :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
         <x-kpi-card label="TDS deducted" :value="$totalTds" sub="Received against invoices" icon="cash" color="#7a5af8"
                     :ismoney="true" bg="#f0ecff" :href="route('payments.index')"/>
@@ -24,16 +24,17 @@
             </div>
             <div class="card-body">
                 @php $maxVal = max(array_merge([1], array_column($trend, 'value'))); @endphp
-                <div class="spark">
+                <div class="spark-chart" style="display:flex;gap:6px;align-items:flex-end">
                     @foreach($trend as $t)
                         @php $barHeight = max(4, round(($t['value'] / $maxVal) * 100)); @endphp
-                        <i style="height: {{ $barHeight }}%"
-                           :title="'{{ $t['label'] }}: ' + $store.currency.format({{ (float)$t['value'] }}, false)"></i>
-                    @endforeach
-                </div>
-                <div class="flex gap-2 mt-2">
-                    @foreach($trend as $t)
-                        <div class="flex-1 text-center text-xs text-gray-500 font-bold">{{ $t['label'] }}</div>
+                        <div class="spark-col">
+                            <div class="spark-val" x-text="$store.currency.format({{ (float)$t['value'] }}, true)"></div>
+                            <div class="spark-bar-wrap">
+                                <i style="height:{{ $barHeight }}%"
+                                   :title="'{{ $t['label'] }}: ' + $store.currency.format({{ (float)$t['value'] }}, false)"></i>
+                            </div>
+                            <div class="spark-label">{{ $t['label'] }}</div>
+                        </div>
                     @endforeach
                 </div>
             </div>
@@ -61,7 +62,7 @@
                                 <div
                                     style="display:flex;justify-content:space-between;font-size:12.3px;margin-bottom:5px">
                                     <span style="font-weight:600">{{ $m['label'] }}</span>
-                                    <span class="muted" style="font-weight:650"><x-money :value="$m['value']"/></span>
+                                    <span class="muted" style="font-weight:650"><x-money :value="$m['value']"/> <span style="font-size:11px;color:#8894ac">({{ $pct }}%)</span></span>
                                 </div>
                                 <div class="bar" style="height:8px">
                                     <i style="width:{{ $pct }}%;background:#0b3d91"></i>
@@ -98,7 +99,7 @@
                         <div>
                             <div style="display:flex;justify-content:space-between;font-size:12.3px;margin-bottom:5px">
                                 <span style="font-weight:600">{{ $bracket }} days</span>
-                                <span class="muted" style="font-weight:650"><x-money :value="$amt"/></span>
+                                <span class="muted" style="font-weight:650"><x-money :value="$amt"/> <span style="font-size:11px;color:#8894ac">({{ $pct }}%)</span></span>
                             </div>
                             <div class="bar" style="height:8px">
                                 <i style="width:{{ $pct }}%;background:{{ $col }}"></i>
@@ -131,7 +132,7 @@
                         <div>
                             <div style="display:flex;justify-content:space-between;font-size:12.3px;margin-bottom:5px">
                                 <span style="font-weight:600">{{ $hLabel }}</span>
-                                <span class="muted" style="font-weight:650">{{ $hCount }}</span>
+                                <span class="muted" style="font-weight:650">{{ $hCount }} <span style="font-size:11px;color:#8894ac">({{ $pct }}%)</span></span>
                             </div>
                             <div class="bar" style="height:8px">
                                 <i style="width:{{ $pct }}%;background:{{ $col }}"></i>

@@ -4,6 +4,7 @@ namespace App\Livewire\Payments;
 
 use App\Models\Payment;
 use App\Models\PaymentTerm;
+use App\Services\AuditNotificationService;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -82,6 +83,15 @@ class PaymentIndex extends Component
             }
         }
 
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Payment',
+            'Payment',
+            $payment->id,
+            $payment->code,
+            "Deleted payment receipt {$payment->code} of ₹".number_format($payment->amount, 2)
+        );
+
         $this->dispatch('payment-deleted');
     }
 
@@ -135,6 +145,16 @@ class PaymentIndex extends Component
                 });
             })
             ->when($this->mode, fn ($q) => $q->where('mode', $this->mode))
+            ->when($this->search, function ($q) {
+                $term = '%'.trim($this->search).'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('code', 'like', $term)
+                        ->orWhere('reference', 'like', $term)
+                        ->orWhere('bank', 'like', $term)
+                        ->orWhereHas('customer', fn ($c) => $c->where('company', 'like', $term))
+                        ->orWhereHas('project', fn ($p) => $p->where('name', 'like', $term)->orWhere('project_code', 'like', $term));
+                });
+            })
             ->orderByDesc('paid_on')
             ->orderByDesc('id');
 

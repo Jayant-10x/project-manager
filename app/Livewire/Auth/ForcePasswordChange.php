@@ -61,6 +61,8 @@ class ForcePasswordChange extends Component
 
         $user->password = $this->new_password;
         $user->must_change = false;
+        $user->fail_count = 0;
+        $user->locked_until = null;
         $user->save();
 
         session()->flash('status', 'Password set successfully.');

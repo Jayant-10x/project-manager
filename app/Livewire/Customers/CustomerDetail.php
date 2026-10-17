@@ -5,6 +5,7 @@ namespace App\Livewire\Customers;
 use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\PaymentTerm;
+use App\Services\AuditNotificationService;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -54,7 +55,21 @@ class CustomerDetail extends Component
             Storage::disk('public')->delete($doc->stored_as);
         }
 
+        $code = $this->customer->customer_code;
+        $company = $this->customer->company;
+        $id = $this->customer->id;
+
         $this->customer->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Customer',
+            'Customer',
+            $id,
+            $code,
+            "Deleted customer {$company} and associated records"
+        );
+
         $this->redirect(route('customers.index'), navigate: true);
     }
 
@@ -82,6 +97,9 @@ class CustomerDetail extends Component
     public function deleteDocument(int $docId): void
     {
         $doc = $this->customer->documents()->findOrFail($docId);
+        if (Storage::disk('uploads')->exists($doc->stored_as)) {
+            Storage::disk('uploads')->delete($doc->stored_as);
+        }
         Storage::disk('public')->delete($doc->stored_as);
         $doc->delete();
     }

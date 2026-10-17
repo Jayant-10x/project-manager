@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -42,11 +43,40 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
+        $user = User::where('email', $this->string('email'))->first();
+
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
+            if ($user) {
+                $user->fail_count = (int) $user->fail_count + 1;
+                if ($user->fail_count >= 5) {
+                    $user->fail_count = 0;
+                    $user->locked_until = now()->addMinutes(30);
+                    $user->save();
+
+                    throw ValidationException::withMessages([
+                        'email' => 'Account locked for 30 minutes due to 5 failed attempts.',
+                    ]);
+                }
+
+                $user->save();
+                $left = 5 - $user->fail_count;
+
+                throw ValidationException::withMessages([
+                    'email' => "Invalid email or password. {$left} attempt(s) left.",
+                ]);
+            }
+
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
+            ]);
+        }
+
+        if ($user) {
+            $user->update([
+                'fail_count' => 0,
+                'locked_until' => null,
             ]);
         }
 
@@ -60,6 +90,17 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
+        $user = User::where('email', $this->string('email'))->first();
+
+        if ($user && $user->locked_until && $user->locked_until->isFuture()) {
+            $seconds = now()->diffInSeconds($user->locked_until);
+            $minutes = max(1, (int) ceil($seconds / 60));
+
+            throw ValidationException::withMessages([
+                'email' => "Account locked due to multiple failed logins. Try again in {$minutes} minute(s).",
+            ]);
+        }
+
         if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
             return;
         }

@@ -5,6 +5,7 @@ namespace App\Livewire\Projects;
 use App\Models\Customer;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use App\Services\CodeGeneratorService;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
@@ -175,9 +176,12 @@ class ProjectModal extends Component
         $codeService = app(CodeGeneratorService::class);
         $isEdit = (bool) $this->projectId;
 
+        $auditService = app(AuditNotificationService::class);
+
         if ($this->projectId) {
             $project = Project::findOrFail($this->projectId);
             $project->update($validated);
+            $auditService->log(auth()->id(), 'Updated Project', 'Project', $project->id, $project->code, "Updated project {$project->name}");
         } else {
             $validated['project_code'] = $codeService->generate('project', 'PJT-');
             $validated['created_by'] = auth()->id();
@@ -185,6 +189,7 @@ class ProjectModal extends Component
                 $validated['coordinator_id'] = auth()->id();
             }
             $project = Project::create($validated);
+            $auditService->log(auth()->id(), 'Created Project', 'Project', $project->id, $project->code, "Created project {$project->name} with value ₹".number_format($project->value, 2));
         }
 
         $this->reset();

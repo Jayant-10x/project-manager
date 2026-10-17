@@ -58,7 +58,9 @@
                         'Other'          => '#8894ac',
                     ];
                     $col = $catColors[$doc->category] ?? '#8894ac';
-                    $fileUrl = asset('storage/' . $doc->stored_as);
+                    $fileUrl = file_exists(public_path('uploads/' . $doc->stored_as))
+                        ? asset('uploads/' . $doc->stored_as)
+                        : asset('storage/' . $doc->stored_as);
                 @endphp
                 <div
                     class="doc flex items-center gap-3 p-3.5 border-b last:border-b-0 border-[#eef2f9] hover:bg-slate-50 transition">
@@ -94,6 +96,7 @@
                                     sizeKb: '{{ $doc->size_kb }}',
                                     category: '{{ $doc->category }}',
                                     url: '{{ $fileUrl }}',
+                                    downloadUrl: '{{ route('documents.download', $doc->id, absolute: false) }}',
                                     mime: '{{ $doc->mime }}'
                                 }
                             })"
@@ -104,7 +107,7 @@
                         </svg>
                     </button>
 
-                    <a class="mini-btn flex-shrink-0" href="{{ $fileUrl }}" target="_blank" rel="noopener" download
+                    <a class="mini-btn flex-shrink-0" href="{{ route('documents.download', $doc->id, absolute: false) }}" download="{{ $doc->file_name }}"
                        title="Download">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>

@@ -5,6 +5,9 @@ namespace App\Livewire\Documents;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Project;
+use App\Services\AuditNotificationService;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -67,7 +70,29 @@ class DocumentUploadModal extends Component
         ];
     }
 
-    public function upload(): void
+    protected function messages(): array
+    {
+        return [
+            'file.required' => 'Please select or drop a file to upload.',
+            'file.max' => 'The file size must not exceed 10 MB.',
+            'file.mimes' => 'The selected file format is not supported. Allowed formats: PDF, DOC, DOCX, XLS, XLSX, CSV, TXT, PPT, Images, ZIP.',
+            'customer_id.required' => 'Please select a customer for this document.',
+            'title.required' => 'Please provide a title for this document.',
+        ];
+    }
+
+    protected function validationAttributes(): array
+    {
+        return [
+            'file' => 'document file',
+            'customer_id' => 'customer',
+            'project_id' => 'project',
+            'category' => 'category',
+            'title' => 'document title',
+        ];
+    }
+
+    public function save(): void
     {
         $this->customer_id = ! empty($this->customer_id) ? (int) $this->customer_id : null;
         $this->project_id = ! empty($this->project_id) ? (int) $this->project_id : null;
@@ -75,13 +100,23 @@ class DocumentUploadModal extends Component
 
         $this->validate();
 
-        $ext = $this->file->getClientOriginalExtension();
-        $storedName = 'd'.($this->project_id ?: $this->customer_id).'_'.bin2hex(random_bytes(8)).'.'.$ext;
+        $originalName = pathinfo($this->file->getClientOriginalName(), PATHINFO_FILENAME);
+        $slug = Str::slug($originalName) ?: 'document';
+        $timestamp = now()->format('Ymd_His');
+        $ext = strtolower($this->file->getClientOriginalExtension());
+        $storedName = "{$slug}_{$timestamp}.{$ext}";
 
-        // Store explicitly to the public disk root (storage/app/public)
+        if (Storage::disk('uploads')->exists($storedName) || Storage::disk('public')->exists($storedName)) {
+            $storedName = "{$slug}_{$timestamp}_".bin2hex(random_bytes(3)).".{$ext}";
+        }
+
+        // Store directly to public uploads directory for simple, symlink-free web access
+        $this->file->storeAs('', $storedName, 'uploads');
+
+        // Also store explicitly to the public storage disk root (storage/app/public)
         $this->file->storeAs('', $storedName, 'public');
 
-        Document::create([
+        $doc = Document::create([
             'customer_id' => $this->customer_id,
             'project_id' => $this->project_id,
             'category' => $this->category,
@@ -93,10 +128,27 @@ class DocumentUploadModal extends Component
             'uploaded_by' => auth()->id(),
         ]);
 
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Uploaded Document',
+            'Document',
+            $doc->id,
+            '',
+            "Uploaded {$doc->title} ({$doc->file_name})"
+        );
+
         $this->reset(['file', 'title', 'category', 'customer_id', 'project_id']);
         $this->dispatch('document-saved');
         $this->dispatch('close-modal', 'document-upload-modal');
         $this->dispatch('toast', ['msg' => 'Document uploaded successfully', 'type' => 'ok']);
+    }
+
+    /**
+     * Alias for save to maintain backward compatibility.
+     */
+    public function upload(): void
+    {
+        $this->save();
     }
 
     public function render()

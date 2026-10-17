@@ -70,10 +70,46 @@ class CustomerIndex extends Component
     public function exportCsv()
     {
         $user = auth()->user();
-        $customers = Customer::query()
+        $query = Customer::query()
             ->with(['projects' => fn ($q) => $q->forUser($user)->with(['terms', 'payments']), 'salesPerson'])
-            ->orderBy('company')
-            ->get();
+            ->when($this->search, function ($q) {
+                $term = '%'.trim($this->search).'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('company', 'like', $term)
+                        ->orWhere('customer_code', 'like', $term)
+                        ->orWhere('contact_name', 'like', $term)
+                        ->orWhere('phone', 'like', $term)
+                        ->orWhere('email', 'like', $term)
+                        ->orWhere('city', 'like', $term)
+                        ->orWhere('gst_number', 'like', $term);
+                });
+            })
+            ->when($this->sales, fn ($q) => $q->where('sales_person_id', $this->sales))
+            ->when($this->city, fn ($q) => $q->where('city', $this->city))
+            ->when($this->status, fn ($q) => $q->where('status', $this->status))
+            ->orderBy('company');
+
+        $customers = $query->get();
+
+        if ($this->pay) {
+            $customers = $customers->filter(function ($c) {
+                $due = $c->projects->sum(fn ($p) => $p->money['due']);
+                $overdue = $c->projects->sum(fn ($p) => $p->money['overdue']);
+                $sched = $c->projects->sum(fn ($p) => $p->money['scheduled']);
+
+                if ($this->pay === 'due') {
+                    return $due > 0;
+                }
+                if ($this->pay === 'over') {
+                    return $overdue > 0;
+                }
+                if ($this->pay === 'clear') {
+                    return $due <= 0 && $sched > 0;
+                }
+
+                return true;
+            });
+        }
 
         $filename = 'customers-'.now()->toDateString().'.csv';
 

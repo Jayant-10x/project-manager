@@ -6,6 +6,7 @@ use App\Models\Milestone;
 use App\Models\Payment;
 use App\Models\PaymentTerm;
 use App\Models\Project;
+use App\Services\AuditNotificationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
@@ -88,6 +89,9 @@ class ProjectDetail extends Component
     public function deleteDocument(int $docId): void
     {
         $doc = $this->project->documents()->findOrFail($docId);
+        if (Storage::disk('uploads')->exists($doc->stored_as)) {
+            Storage::disk('uploads')->delete($doc->stored_as);
+        }
         Storage::disk('public')->delete($doc->stored_as);
         $doc->delete();
         $this->project->load('documents');
@@ -103,7 +107,21 @@ class ProjectDetail extends Component
             Storage::disk('public')->delete($doc->stored_as);
         }
 
+        $name = $this->project->name;
+        $code = $this->project->code;
+        $id = $this->project->id;
+
         $this->project->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Project',
+            'Project',
+            $id,
+            $code,
+            "Deleted project {$name} and associated records"
+        );
+
         $this->redirect(route('projects.index'), navigate: true);
     }
 

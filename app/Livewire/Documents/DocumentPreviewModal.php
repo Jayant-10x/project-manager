@@ -17,6 +17,8 @@ class DocumentPreviewModal extends Component
 
     public string $url = '';
 
+    public string $downloadUrl = '';
+
     public string $mime = '';
 
     #[On('open-document-preview')]
@@ -27,6 +29,7 @@ class DocumentPreviewModal extends Component
         $this->sizeKb = (string) ($data['sizeKb'] ?? '');
         $this->category = $data['category'] ?? '';
         $this->url = $data['url'] ?? '';
+        $this->downloadUrl = $data['downloadUrl'] ?? '';
         $this->mime = $data['mime'] ?? '';
 
         $this->dispatch('open-modal', 'document-preview-modal');

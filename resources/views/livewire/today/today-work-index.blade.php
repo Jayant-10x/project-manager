@@ -1,11 +1,11 @@
 <div>
     <!-- Top 4 KPIs -->
     <div class="kpis four mb-6">
-        <x-kpi-card label="Overdue" :value="$totalOverdue" :sub="$overdue->count() . ' installments'" icon="alert"
+        <x-kpi-card label="Overdue" :value="$totalOverdue" :sub="$overdue->count() . ' ' . \Illuminate\Support\Str::plural('installment', $overdue->count())" icon="alert"
                     color="#d94b4b" bg="#fdeaea" :ismoney="true"
                     :href="route('schedule.index', ['status' => 'Overdue'])"/>
         <x-kpi-card :label="'Due in ' . $alertDays . ' days'" :value="$totalSoon" :ismoney="true"
-                    :sub="$soon->count() . ' installments'" icon="clock" color="#e0a13a" bg="#fdf3e2"
+                    :sub="$soon->count() . ' ' . \Illuminate\Support\Str::plural('installment', $soon->count())" icon="clock" color="#e0a13a" bg="#fdf3e2"
                     :href="route('schedule.index', ['status' => 'Upcoming'])"/>
         <x-kpi-card label="Follow-ups" :value="$followups->count()" sub="Pending conversations" icon="chat"
                     color="#0b3d91" bg="#e8eefc" :href="route('followups.index')"/>
@@ -20,7 +20,7 @@
             <div class="card-head">
                 <div>
                     <h3 class="font-bold text-sm text-[#0d1b34]">Overdue Payments</h3>
-                    <div class="text-xs text-[#8894ac]">{{ $overdue->count() }} installments ·
+                    <div class="text-xs text-[#8894ac]">{{ $overdue->count() }} {{ \Illuminate\Support\Str::plural('installment', $overdue->count()) }} ·
                         <x-money :value="$totalOverdue"/>
                     </div>
                 </div>

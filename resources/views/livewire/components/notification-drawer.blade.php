@@ -46,6 +46,15 @@
                         Mark all as read
                     </button>
                 @endif
+                @if($totalCount > 0)
+                    <button type="button"
+                            wire:click="clearAll"
+                            wire:confirm="Clear all notifications?"
+                            class="text-xs font-semibold text-[#8894ac] hover:text-[#d94b4b] px-2 py-1 rounded"
+                            title="Clear all notifications">
+                        Clear all
+                    </button>
+                @endif
                 <button type="button"
                         @click="open = false"
                         class="icon-sq w-8 h-8 rounded-lg text-[#8894ac] hover:text-[#0d1b34]"
@@ -142,17 +151,27 @@
                         </div>
                     </div>
 
-                    <!-- Single Mark Read Action -->
-                    @if(!$n->is_read)
+                    <!-- Actions (Mark Read & Delete) -->
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0 mt-0.5">
+                        @if(!$n->is_read)
+                            <button type="button"
+                                    wire:click.stop="markAsRead({{ $n->id }})"
+                                    class="w-6 h-6 rounded-md flex items-center justify-center text-[#8894ac] hover:text-[#0b3d91] hover:bg-[#e8eefc]"
+                                    title="Mark as read">
+                                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                    <path d="M20 6L9 17l-5-5"/>
+                                </svg>
+                            </button>
+                        @endif
                         <button type="button"
-                                wire:click.stop="markAsRead({{ $n->id }})"
-                                class="w-6 h-6 rounded-md flex items-center justify-center text-[#8894ac] hover:text-[#0b3d91] hover:bg-[#e8eefc] opacity-0 group-hover:opacity-100 transition flex-shrink-0 mt-0.5"
-                                title="Mark as read">
+                                wire:click.stop="deleteNotification({{ $n->id }})"
+                                class="w-6 h-6 rounded-md flex items-center justify-center text-[#8894ac] hover:text-[#d94b4b] hover:bg-[#fdeaea]"
+                                title="Delete notification">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                                <path d="M20 6L9 17l-5-5"/>
+                                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
                             </svg>
                         </button>
-                    @endif
+                    </div>
                 </div>
             @empty
                 <div class="p-10 text-center text-[#8894ac]">

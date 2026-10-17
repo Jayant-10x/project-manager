@@ -5,6 +5,7 @@ namespace App\Livewire\Tasks;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -61,6 +62,16 @@ class TaskIndex extends Component
 
         $task->done = ! $task->done;
         $task->save();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            $task->done ? 'Completed Task' : 'Reopened Task',
+            'Task',
+            $task->id,
+            '',
+            ($task->done ? 'Marked task as done: ' : 'Reopened task: ').$task->title
+        );
+
         $this->dispatch('task-updated');
     }
 
@@ -72,7 +83,20 @@ class TaskIndex extends Component
             })
             ->findOrFail($taskId);
 
+        $title = $task->title;
+        $id = $task->id;
+
         $task->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Task',
+            'Task',
+            $id,
+            '',
+            "Deleted task: {$title}"
+        );
+
         $this->dispatch('task-updated');
     }
 
@@ -91,7 +115,7 @@ class TaskIndex extends Component
             $customerId = Project::find($this->project_id)?->customer_id;
         }
 
-        Task::create([
+        $task = Task::create([
             'title' => $this->title,
             'project_id' => $this->project_id,
             'customer_id' => $customerId,
@@ -101,6 +125,15 @@ class TaskIndex extends Component
             'created_by' => auth()->id(),
             'done' => false,
         ]);
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Created Task',
+            'Task',
+            $task->id,
+            '',
+            "Created task: {$task->title}"
+        );
 
         $this->dispatch('task-saved');
         $this->dispatch('close-modal', 'add-task-modal');
