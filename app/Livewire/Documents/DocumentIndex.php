@@ -5,6 +5,7 @@ namespace App\Livewire\Documents;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Project;
+use App\Services\AuditNotificationService;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -72,11 +73,21 @@ class DocumentIndex extends Component
             return;
         }
 
+        $docName = $doc->file_name;
         if (Storage::disk('uploads')->exists($doc->stored_as)) {
             Storage::disk('uploads')->delete($doc->stored_as);
         }
         Storage::disk('public')->delete($doc->stored_as);
         $doc->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Document',
+            'Document',
+            $id,
+            '',
+            "Deleted document '{$docName}'"
+        );
 
         $this->dispatch('toast', ['msg' => 'Document removed', 'type' => 'ok']);
     }

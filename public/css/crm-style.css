@@ -2043,9 +2043,14 @@ textarea.i {
 }
 
 @media (max-width: 860px) {
-    .app, .main {
+    .app {
         max-width: 100vw;
-        overflow-x: hidden;
+        overflow-x: clip;
+    }
+
+    .main {
+        max-width: 100vw;
+        overflow-x: clip;
     }
 
     .sidebar {

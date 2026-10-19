@@ -180,8 +180,19 @@ class ProjectModal extends Component
 
         if ($this->projectId) {
             $project = Project::findOrFail($this->projectId);
+            $changes = [];
+            if ($project->status !== $validated['status']) {
+                $changes[] = "status: {$project->status} -> {$validated['status']}";
+            }
+            if ($project->health !== $validated['health']) {
+                $changes[] = "health: {$project->health} -> {$validated['health']}";
+            }
+            if ((float) $project->value !== (float) $validated['value']) {
+                $changes[] = 'value: ₹'.number_format($project->value).' -> ₹'.number_format($validated['value']);
+            }
+            $diffText = ! empty($changes) ? ' ('.implode(', ', $changes).')' : '';
             $project->update($validated);
-            $auditService->log(auth()->id(), 'Updated Project', 'Project', $project->id, $project->code, "Updated project {$project->name}");
+            $auditService->log(auth()->id(), 'Updated Project', 'Project', $project->id, $project->code, "Updated project {$project->name}{$diffText}");
         } else {
             $validated['project_code'] = $codeService->generate('project', 'PJT-');
             $validated['created_by'] = auth()->id();

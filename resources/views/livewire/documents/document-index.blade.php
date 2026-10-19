@@ -134,8 +134,16 @@
 
                     <button type="button"
                             class="mini-btn danger flex-shrink-0"
-                            wire:confirm="Remove document? The file will be permanently deleted."
-                            wire:click="deleteDocument({{ $doc->id }})"
+                            @click="$dispatch('confirm-dialog', {
+                                title: 'Remove Document?',
+                                message: 'Are you sure you want to remove {{ addslashes($doc->file_name) }}? The file will be permanently deleted.',
+                                confirmText: 'Remove Document',
+                                cancelText: 'Cancel',
+                                danger: true,
+                                wire: $wire,
+                                action: 'deleteDocument',
+                                params: {{ $doc->id }}
+                            })"
                             title="Remove">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path

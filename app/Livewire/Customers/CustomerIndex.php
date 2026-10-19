@@ -4,6 +4,7 @@ namespace App\Livewire\Customers;
 
 use App\Models\Customer;
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -110,6 +111,15 @@ class CustomerIndex extends Component
                 return true;
             });
         }
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Exported CSV',
+            'Customer',
+            null,
+            '',
+            "Exported {$customers->count()} customers to CSV"
+        );
 
         $filename = 'customers-'.now()->toDateString().'.csv';
 

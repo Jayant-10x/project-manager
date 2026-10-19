@@ -1,12 +1,14 @@
 <div>
     <div class="mb-4">
-        <a href="{{ route('projects.index') }}" wire:navigate
-           class="btn btn-ghost btn-sm inline-flex items-center gap-1.5">
+        <button type="button"
+                @click="window.history.length > 1 ? window.history.back() : Livewire.navigate('{{ route('projects.index') }}')"
+                class="btn btn-ghost btn-sm inline-flex items-center gap-1.5"
+                title="Go back">
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
             Back
-        </a>
+        </button>
     </div>
 
     <!-- Health / Delivery Status Notice Banner -->
@@ -87,8 +89,16 @@
                     </button>
                     @if(auth()->user()->role === 'Admin')
                         <button type="button" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50"
-                                wire:confirm="Delete project and all associated milestones, schedule, and receipts?"
-                                wire:click="deleteProject" title="Delete project" aria-label="Delete project">
+                                @click="$dispatch('confirm-dialog', {
+                                    title: 'Delete Project?',
+                                    message: 'Are you sure you want to permanently delete {{ addslashes($project->name) }} ({{ $project->code }}) and all associated milestones, payment schedules, and receipts?',
+                                    confirmText: 'Delete Project',
+                                    cancelText: 'Cancel',
+                                    danger: true,
+                                    wire: $wire,
+                                    action: 'deleteProject'
+                                })"
+                                title="Delete project" aria-label="Delete project">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -408,8 +418,18 @@
                                     </svg>
                                 </button>
                             @endif
-                            <button type="button" class="mini-btn danger" wire:confirm="Remove this installment?"
-                                    wire:click="deleteTerm({{ $term->id }})" title="Remove">
+                            <button type="button" class="mini-btn danger"
+                                    @click="$dispatch('confirm-dialog', {
+                                        title: 'Remove Installment Term?',
+                                        message: 'Are you sure you want to remove {{ addslashes($term->label) }} (₹{{ number_format($term->amount) }}) from the schedule?',
+                                        confirmText: 'Remove Installment',
+                                        cancelText: 'Cancel',
+                                        danger: true,
+                                        wire: $wire,
+                                        action: 'deleteTerm',
+                                        params: {{ $term->id }}
+                                    })"
+                                    title="Remove">
                                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                     <path
                                         d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -480,8 +500,16 @@
                                     <td>
                                         <div class="row-actions">
                                             <button type="button" class="mini-btn danger"
-                                                    wire:confirm="Remove this payment entry?"
-                                                    wire:click="deletePayment({{ $pay->id }})"
+                                                    @click="$dispatch('confirm-dialog', {
+                                                        title: 'Delete Payment Receipt?',
+                                                        message: 'Remove this payment entry ({{ $pay->code ?: 'Receipt' }})? The receipt will be deleted and the installment balance adjusted.',
+                                                        confirmText: 'Delete Payment',
+                                                        cancelText: 'Cancel',
+                                                        danger: true,
+                                                        wire: $wire,
+                                                        action: 'deletePayment',
+                                                        params: {{ $pay->id }}
+                                                    })"
                                                     title="Delete payment" aria-label="Delete payment">
                                                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                                     <path
@@ -558,8 +586,18 @@
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                             </svg>
                         </a>
-                        <button type="button" class="mini-btn danger" wire:confirm="Remove this document?"
-                                wire:click="deleteDocument({{ $doc->id }})" title="Remove">
+                        <button type="button" class="mini-btn danger"
+                                @click="$dispatch('confirm-dialog', {
+                                    title: 'Remove Document?',
+                                    message: 'Are you sure you want to remove {{ addslashes($doc->file_name) }}? The file will be permanently deleted.',
+                                    confirmText: 'Remove Document',
+                                    cancelText: 'Cancel',
+                                    danger: true,
+                                    wire: $wire,
+                                    action: 'deleteDocument',
+                                    params: {{ $doc->id }}
+                                })"
+                                title="Remove">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>

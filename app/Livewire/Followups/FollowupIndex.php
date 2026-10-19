@@ -4,6 +4,7 @@ namespace App\Livewire\Followups;
 
 use App\Models\Customer;
 use App\Models\Followup;
+use App\Services\AuditNotificationService;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -78,7 +79,18 @@ class FollowupIndex extends Component
             return;
         }
 
+        $summary = $fu->summary;
         $fu->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Follow-up',
+            'Followup',
+            $id,
+            '',
+            "Deleted follow-up '{$summary}'"
+        );
+
         $this->dispatch('toast', ['msg' => 'Follow-up removed', 'type' => 'ok']);
     }
 

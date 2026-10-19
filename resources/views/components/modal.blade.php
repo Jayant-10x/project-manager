@@ -5,9 +5,19 @@
         isDirty: false,
         confirmClose() {
             if (this.isDirty) {
-                if (confirm('You have unsaved changes. Are you sure you want to discard them?')) {
-                    this.forceClose();
-                }
+                window.dispatchEvent(new CustomEvent('confirm-dialog', {
+                    detail: {
+                        title: 'Discard Unsaved Changes?',
+                        message: 'You have unsaved changes in this form. Are you sure you want to discard them?',
+                        confirmText: 'Discard Changes',
+                        cancelText: 'Keep Editing',
+                        type: 'warning',
+                        danger: true,
+                        onConfirm: () => {
+                            this.forceClose();
+                        }
+                    }
+                }));
             } else {
                 this.forceClose();
             }
@@ -32,13 +42,13 @@
         }
      "
      x-on:close.stop="forceClose()"
-     x-on:keydown.escape.window="if (show) confirmClose()"
-     style="display: none;"
-     class="overlay fixed inset-0 bg-[#08142a]/60 backdrop-blur-sm flex items-start justify-center p-6 z-50 overflow-y-auto">
+     x-on:keydown.escape.window="if (show && !window._confirmModalActive) confirmClose()"
+     style="display: none; background-color: rgba(8, 20, 42, 0.60); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);"
+     class="overlay fixed inset-0 flex items-start justify-center p-6 z-50 overflow-y-auto">
 
     <div
         class="modal bg-white rounded-2xl w-full {{ $wide ? 'max-w-4xl' : 'max-w-2xl' }} shadow-2xl overflow-hidden my-auto"
-        @click.outside="confirmClose()"
+        @click.outside="if (show && !window._confirmModalActive && !$event.target.closest('[data-confirm-modal]')) confirmClose()"
         @input="isDirty = true"
         @change="isDirty = true">
 

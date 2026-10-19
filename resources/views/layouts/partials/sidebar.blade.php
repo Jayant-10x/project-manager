@@ -7,9 +7,9 @@
        :class="{ 'collapsed': collapsed, 'open': mobileOpen }">
 
     <div class="sb-head">
-        <div class="logo-plate">
+        <a href="{{ route('dashboard') }}" wire:navigate class="logo-plate hover:opacity-95 transition-opacity cursor-pointer block" title="Go to Dashboard">
             <img src="{{ asset('assets/logo.png') }}" alt="10X Agency">
-        </div>
+        </a>
         <button type="button" class="sb-close-btn" @click="mobileOpen = false" title="Close Menu">
             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
@@ -132,10 +132,18 @@
                 <strong>{{ $user->name }}</strong>
                 <span>{{ $user->designation ?? $user->role }}</span>
             </div>
-            <form method="POST" action="{{ route('logout') }}" class="inline">
+            <form method="POST" action="{{ route('logout') }}" id="sidebar-logout-form" class="inline">
                 @csrf
-                <button type="submit" class="sb-btn" title="Sign out"
-                        onclick="return confirm('Are you sure want to logout?')">
+                <button type="button" class="sb-btn" title="Sign out"
+                        @click="$dispatch('confirm-dialog', {
+                            title: 'Sign Out?',
+                            message: 'Are you sure you want to sign out of your workspace session?',
+                            confirmText: 'Sign Out',
+                            cancelText: 'Stay',
+                            type: 'logout',
+                            danger: true,
+                            onConfirm: () => document.getElementById('sidebar-logout-form').submit()
+                        })">
                     <svg viewBox="0 0 24 24">
                         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
                         <path d="M16 17l5-5-5-5"/>

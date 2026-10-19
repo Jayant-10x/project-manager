@@ -9,7 +9,17 @@
         </span>
         <span class="spacer"></span>
         @if($unreadCount > 0)
-            <button wire:click="markAllAsRead" class="btn btn-ghost btn-sm">
+            <button type="button"
+                    @click="$dispatch('confirm-dialog', {
+                        title: 'Mark All as Read?',
+                        message: 'Are you sure you want to mark all unread notifications as read?',
+                        confirmText: 'Mark All Read',
+                        cancelText: 'Cancel',
+                        danger: false,
+                        wire: $wire,
+                        action: 'markAllAsRead'
+                    })"
+                    class="btn btn-ghost btn-sm">
                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                     <path d="M20 6L9 17l-5-5"/>
                 </svg>

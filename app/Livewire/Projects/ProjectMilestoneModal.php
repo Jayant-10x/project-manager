@@ -118,7 +118,9 @@ class ProjectMilestoneModal extends Component
         $this->validate();
 
         $project = Project::findOrFail($this->projectId);
+        $existingMilestones = Milestone::where('project_id', $this->projectId)->get()->keyBy('id');
         $seenIds = [];
+        $diffs = [];
 
         foreach ($this->items as $idx => $m) {
             $done = ! empty($m['done']) || ($m['status'] === 'Done');
@@ -134,21 +136,44 @@ class ProjectMilestoneModal extends Component
             ];
 
             if (! empty($m['id'])) {
-                $milestone = Milestone::where('project_id', $this->projectId)->find($m['id']);
+                $milestone = $existingMilestones->get($m['id']);
                 if ($milestone) {
+                    $itemChanges = [];
+                    if ($milestone->name !== $payload['name']) {
+                        $itemChanges[] = "name: '{$milestone->name}' -> '{$payload['name']}'";
+                    }
+                    $oldDue = $milestone->due_date ? Carbon::parse($milestone->due_date)->toDateString() : null;
+                    if ($oldDue !== $payload['due_date']) {
+                        $itemChanges[] = 'due: '.($oldDue ?: 'none').' -> '.($payload['due_date'] ?: 'none');
+                    }
+                    if ($milestone->status !== $payload['status']) {
+                        $itemChanges[] = "status: {$milestone->status} -> {$payload['status']}";
+                    }
+                    if (! empty($itemChanges)) {
+                        $diffs[] = "Edited '{$milestone->name}' (".implode(', ', $itemChanges).')';
+                    }
                     $milestone->update($payload);
                     $seenIds[] = $milestone->id;
                 }
             } else {
                 $created = $project->milestones()->create($payload);
                 $seenIds[] = $created->id;
+                $diffs[] = "Added '{$created->name}' (status: {$payload['status']})";
             }
         }
 
         // Clean up removed milestones that are not locked to payment terms
-        Milestone::where('project_id', $this->projectId)
+        $removed = Milestone::where('project_id', $this->projectId)
             ->whereNotIn('id', $seenIds)
-            ->delete();
+            ->get();
+        foreach ($removed as $rm) {
+            $diffs[] = "Removed '{$rm->name}'";
+            $rm->delete();
+        }
+
+        $detailText = ! empty($diffs)
+            ? "Updated milestones for {$project->name}: ".implode('; ', $diffs)
+            : "Updated milestones for project {$project->name}";
 
         app(AuditNotificationService::class)->log(
             auth()->id(),
@@ -156,7 +181,7 @@ class ProjectMilestoneModal extends Component
             'Project',
             $project->id,
             $project->code,
-            "Updated milestones for project {$project->name}"
+            $detailText
         );
 
         $this->dispatch('close-modal', 'project-milestone-modal');

@@ -2,7 +2,7 @@
     <form wire:submit="save" novalidate>
         <div class="form-grid">
             <label class="f full">
-                <span>Customer<span class="text-red-500"> *<span></span>
+                <span>Customer <span class="text-red-500">*</span></span>
                 <select wire:model.live="customer_id"
                         class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— Select Customer —</option>
@@ -16,7 +16,7 @@
             </label>
 
             <label class="f">
-                <span>Channel<span class="text-red-500"> *<span></span>
+                <span>Channel <span class="text-red-500">*</span></span>
                 <select wire:model.blur="type"
                         class="i @error('type') border-red-500! bg-red-50/20! @enderror">
                     <option value="Call">Call</option>
@@ -45,10 +45,10 @@
             </label>
 
             <label class="f full">
-                <span>Summary<span class="text-red-500"> *<span></span>
+                <span>Summary <span class="text-red-500">*</span></span>
                 <input wire:model.blur="summary"
-                       class="i @error('summary') border-red-500! bg-red-50/20! @enderror"
-                       placeholder="e.g. Discussed payment clearance and deliverables">
+                        class="i @error('summary') border-red-500! bg-red-50/20! @enderror"
+                        placeholder="e.g. Discussed payment clearance and deliverables">
                 @error('summary')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror

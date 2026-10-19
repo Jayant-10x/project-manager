@@ -77,6 +77,8 @@ class CustomerDetail extends Component
     {
         $pay = Payment::where('customer_id', $this->customer->id)->findOrFail($paymentId);
         $termId = $pay->term_id;
+        $payCode = $pay->code;
+        $payAmt = $pay->amount;
         $pay->delete();
 
         if ($termId) {
@@ -91,22 +93,52 @@ class CustomerDetail extends Component
             }
         }
 
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Payment',
+            'Payment',
+            $paymentId,
+            $payCode ?: '',
+            "Deleted payment receipt {$payCode} of ₹".number_format($payAmt, 2)." from customer {$this->customer->company}"
+        );
+
         $this->dispatch('payment-deleted');
     }
 
     public function deleteDocument(int $docId): void
     {
         $doc = $this->customer->documents()->findOrFail($docId);
+        $docName = $doc->file_name;
         if (Storage::disk('uploads')->exists($doc->stored_as)) {
             Storage::disk('uploads')->delete($doc->stored_as);
         }
         Storage::disk('public')->delete($doc->stored_as);
         $doc->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Document',
+            'Document',
+            $docId,
+            $this->customer->customer_code,
+            "Deleted document '{$docName}' from customer {$this->customer->company}"
+        );
     }
 
     public function deleteFollowup(int $fuId): void
     {
-        $this->customer->followups()->findOrFail($fuId)->delete();
+        $fu = $this->customer->followups()->findOrFail($fuId);
+        $summary = $fu->summary;
+        $fu->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Follow-up',
+            'Followup',
+            $fuId,
+            $this->customer->customer_code,
+            "Deleted follow-up '{$summary}' for customer {$this->customer->company}"
+        );
     }
 
     public function render()

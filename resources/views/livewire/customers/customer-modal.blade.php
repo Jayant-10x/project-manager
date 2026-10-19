@@ -171,7 +171,7 @@
         </div>
 
         <div class="mt-6 flex justify-end gap-3">
-            <button type="button" @click="$dispatch('close-modal')" class="btn btn-ghost">Cancel</button>
+            <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
             <button type="submit" class="btn btn-primary">
                 {{ $customerId ? 'Save changes' : 'Create customer' }}
             </button>

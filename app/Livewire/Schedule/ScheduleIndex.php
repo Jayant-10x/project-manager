@@ -5,6 +5,7 @@ namespace App\Livewire\Schedule;
 use App\Models\Customer;
 use App\Models\PaymentTerm;
 use App\Models\Project;
+use App\Services\AuditNotificationService;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -54,6 +55,15 @@ class ScheduleIndex extends Component
             ->orderByRaw("CASE status WHEN 'Overdue' THEN 1 WHEN 'Pending' THEN 2 WHEN 'Partial' THEN 3 WHEN 'Paid' THEN 4 WHEN 'Cancelled' THEN 5 ELSE 6 END")
             ->orderBy('due_date')
             ->get();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Exported CSV',
+            'Schedule',
+            null,
+            '',
+            "Exported {$terms->count()} schedule payment terms to CSV"
+        );
 
         $filename = 'payment-schedule-'.now()->toDateString().'.csv';
 

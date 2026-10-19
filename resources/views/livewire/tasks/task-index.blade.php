@@ -85,8 +85,7 @@
             </div>
 
             <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
-                <button type="button" @click="$dispatch('close-modal', 'add-task-modal')" class="btn btn-ghost">Cancel
-                </button>
+                <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
                 <button type="submit" class="btn btn-primary">
                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                         <path d="M12 5v14M5 12h14"/>
@@ -210,8 +209,16 @@
 
                     <button type="button"
                             class="mini-btn danger"
-                            wire:confirm="Remove this task from your list?"
-                            wire:click="deleteTask({{ $t->id }})"
+                            @click="$dispatch('confirm-dialog', {
+                                title: 'Remove Task?',
+                                message: 'Are you sure you want to remove this task ({{ addslashes($t->title) }}) from your list?',
+                                confirmText: 'Remove Task',
+                                cancelText: 'Cancel',
+                                danger: true,
+                                wire: $wire,
+                                action: 'deleteTask',
+                                params: {{ $t->id }}
+                            })"
                             title="Remove task">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path

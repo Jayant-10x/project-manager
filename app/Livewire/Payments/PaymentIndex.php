@@ -148,6 +148,15 @@ class PaymentIndex extends Component
             ->orderByDesc('paid_on')
             ->get();
 
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Exported CSV',
+            'Payment',
+            null,
+            '',
+            "Exported {$payments->count()} payment receipts to CSV"
+        );
+
         $filename = 'payments-'.now()->toDateString().'.csv';
 
         return response()->streamDownload(function () use ($payments) {

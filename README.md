@@ -186,11 +186,17 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
    Global layout-level modals (e.g. `<livewire:customers.customer-modal/>` or `<livewire:payments.payment-modal/>`) reside outside the DOM hierarchy of page tables. Triggers must use `Livewire.dispatch('event-name', payload)` instead of Alpine `$dispatch` to broadcast across independent component trees.
 3. **SPA Transitions (`Livewire.navigate`)**:
    Navigating between views from clickable table rows must invoke `Livewire.navigate('url')` rather than legacy `window.location`. This avoids full browser reloads and maintains active Alpine store states (`$store.currency`, `$store.notifications`).
-4. **Modal Unsaved Changes Guard (`isDirty`)**:
-   The `<x-modal>` component listens for DOM `@input` and `@change` events to mark forms as dirty. Attempting to dismiss an unsubmitted form via outside click, `Escape`, or Cancel triggers a browser confirmation dialog (`confirm('You have unsaved changes...')`).
-5. **Real-Time Blur Validation**:
+4. **In-App Confirmation Modal System (`<x-confirm-modal>`)**:
+   Destructive actions (deletions, logouts, unlinking, mark-all-read) and form modal discards use the unified in-app confirmation component (`<x-confirm-modal/>`) rather than native browser `confirm()` or `wire:confirm`. The component provides hardware-accelerated frosted glass backdrop blur (`backdrop-filter: blur(8px)`), distinct contextual operation icons (danger, warning, logout, info), customizable actions, and outside-click collision guards (`data-confirm-modal`).
+5. **Modal Unsaved Changes Guard (`isDirty`)**:
+   The `<x-modal>` component listens for DOM `@input` and `@change` events to mark forms as dirty. Attempting to dismiss an unsubmitted form via outside click, `Escape`, or Cancel triggers the in-app confirmation modal (`<x-confirm-modal>`) asking the user to confirm discarding unsaved changes. The "Keep Editing" button cleanly dismisses the confirmation dialog without triggering event loop collisions or closing the form.
+6. **Real-Time Blur Validation**:
    Inputs utilize `wire:model.blur` combined with `$this->validateOnly($propertyName)` inside the `updated()` lifecycle hook. Invalid inputs display an active red border (`border-red-500! bg-red-50/20!`) and inline error labels beneath the field without rendering disruptive alert banners.
-6. **Schema Null vs. Default Synchronization**:
+7. **Filter Visibility & Dynamic Clear Action**:
+   Filter action buttons (e.g. "Clear filters" or "Reset filters") are conditionally displayed across data index tables only when active filters, status scopes, or search strings are applied.
+8. **Navigation & Dynamic Back History**:
+   Secondary views and detail pages use `window.history.length > 1 ? window.history.back() : window.location.href = '...'` to navigate back to the user's previous filtered list state instead of hardcoded route jumps.
+9. **Schema Null vs. Default Synchronization**:
    For database columns defined as `NOT NULL DEFAULT 0.00` (e.g., `projects.cost`, `projects.amc_amount`, `payments.tds`, `sales_persons.target`), Livewire components explicitly convert empty strings (`""`) to `0.00` before persistence, preventing MySQL `1048 Column cannot be null` errors.
 
 ---

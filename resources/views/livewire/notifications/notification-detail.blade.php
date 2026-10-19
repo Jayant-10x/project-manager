@@ -1,13 +1,15 @@
 <div>
     <!-- Back to Notifications Navigation -->
     <div class="mb-4">
-        <a href="{{ route('notifications.index') }}" wire:navigate
-           class="btn btn-ghost btn-sm inline-flex items-center gap-1.5">
+        <button type="button"
+                @click="window.history.length > 1 ? window.history.back() : Livewire.navigate('{{ route('notifications.index') }}')"
+                class="btn btn-ghost btn-sm inline-flex items-center gap-1.5"
+                title="Go back">
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
             Back to Notifications
-        </a>
+        </button>
     </div>
 
     @php
@@ -116,8 +118,15 @@
 
                 <button type="button"
                         class="btn btn-danger btn-sm"
-                        wire:confirm="Permanently delete this notification?"
-                        wire:click="deleteNotification">
+                        @click="$dispatch('confirm-dialog', {
+                            title: 'Delete Notification?',
+                            message: 'Are you sure you want to permanently delete this notification?',
+                            confirmText: 'Delete Notification',
+                            cancelText: 'Cancel',
+                            danger: true,
+                            wire: $wire,
+                            action: 'deleteNotification'
+                        })">
                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                         <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                     </svg>

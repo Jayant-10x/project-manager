@@ -135,8 +135,16 @@
                             <div class="row-actions">
                                 <button type="button"
                                         class="mini-btn danger"
-                                        wire:confirm="Remove payment entry? The receipt will be deleted and the installment balance will adjust."
-                                        wire:click="deletePayment({{ $p->id }})"
+                                        @click="$dispatch('confirm-dialog', {
+                                            title: 'Delete Payment Receipt?',
+                                            message: 'Remove payment entry {{ $p->code ?: '' }}? The receipt will be deleted and the installment balance will adjust.',
+                                            confirmText: 'Delete Payment',
+                                            cancelText: 'Cancel',
+                                            danger: true,
+                                            wire: $wire,
+                                            action: 'deletePayment',
+                                            params: {{ $p->id }}
+                                        })"
                                         title="Delete receipt">
                                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                         <path

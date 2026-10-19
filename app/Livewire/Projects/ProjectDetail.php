@@ -43,10 +43,20 @@ class ProjectDetail extends Component
     public function toggleMilestone(int $milestoneId): void
     {
         $milestone = Milestone::where('project_id', $this->project->id)->findOrFail($milestoneId);
+        $oldStatus = $milestone->status;
         $milestone->done = ! $milestone->done;
         $milestone->done_on = $milestone->done ? now()->toDateString() : null;
         $milestone->status = $milestone->done ? 'Done' : 'Pending';
         $milestone->save();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Toggled Milestone',
+            'Milestone',
+            $milestone->id,
+            $this->project->code,
+            "Milestone '{$milestone->name}' status changed: {$oldStatus} -> {$milestone->status}"
+        );
 
         $this->project->load('milestones');
     }
@@ -59,7 +69,19 @@ class ProjectDetail extends Component
 
             return;
         }
+        $label = $term->label;
+        $amt = $term->amount;
         $term->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Installment',
+            'PaymentTerm',
+            $termId,
+            $this->project->code,
+            "Deleted installment '{$label}' of ₹".number_format($amt, 2)." from project {$this->project->name}"
+        );
+
         $this->project->load('terms');
         $this->dispatch('project-saved');
     }
@@ -68,6 +90,8 @@ class ProjectDetail extends Component
     {
         $pay = Payment::where('project_id', $this->project->id)->findOrFail($paymentId);
         $termId = $pay->term_id;
+        $payCode = $pay->code;
+        $payAmt = $pay->amount;
         $pay->delete();
 
         if ($termId) {
@@ -82,6 +106,15 @@ class ProjectDetail extends Component
             }
         }
 
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Payment',
+            'Payment',
+            $paymentId,
+            $payCode ?: '',
+            "Deleted payment receipt {$payCode} of ₹".number_format($payAmt, 2)." from project {$this->project->name}"
+        );
+
         $this->project->load(['payments', 'terms']);
         $this->dispatch('payment-deleted');
     }
@@ -89,11 +122,22 @@ class ProjectDetail extends Component
     public function deleteDocument(int $docId): void
     {
         $doc = $this->project->documents()->findOrFail($docId);
+        $docName = $doc->file_name;
         if (Storage::disk('uploads')->exists($doc->stored_as)) {
             Storage::disk('uploads')->delete($doc->stored_as);
         }
         Storage::disk('public')->delete($doc->stored_as);
         $doc->delete();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Deleted Document',
+            'Document',
+            $docId,
+            $this->project->code,
+            "Deleted document '{$docName}' from project {$this->project->name}"
+        );
+
         $this->project->load('documents');
     }
 

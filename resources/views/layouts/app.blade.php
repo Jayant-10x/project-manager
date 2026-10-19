@@ -147,6 +147,7 @@
 <livewire:payments.payment-modal/>
 <livewire:followups.followup-modal/>
 <livewire:documents.document-preview-modal/>
+<x-confirm-modal/>
 
 @livewireScripts
 

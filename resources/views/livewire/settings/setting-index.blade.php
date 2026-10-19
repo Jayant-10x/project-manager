@@ -6,7 +6,17 @@
                 <h3 class="font-bold text-sm text-[#0d1b34]">My Profile</h3>
                 <div class="text-xs text-[#8894ac]">How you appear in the workspace</div>
             </div>
-            <button type="button" wire:click="logout" wire:confirm="Are you sure want to logout?"
+            <button type="button"
+                    @click="$dispatch('confirm-dialog', {
+                        title: 'Sign Out?',
+                        message: 'Are you sure you want to sign out of your workspace session?',
+                        confirmText: 'Sign Out',
+                        cancelText: 'Stay',
+                        type: 'logout',
+                        danger: true,
+                        wire: $wire,
+                        action: 'logout'
+                    })"
                     class="btn btn-danger btn-sm">
                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                     <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
@@ -246,8 +256,16 @@
                                 </button>
                                 @if($u->id !== auth()->id())
                                     <button type="button" class="mini-btn danger"
-                                            wire:confirm="Remove this user login permanently?"
-                                            wire:click="deleteUser({{ $u->id }})"
+                                            @click="$dispatch('confirm-dialog', {
+                                                title: 'Remove User Account?',
+                                                message: 'Permanently remove this user login ({{ addslashes($u->name) }})? They will immediately lose workspace access.',
+                                                confirmText: 'Remove User',
+                                                cancelText: 'Cancel',
+                                                danger: true,
+                                                wire: $wire,
+                                                action: 'deleteUser',
+                                                params: {{ $u->id }}
+                                            })"
                                             title="Remove">
                                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                             <path

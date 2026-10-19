@@ -152,8 +152,16 @@
 
                     <button type="button"
                             class="mini-btn danger flex-shrink-0"
-                            wire:confirm="Remove this follow-up entry?"
-                            wire:click="deleteFollowup({{ $f->id }})"
+                            @click="$dispatch('confirm-dialog', {
+                                title: 'Remove Follow-up?',
+                                message: 'Are you sure you want to remove this follow-up entry?',
+                                confirmText: 'Remove Follow-up',
+                                cancelText: 'Cancel',
+                                danger: true,
+                                wire: $wire,
+                                action: 'deleteFollowup',
+                                params: {{ $f->id }}
+                            })"
                             title="Remove follow-up">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path

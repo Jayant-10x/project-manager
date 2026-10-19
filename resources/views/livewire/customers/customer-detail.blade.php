@@ -1,12 +1,14 @@
 <div>
     <div class="mb-4">
-        <a href="{{ route('customers.index') }}" wire:navigate
-           class="btn btn-ghost btn-sm inline-flex items-center gap-1.5">
+        <button type="button"
+                @click="window.history.length > 1 ? window.history.back() : Livewire.navigate('{{ route('customers.index') }}')"
+                class="btn btn-ghost btn-sm inline-flex items-center gap-1.5"
+                title="Go back">
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
             Back
-        </a>
+        </button>
     </div>
 
     <!-- Customer Identity & Financial Header -->
@@ -72,8 +74,16 @@
                     </button>
                     @if(auth()->user()->role === 'Admin')
                         <button type="button" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50"
-                                wire:confirm="Are you sure? This will delete the customer and all related projects and documents permanently."
-                                wire:click="deleteCustomer" title="Delete customer">
+                                @click="$dispatch('confirm-dialog', {
+                                    title: 'Delete Customer?',
+                                    message: 'Are you sure? This will delete {{ addslashes($customer->company) }} and all associated projects, payment records, and documents permanently.',
+                                    confirmText: 'Delete Customer',
+                                    cancelText: 'Cancel',
+                                    danger: true,
+                                    wire: $wire,
+                                    action: 'deleteCustomer'
+                                })"
+                                title="Delete customer">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -380,8 +390,16 @@
                                     <td>
                                         <div class="row-actions">
                                             <button type="button" class="mini-btn danger"
-                                                    wire:confirm="Remove this receipt entry?"
-                                                    wire:click="deletePayment({{ $pay->id }})"
+                                                    @click="$dispatch('confirm-dialog', {
+                                                        title: 'Delete Payment Receipt?',
+                                                        message: 'Remove this receipt entry ({{ $pay->code ?: 'Payment' }})? The receipt will be permanently deleted.',
+                                                        confirmText: 'Delete Payment',
+                                                        cancelText: 'Cancel',
+                                                        danger: true,
+                                                        wire: $wire,
+                                                        action: 'deletePayment',
+                                                        params: {{ $pay->id }}
+                                                    })"
                                                     title="Delete payment" aria-label="Delete payment">
                                                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                                     <path
@@ -451,8 +469,18 @@
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                             </svg>
                         </a>
-                        <button type="button" class="mini-btn danger" wire:confirm="Remove this document?"
-                                wire:click="deleteDocument({{ $doc->id }})" title="Remove">
+                        <button type="button" class="mini-btn danger"
+                                @click="$dispatch('confirm-dialog', {
+                                    title: 'Remove Document?',
+                                    message: 'Are you sure you want to remove {{ addslashes($doc->file_name) }}? The file will be permanently deleted.',
+                                    confirmText: 'Remove Document',
+                                    cancelText: 'Cancel',
+                                    danger: true,
+                                    wire: $wire,
+                                    action: 'deleteDocument',
+                                    params: {{ $doc->id }}
+                                })"
+                                title="Remove">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -501,8 +529,17 @@
                                 </div>
                             @endif
                         </div>
-                        <button type="button" class="mini-btn danger" wire:confirm="Remove this follow-up?"
-                                wire:click="deleteFollowup({{ $fu->id }})">
+                        <button type="button" class="mini-btn danger"
+                                @click="$dispatch('confirm-dialog', {
+                                    title: 'Remove Follow-up?',
+                                    message: 'Are you sure you want to remove this follow-up entry?',
+                                    confirmText: 'Remove Follow-up',
+                                    cancelText: 'Cancel',
+                                    danger: true,
+                                    wire: $wire,
+                                    action: 'deleteFollowup',
+                                    params: {{ $fu->id }}
+                                })">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>

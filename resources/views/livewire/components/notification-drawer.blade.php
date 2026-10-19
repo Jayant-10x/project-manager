@@ -41,15 +41,30 @@
             <div class="flex items-center gap-2">
                 @if($unreadCount > 0)
                     <button type="button"
-                            wire:click="markAllAsRead"
+                            @click="$dispatch('confirm-dialog', {
+                                title: 'Mark All as Read?',
+                                message: 'Are you sure you want to mark all unread notifications as read?',
+                                confirmText: 'Mark All Read',
+                                cancelText: 'Cancel',
+                                danger: false,
+                                wire: $wire,
+                                action: 'markAllAsRead'
+                            })"
                             class="text-xs font-semibold text-[#0b3d91] hover:underline px-2 py-1 rounded">
                         Mark all as read
                     </button>
                 @endif
                 @if($totalCount > 0)
                     <button type="button"
-                            wire:click="clearAll"
-                            wire:confirm="Clear all notifications?"
+                            @click="$dispatch('confirm-dialog', {
+                                title: 'Clear All Notifications?',
+                                message: 'Are you sure you want to permanently clear all notifications from your list?',
+                                confirmText: 'Clear All',
+                                cancelText: 'Cancel',
+                                danger: true,
+                                wire: $wire,
+                                action: 'clearAll'
+                            })"
                             class="text-xs font-semibold text-[#8894ac] hover:text-[#d94b4b] px-2 py-1 rounded"
                             title="Clear all notifications">
                         Clear all

@@ -95,8 +95,16 @@
                     </button>
                     @if(auth()->user()->role === 'Admin')
                         <button type="button" class="mini-btn danger"
-                                wire:confirm="Remove salesperson? Past attributed customers will remain intact."
-                                wire:click="deleteSales({{ $sp->id }})"
+                                @click="$dispatch('confirm-dialog', {
+                                    title: 'Remove Salesperson?',
+                                    message: 'Remove {{ addslashes($sp->name) }}? Past attributed customers and projects will remain intact.',
+                                    confirmText: 'Remove Salesperson',
+                                    cancelText: 'Cancel',
+                                    danger: true,
+                                    wire: $wire,
+                                    action: 'deleteSales',
+                                    params: {{ $sp->id }}
+                                })"
                                 title="Remove">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path

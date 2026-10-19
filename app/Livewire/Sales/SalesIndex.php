@@ -4,6 +4,7 @@ namespace App\Livewire\Sales;
 
 use App\Models\Customer;
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -25,6 +26,15 @@ class SalesIndex extends Component
             ->with([
                 'salesProjects' => fn ($q) => $q->forUser($user)->with(['terms', 'payments', 'customer']),
             ])->orderBy('name')->get();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Exported CSV',
+            'Sales',
+            null,
+            '',
+            "Exported sales report for {$salesPeople->count()} team members to CSV"
+        );
 
         $filename = 'sales-report-'.now()->toDateString().'.csv';
 
