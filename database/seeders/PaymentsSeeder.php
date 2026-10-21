@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\PaymentTerm;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\CodeGeneratorService;
 use Illuminate\Database\Seeder;
 
 class PaymentsSeeder extends Seeder
@@ -246,5 +247,7 @@ class PaymentsSeeder extends Seeder
                 ]
             );
         }
+
+        app(CodeGeneratorService::class)->sync('payment');
     }
 }

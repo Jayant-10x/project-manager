@@ -536,6 +536,30 @@ a {
     background: #4a8a2b;
 }
 
+.btn-amber {
+    background: var(--amber);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 12px -4px rgba(224, 161, 58, .6);
+}
+
+.btn-amber:hover {
+    background: #c88a28;
+    color: #fff;
+}
+
+.btn-amber-soft {
+    background: var(--amberSoft);
+    color: #96660f;
+    border: 1px solid #fae4be;
+}
+
+.btn-amber-soft:hover {
+    background: #fae4be;
+    color: #785006;
+    border-color: #f5d49a;
+}
+
 .btn-ghost {
     background: #fff;
     border-color: var(--border);

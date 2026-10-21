@@ -28,7 +28,7 @@
             @endif
 
             <div style="font-size:12.6px;color:var(--text2);line-height:1.6;margin-top:20px">
-                Enter your email and we will send a password reset link.
+                Enter your registered email address. Your request will be forwarded to the system administrator for temporary credential provisioning.
             </div>
 
             <form method="POST" action="{{ route('password.email') }}">
@@ -53,7 +53,7 @@
                         <rect x="2" y="4" width="20" height="16" rx="2"/>
                         <path d="M22 6l-10 7L2 6"/>
                     </svg>
-                    Send reset link
+                    Request Password Reset
                 </button>
             </form>
 

@@ -32,8 +32,8 @@
                     <select wire:model.live="project_id"
                             class="i text-sm @error('project_id') border-red-500! bg-red-50/20! @enderror">
                         <option value="">— none —</option>
-                        @foreach($projects as $p)
-                            <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }}</option>
+                        @foreach($projects as $projectOption)
+                            <option value="{{ $projectOption->id }}">{{ $projectOption->code }} — {{ $projectOption->name }}</option>
                         @endforeach
                     </select>
                     @error('project_id')
@@ -68,13 +68,13 @@
                     @enderror
                 </div>
 
-                @if(auth()->user()->role === 'Admin')
+                @if(auth()->user()->role !== 'Sales')
                     <div>
                         <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Assign to</label>
                         <select wire:model.live="assigned_to"
                                 class="i text-sm @error('assigned_to') border-red-500! bg-red-50/20! @enderror">
-                            @foreach($users as $u)
-                                <option value="{{ $u->id }}">{{ $u->name }}</option>
+                            @foreach($users as $assigneeOption)
+                                <option value="{{ $assigneeOption->id }}">{{ $assigneeOption->name }}</option>
                             @endforeach
                         </select>
                         @error('assigned_to')
@@ -125,8 +125,8 @@
                 @if($projects->isNotEmpty())
                     <select wire:model.live="filterProjectId" class="i" style="width:auto; max-width: 180px;">
                         <option value="">All projects</option>
-                        @foreach($projects as $p)
-                            <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }}</option>
+                        @foreach($projects as $proj)
+                            <option value="{{ $proj->id }}">{{ $proj->code }} — {{ $proj->name }}</option>
                         @endforeach
                     </select>
                 @endif
@@ -134,8 +134,8 @@
                 @if(auth()->user()->role === 'Admin' && $users->isNotEmpty())
                     <select wire:model.live="filterAssignedTo" class="i" style="width:auto; max-width: 160px;">
                         <option value="">All assignees</option>
-                        @foreach($users as $u)
-                            <option value="{{ $u->id }}">{{ $u->name }}</option>
+                        @foreach($users as $userOption)
+                            <option value="{{ $userOption->id }}">{{ $userOption->name }}</option>
                         @endforeach
                     </select>
                 @endif
@@ -155,69 +155,69 @@
     <!-- Task Execution List -->
     <div class="card p-4">
         <div class="card-body p-0">
-            @forelse($tasks as $t)
+            @forelse($tasks as $task)
                 @php
-                    $isDone = (bool) $t->done;
-                    $isLate = !$isDone && $t->due_date && $t->due_date->toDateString() < $today;
-                    $daysLate = $isLate ? abs(\Carbon\Carbon::parse($today)->diffInDays($t->due_date, false)) : 0;
-                    $custName = $t->project?->customer?->company ?? ($t->customer?->company ?? '');
-                    $priorityClass = match($t->priority) {
+                    $isDone = (bool) $task->done;
+                    $isLate = !$isDone && $task->due_date && $task->due_date->toDateString() < $today;
+                    $daysLate = $isLate ? abs(\Carbon\Carbon::parse($today)->diffInDays($task->due_date, false)) : 0;
+                    $custName = $task->project?->customer?->display_name ?? ($task->customer?->display_name ?? '');
+                    $priorityClass = match($task->priority) {
                         'Urgent' => 'b-red',
                         'High'   => 'b-amber',
                         'Medium' => 'b-navy',
                         default  => 'b-grey',
                     };
                 @endphp
-                <div wire:key="task-item-{{ $t->id }}"
+                <div wire:key="task-item-{{ $task->id }}"
                      class="mini-item flex items-center gap-3 p-3 border-b last:border-b-0 hover:bg-slate-50 transition">
                     <input type="checkbox"
-                           wire:key="task-chk-{{ $t->id }}-{{ $isDone ? 'done' : 'open' }}"
-                           wire:click="toggleDone({{ $t->id }})"
+                           wire:key="task-chk-{{ $task->id }}-{{ $isDone ? 'done' : 'open' }}"
+                           wire:click="toggleDone({{ $task->id }})"
                            {{ $isDone ? 'checked' : '' }}
                            class="w-4 h-4 rounded accent-[#0b3d91] cursor-pointer">
 
                     <div class="flex-1 min-w-0">
                         <div
                             class="t text-sm font-semibold {{ $isDone ? 'line-through text-gray-400' : 'text-[#0d1b34]' }}">
-                            {{ $t->title }}
+                            {{ $task->title }}
                         </div>
                         <div class="s text-xs text-[#8894ac] mt-0.5">
-                            @if($t->project)
-                                <span>{{ $t->project->code }} · </span>
+                            @if($task->project)
+                                <span>{{ $task->project->code }} · </span>
                             @endif
                             @if($custName)
                                 <span>{{ $custName }} · </span>
                             @endif
-                            @if($t->due_date)
+                            @if($task->due_date)
                                 @if($isLate)
                                     <b style="color:#d94b4b">
-                                        due {{ $t->due_date->format('d M') }} ({{ $daysLate }} days late)
+                                        due {{ $task->due_date->format('d M') }} ({{ $daysLate }} days late)
                                     </b>
                                 @else
-                                    <span>due {{ $t->due_date->format('d M') }}</span>
+                                    <span>due {{ $task->due_date->format('d M') }}</span>
                                 @endif
                             @else
                                 <span>no date</span>
                             @endif
-                            @if($t->assignedTo)
-                                <span>· {{ $t->assignedTo->name }}</span>
+                            @if($task->assignedTo)
+                                <span>· {{ $task->assignedTo->name }}</span>
                             @endif
                         </div>
                     </div>
 
-                    <span class="badge {{ $priorityClass }} text-xs">{{ $t->priority }}</span>
+                    <span class="badge {{ $priorityClass }} text-xs">{{ $task->priority }}</span>
 
                     <button type="button"
                             class="mini-btn danger"
                             @click="$dispatch('confirm-dialog', {
                                 title: 'Remove Task?',
-                                message: 'Are you sure you want to remove this task ({{ addslashes($t->title) }}) from your list?',
+                                message: 'Are you sure you want to remove this task ({{ addslashes($task->title) }}) from your list?',
                                 confirmText: 'Remove Task',
                                 cancelText: 'Cancel',
                                 danger: true,
                                 wire: $wire,
                                 action: 'deleteTask',
-                                params: {{ $t->id }}
+                                params: {{ $task->id }}
                             })"
                             title="Remove task">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">

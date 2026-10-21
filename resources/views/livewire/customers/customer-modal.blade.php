@@ -5,7 +5,7 @@
     <form wire:submit="save">
         <div class="form-grid">
             <label class="f full">
-                <span>Company name <span class="text-red-500">*</span></span>
+                <span>Company name</span>
                 <input wire:model.live.blur="company"
                        class="i @error('company') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Sunrise Mart Pvt Ltd">
@@ -15,7 +15,7 @@
             </label>
 
             <label class="f">
-                <span>Contact person</span>
+                <span>Contact person <span class="text-red-500">*</span></span>
                 <input wire:model.live.blur="contact_name"
                        class="i @error('contact_name') border-red-500! bg-red-50/20! @enderror"
                        placeholder="e.g. Rakesh Gupta">
@@ -25,7 +25,7 @@
             </label>
 
             <label class="f">
-                <span>Phone</span>
+                <span>Phone <span class="text-red-500">*</span></span>
                 <input wire:model.live.blur="phone"
                        class="i @error('phone') border-red-500! bg-red-50/20! @enderror"
                        placeholder="+91 ...">
@@ -63,9 +63,14 @@
             </label>
 
             <label class="f">
-                <span>State</span>
-                <input wire:model.live.blur="state"
-                       class="i @error('state') border-red-500! bg-red-50/20! @enderror">
+                <span>State <span class="text-red-500">*</span></span>
+                <select wire:model.live="state"
+                        class="i @error('state') border-red-500! bg-red-50/20! @enderror">
+                    <option value="">— select State —</option>
+                    @foreach(config('constants.states') as $id =>$state_name)
+                        <option value="{{ $id }}">{{ $state_name }}</option>
+                    @endforeach
+                </select>
                 @error('state')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
@@ -111,7 +116,7 @@
             </label>
 
             <label class="f">
-                <span>Onboarded by (salesperson)</span>
+                <span>Onboarded by (salesperson) <span class="text-red-500">*</span></span>
                 <select wire:model.live="sales_person_id"
                         class="i @error('sales_person_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— select —</option>
@@ -126,7 +131,7 @@
             </label>
 
             <label class="f">
-                <span>Status</span>
+                <span>Status <span class="text-red-500">*</span></span>
                 <select wire:model.live="status"
                         class="i @error('status') border-red-500! bg-red-50/20! @enderror">
                     <option value="Active">Active</option>

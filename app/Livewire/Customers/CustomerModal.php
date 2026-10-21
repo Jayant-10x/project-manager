@@ -106,13 +106,13 @@ class CustomerModal extends Component
     protected function rules(): array
     {
         return [
-            'company' => 'required|string|min:2|max:160|unique:customers,company,'.$this->customerId.',id',
-            'contact_name' => 'nullable|string|min:2|max:80',
+            'company' => 'nullable|string|min:2|max:160|unique:customers,company,'.$this->customerId.',id',
+            'contact_name' => 'required|string|min:2|max:80',
             'email' => 'nullable|email|min:2|max:160|unique:customers,email,'.$this->customerId,
-            'phone' => 'nullable|integer|digits_between:10,30|unique:customers,phone,'.$this->customerId,
+            'phone' => 'required|integer|digits_between:10,30|unique:customers,phone,'.$this->customerId,
             'alt_phone' => 'nullable|integer|digits_between:10,30',
             'city' => 'nullable|string|min:2|max:60',
-            'state' => 'nullable|string|min:2|max:60',
+            'state' => 'required|string|in:'.implode(',', array_keys(config('constants.states'))),
             'address' => 'nullable|string|min:5|max:1000',
             'gst_number' => [
                 'nullable', 'string', 'size:15',
@@ -128,7 +128,7 @@ class CustomerModal extends Component
             'billing_address' => 'nullable|string|min:2|max:1000',
             'source' => 'nullable|string|min:2|max:60',
             'industry' => 'nullable|string|min:2|max:60',
-            'sales_person_id' => 'nullable|integer|exists:users,id',
+            'sales_person_id' => 'required|integer|exists:users,id',
             'status' => 'required|in:Active,On Hold,Completed,Churned',
             'internal_notes' => 'nullable|string|min:2|max:4000',
         ];
@@ -152,6 +152,13 @@ class CustomerModal extends Component
         }
 
         $validated = $this->validate();
+
+        foreach (['company', 'email', 'alt_phone', 'gst_number', 'pan_number', 'billing_name', 'billing_address', 'source', 'industry', 'internal_notes', 'address', 'city'] as $field) {
+            if (array_key_exists($field, $validated) && ($validated[$field] === '' || $validated[$field] === null)) {
+                $validated[$field] = null;
+            }
+        }
+
         $codeService = app(CodeGeneratorService::class);
         $isEdit = (bool) $this->customerId;
 
@@ -160,12 +167,14 @@ class CustomerModal extends Component
         if ($this->customerId) {
             $customer = Customer::findOrFail($this->customerId);
             $customer->update($validated);
-            $auditService->log(auth()->id(), 'Updated Customer', 'Customer', $customer->id, $customer->customer_code, "Updated customer {$customer->company}");
+            $label = $customer->company ?: ($customer->contact_name ?: $customer->customer_code);
+            $auditService->log(auth()->id(), 'Updated Customer', 'Customer', $customer->id, $customer->customer_code, "Updated customer {$label}");
         } else {
             $validated['customer_code'] = $codeService->generate('customer', 'CUS-');
             $validated['created_by'] = auth()->id();
             $customer = Customer::create($validated);
-            $auditService->log(auth()->id(), 'Created Customer', 'Customer', $customer->id, $customer->customer_code, "Created customer {$customer->company}");
+            $label = $customer->company ?: ($customer->contact_name ?: $customer->customer_code);
+            $auditService->log(auth()->id(), 'Created Customer', 'Customer', $customer->id, $customer->customer_code, "Created customer {$label}");
         }
 
         $this->reset();

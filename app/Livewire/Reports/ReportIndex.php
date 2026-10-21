@@ -13,6 +13,14 @@ use Livewire\Component;
 #[Layout('layouts.app')]
 class ReportIndex extends Component
 {
+    public function mount(): void
+    {
+        $user = auth()->user();
+        if (! $user || ! in_array($user->role, ['Admin', 'Manager'], true)) {
+            abort(403, 'Unauthorized access to executive financial reports.');
+        }
+    }
+
     public function render()
     {
         $user = auth()->user();
@@ -64,13 +72,13 @@ class ReportIndex extends Component
         foreach ($modeData as $mName => $mAmt) {
             $modes[] = ['label' => $mName, 'value' => (float) $mAmt];
         }
-        usort($modes, fn ($a, $b) => $b['value'] <=> $a['value']);
+        usort($modes, fn ($firstMode, $secondMode) => $secondMode['value'] <=> $firstMode['value']);
 
         // 4. Payment Ageing Breakdown (0-30, 31-60, 61-90, 90+)
         $ageing = ['0-30' => 0.0, '31-60' => 0.0, '61-90' => 0.0, '90+' => 0.0];
-        foreach ($overdueTerms as $ot) {
-            $bal = max(0, (float) $ot->amount - (float) $ot->received - (float) $ot->tds);
-            $days = $ot->due_date ? abs(Carbon::parse($today)->diffInDays($ot->due_date, false)) : 0;
+        foreach ($overdueTerms as $overdueTerm) {
+            $bal = max(0, (float) $overdueTerm->amount - (float) $overdueTerm->received - (float) $overdueTerm->tds);
+            $days = $overdueTerm->due_date ? abs(Carbon::parse($today)->diffInDays($overdueTerm->due_date, false)) : 0;
             if ($days <= 30) {
                 $ageing['0-30'] += $bal;
             } elseif ($days <= 60) {
@@ -92,28 +100,28 @@ class ReportIndex extends Component
 
         // 6. Milestone vs Collection Variance Rows
         $varianceRows = [];
-        foreach ($projects as $p) {
-            $totMs = $p->milestones->count();
-            $doneMs = $p->milestones->where('done', true)->count();
+        foreach ($projects as $project) {
+            $totMs = $project->milestones->count();
+            $doneMs = $project->milestones->where('done', true)->count();
             $msPct = $totMs > 0 ? min(100, round(($doneMs / $totMs) * 100)) : 0;
 
-            $pSched = (float) $p->money['scheduled'];
-            $pRec = (float) $p->money['received'];
+            $pSched = (float) $project->money['scheduled'];
+            $pRec = (float) $project->money['received'];
             $moneyPct = $pSched > 0 ? min(100, round(($pRec / $pSched) * 100)) : 0;
 
             $gap = $msPct - $moneyPct;
 
             $varianceRows[] = [
-                'project' => $p,
+                'project' => $project,
                 'msPct' => $msPct,
                 'moneyPct' => $moneyPct,
                 'gap' => $gap,
-                'due' => (float) $p->money['due'],
-                'health' => $p->health,
+                'due' => (float) $project->money['due'],
+                'health' => $project->health,
             ];
         }
 
-        usort($varianceRows, fn ($a, $b) => $b['gap'] <=> $a['gap']);
+        usort($varianceRows, fn ($rowA, $rowB) => $rowB['gap'] <=> $rowA['gap']);
 
         return view('livewire.reports.report-index', [
             'totalReceived' => $totalReceived,

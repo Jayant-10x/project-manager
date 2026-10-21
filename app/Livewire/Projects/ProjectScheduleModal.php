@@ -18,6 +18,10 @@ class ProjectScheduleModal extends Component
 
     public float $projectValue = 0.0;
 
+    public ?string $projectStartDate = null;
+
+    public ?string $projectDeliveryDate = null;
+
     public array $terms = [];
 
     public array $availableMilestones = [];
@@ -30,6 +34,8 @@ class ProjectScheduleModal extends Component
         $project = Project::with(['terms', 'milestones'])->findOrFail($projectId);
         $this->projectCode = $project->code;
         $this->projectValue = (float) $project->value;
+        $this->projectStartDate = $project->start_date?->toDateString();
+        $this->projectDeliveryDate = $project->delivery_date?->toDateString();
 
         $this->availableMilestones = $project->milestones->map(fn ($m) => [
             'id' => $m->id,
@@ -70,42 +76,54 @@ class ProjectScheduleModal extends Component
 
     public function autoSplit(): void
     {
-        $v = $this->projectValue;
-        $firstMilestone = ! empty($this->availableMilestones) ? $this->availableMilestones[0]['id'] : null;
-        $lastMilestone = ! empty($this->availableMilestones) ? end($this->availableMilestones)['id'] : null;
+        $projectValue = $this->projectValue;
+        $milestoneCount = count($this->availableMilestones);
+        $firstMilestone = $milestoneCount > 0 ? $this->availableMilestones[0]['id'] : null;
+        $lastMilestone = $milestoneCount > 1 ? end($this->availableMilestones)['id'] : ($milestoneCount === 1 ? $firstMilestone : null);
 
-        $p1 = round($v * 0.3, 2);
-        $p2 = round($v * 0.4, 2);
-        $p3 = round($v - $p1 - $p2, 2);
+        $advanceAmount = round($projectValue * 0.3, 2);
+        $midAmount = round($projectValue * 0.4, 2);
+        $deliveryAmount = round($projectValue - $advanceAmount - $midAmount, 2);
+
+        // Staggered dates when no milestones are available
+        $advanceDate = $this->projectStartDate ?? now()->toDateString();
+        $deliveryDate = $this->projectDeliveryDate ?? now()->addDays(60)->toDateString();
+
+        $advanceCarbon = Carbon::parse($advanceDate);
+        $deliveryCarbon = Carbon::parse($deliveryDate);
+        $daysDiff = $advanceCarbon->diffInDays($deliveryCarbon, false);
+        $midDate = ($daysDiff > 14)
+            ? $advanceCarbon->copy()->addDays((int) floor($daysDiff / 2))->toDateString()
+            : now()->addDays(30)->toDateString();
 
         $this->terms = [
             [
                 'id' => null,
                 'label' => 'Advance',
-                'amount' => $p1,
+                'amount' => $advanceAmount,
                 'trigger' => 'fixed',
                 'milestoneId' => null,
-                'dueDate' => now()->toDateString(),
+                'dueDate' => $advanceDate,
                 'graceDays' => 0,
                 'locked' => false,
             ],
             [
                 'id' => null,
                 'label' => 'Mid project',
-                'amount' => $p2,
+                'amount' => $midAmount,
                 'trigger' => $firstMilestone ? 'milestone' : 'fixed',
                 'milestoneId' => $firstMilestone,
-                'dueDate' => '',
+                'dueDate' => $firstMilestone ? '' : $midDate,
                 'graceDays' => 7,
                 'locked' => false,
             ],
             [
                 'id' => null,
                 'label' => 'On delivery',
-                'amount' => $p3,
-                'trigger' => $lastMilestone ? 'milestone' : 'fixed',
-                'milestoneId' => $lastMilestone,
-                'dueDate' => '',
+                'amount' => $deliveryAmount,
+                'trigger' => ($lastMilestone && $lastMilestone !== $firstMilestone) ? 'milestone' : 'fixed',
+                'milestoneId' => ($lastMilestone && $lastMilestone !== $firstMilestone) ? $lastMilestone : null,
+                'dueDate' => ($lastMilestone && $lastMilestone !== $firstMilestone) ? '' : $deliveryDate,
                 'graceDays' => 7,
                 'locked' => false,
             ],

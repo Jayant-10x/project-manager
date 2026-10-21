@@ -17,10 +17,10 @@
             <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
                 <div
                     style="width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#0b3d91,#5aa236);display:grid;place-items:center;color:#fff;font-size:18px;font-weight:750">
-                    {{ strtoupper(substr($customer->company, 0, 2)) }}
+                    {{ strtoupper(substr($customer->display_name, 0, 2)) }}
                 </div>
                 <div style="flex:1;min-width:240px">
-                    <h2 style="font-size:19px;font-weight:700;letter-spacing:-.3px">{{ $customer->company }}</h2>
+                    <h2 style="font-size:19px;font-weight:700;letter-spacing:-.3px">{{ $customer->display_name }}</h2>
                     <div class="muted" style="font-size:12.5px;margin-top:3px">
                         {{ $customer->code }}
                         @if($customer->contact_name)
@@ -66,7 +66,7 @@
                         Log Follow-up
                     </button>
                     <button type="button" class="btn btn-primary btn-sm"
-                            @click="$dispatch('open-modal', 'project-modal')">
+                            @click="Livewire.dispatch('open-project-modal', { id: null, customerId: {{ $customer->id }} })">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M12 5v14M5 12h14"/>
                         </svg>
@@ -76,7 +76,7 @@
                         <button type="button" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50"
                                 @click="$dispatch('confirm-dialog', {
                                     title: 'Delete Customer?',
-                                    message: 'Are you sure? This will delete {{ addslashes($customer->company) }} and all associated projects, payment records, and documents permanently.',
+                                    message: 'Are you sure? This will delete {{ addslashes($customer->display_name) }} and all associated projects, payment records, and documents permanently.',
                                     confirmText: 'Delete Customer',
                                     cancelText: 'Cancel',
                                     danger: true,
@@ -93,55 +93,58 @@
                 </div>
             </div>
 
-            <div class="divider"></div>
+            @if(auth()->user()->role !== 'Sales')
+                <div class="divider"></div>
 
-            <!-- Financial Strip -->
-            <div class="money-grid">
-                <div class="money-cell cursor-pointer hover:bg-gray-50 transition rounded-xl p-1.5"
-                     wire:click="$set('activeTab', 'projects')" title="View projects">
-                    <div class="k">Total Value</div>
-                    <div class="v">
-                        <x-money :value="$money['contract'] > 0 ? $money['contract'] : $money['scheduled']"/>
-                    </div>
-                    @if($money['contract'] > 0 && abs((float)$money['contract'] - (float)$money['scheduled']) > 0.01)
-                        <div class="text-[11px] text-[#8894ac] mt-0.5">
-                            Sched: <x-money :value="$money['scheduled']"/>
+                <!-- Financial Strip -->
+                <div class="money-grid">
+                    <div class="money-cell cursor-pointer hover:bg-gray-50 transition rounded-xl p-1.5"
+                         wire:click="$set('activeTab', 'projects')" title="View projects">
+                        <div class="k">Total Value</div>
+                        <div class="v">
+                            <x-money :value="$money['contract'] > 0 ? $money['contract'] : $money['scheduled']"/>
                         </div>
-                    @endif
-                </div>
-                <div class="money-cell rec cursor-pointer hover:bg-green-50/50 transition rounded-xl p-1.5"
-                     wire:click="$set('activeTab', 'payments')" title="View payments">
-                    <div class="k">Received</div>
-                    <div class="v text-[#5aa236]">
-                        <x-money :value="$money['received']"/>
+                        @if($money['contract'] > 0 && abs((float)$money['contract'] - (float)$money['scheduled']) > 0.01)
+                            <div class="text-[11px] text-[#8894ac] mt-0.5">
+                                Sched:
+                                <x-money :value="$money['scheduled']"/>
+                            </div>
+                        @endif
+                    </div>
+                    <div class="money-cell rec cursor-pointer hover:bg-green-50/50 transition rounded-xl p-1.5"
+                         wire:click="$set('activeTab', 'payments')" title="View payments">
+                        <div class="k">Received</div>
+                        <div class="v text-[#5aa236]">
+                            <x-money :value="$money['received']"/>
+                        </div>
+                    </div>
+                    <div class="money-cell due cursor-pointer hover:bg-amber-50/50 transition rounded-xl p-1.5"
+                         wire:click="$set('activeTab', 'payments')" title="View installments due">
+                        <div class="k">Due</div>
+                        <div class="v text-[#e0a13a]">
+                            <x-money :value="$money['due']"/>
+                        </div>
+                    </div>
+                    <div class="money-cell over cursor-pointer hover:bg-red-50/50 transition rounded-xl p-1.5"
+                         wire:click="$set('activeTab', 'payments')" title="View overdue installments">
+                        <div class="k">Overdue</div>
+                        <div class="v text-[#d94b4b]">
+                            <x-money :value="$money['overdue']"/>
+                        </div>
                     </div>
                 </div>
-                <div class="money-cell due cursor-pointer hover:bg-amber-50/50 transition rounded-xl p-1.5"
-                     wire:click="$set('activeTab', 'payments')" title="View installments due">
-                    <div class="k">Due</div>
-                    <div class="v text-[#e0a13a]">
-                        <x-money :value="$money['due']"/>
-                    </div>
-                </div>
-                <div class="money-cell over cursor-pointer hover:bg-red-50/50 transition rounded-xl p-1.5"
-                     wire:click="$set('activeTab', 'payments')" title="View overdue installments">
-                    <div class="k">Overdue</div>
-                    <div class="v text-[#d94b4b]">
-                        <x-money :value="$money['overdue']"/>
-                    </div>
-                </div>
-            </div>
 
-            <div style="margin-top:14px">
-                <div class="progress-row">
-                    <span>Collection progress</span>
-                    <b>{{ $money['rate'] }}%</b>
+                <div style="margin-top:14px">
+                    <div class="progress-row">
+                        <span>Collection progress</span>
+                        <b>{{ $money['rate'] }}%</b>
+                    </div>
+                    <div class="bar {{ $money['rate'] >= 80 ? 'green' : ($money['rate'] >= 40 ? '' : 'amber') }}"
+                         style="height:8px">
+                        <i style="width:{{ $money['rate'] }}%"></i>
+                    </div>
                 </div>
-                <div class="bar {{ $money['rate'] >= 80 ? 'green' : ($money['rate'] >= 40 ? '' : 'amber') }}"
-                     style="height:8px">
-                    <i style="width:{{ $money['rate'] }}%"></i>
-                </div>
-            </div>
+            @endif
         </div>
     </div>
 
@@ -155,10 +158,12 @@
                     class="tab {{ $activeTab === 'projects' ? 'active' : '' }}">
                 Projects <span class="n">{{ $projects->count() }}</span>
             </button>
-            <button wire:click="$set('activeTab', 'payments')"
-                    class="tab {{ $activeTab === 'payments' ? 'active' : '' }}">
-                Payments <span class="n">{{ $payments->count() }}</span>
-            </button>
+            @if(auth()->user()->role !== 'Sales')
+                <button wire:click="$set('activeTab', 'payments')"
+                        class="tab {{ $activeTab === 'payments' ? 'active' : '' }}">
+                    Payments <span class="n">{{ $payments->count() }}</span>
+                </button>
+            @endif
             <button wire:click="$set('activeTab', 'documents')"
                     class="tab {{ $activeTab === 'documents' ? 'active' : '' }}">
                 Documents <span class="n">{{ $documents->count() }}</span>
@@ -265,33 +270,33 @@
                     </div>
                 @else
                     <div class="grid-3">
-                        @foreach($projects as $p)
+                        @foreach($projects as $project)
                             @php
-                                $doneMs = $p->milestones->where('done', true)->count();
-                                $totMs = $p->milestones->count();
+                                $doneMs = $project->milestones->where('done', true)->count();
+                                $totMs = $project->milestones->count();
                             @endphp
                             <div class="card clickable p-4"
-                                 onclick="window.location='{{ route('projects.show', $p) }}'">
+                                 onclick="window.location='{{ route('projects.show', $project) }}'">
                                 <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
                                     <div style="flex:1">
                                         <div class="muted"
-                                             style="font-size:10.8px;font-weight:750;letter-spacing:.5px">{{ $p->code }}</div>
+                                             style="font-size:10.8px;font-weight:750;letter-spacing:.5px">{{ $project->code }}</div>
                                         <div
-                                            style="font-size:14.6px;font-weight:660;margin-top:3px">{{ $p->name }}</div>
+                                            style="font-size:14.6px;font-weight:660;margin-top:3px">{{ $project->name }}</div>
                                     </div>
-                                    <x-health-badge :health="$p->health"/>
+                                    <x-health-badge :health="$project->health"/>
                                 </div>
                                 <div class="money-grid" style="grid-template-columns:1fr 1fr;gap:9px">
                                     <div class="money-cell" style="padding:9px 11px">
                                         <div class="k">Value</div>
                                         <div class="v" style="font-size:14.5px">
-                                            <x-money :value="$p->money['scheduled']"/>
+                                            <x-money :value="$project->money['scheduled']"/>
                                         </div>
                                     </div>
                                     <div class="money-cell due" style="padding:9px 11px">
                                         <div class="k">Due</div>
                                         <div class="v text-[#e0a13a]" style="font-size:14.5px">
-                                            <x-money :value="$p->money['due']"/>
+                                            <x-money :value="$project->money['due']"/>
                                         </div>
                                     </div>
                                 </div>
@@ -306,9 +311,9 @@
                                     </div>
                                 </div>
                                 <div style="display:flex;gap:10px;margin-top:10px;font-size:11.4px;color:var(--text2)">
-                                    <span>Due {{ $p->delivery_date?->format('d M') ?? '—' }}</span>
+                                    <span>Due {{ $project->delivery_date?->format('d M') ?? '—' }}</span>
                                     <span>·</span>
-                                    <span>{{ $p->status }}</span>
+                                    <span>{{ $project->status }}</span>
                                 </div>
                             </div>
                         @endforeach
@@ -316,31 +321,32 @@
                 @endif
 
                 <!-- 3. PAYMENTS TAB -->
-            @elseif($activeTab === 'payments')
+            @elseif($activeTab === 'payments' && auth()->user()->role !== 'Sales')
                 <div class="card-head" style="padding:0 0 12px;border:none">
                     <div>
                         <h3>Payment schedule</h3>
                         <div class="sub">{{ $terms->count() }} installments</div>
                     </div>
                 </div>
-                @forelse($terms as $t)
-                    @php $bal = max(0, $t->amount - $t->received - $t->tds); @endphp
-                    <div class="term {{ $t->status === 'Paid' ? 'paid' : ($t->status === 'Overdue' ? 'over' : '') }}">
-                        <div class="term-no">{{ $t->seq }}</div>
+                @forelse($terms as $term)
+                    @php $balance = max(0, $term->amount - $term->received - $term->tds); @endphp
+                    <div
+                        class="term {{ $term->status === 'Paid' ? 'paid' : ($term->status === 'Overdue' ? 'over' : '') }}">
+                        <div class="term-no">{{ $term->seq }}</div>
                         <div class="term-body">
-                            <div class="term-title">{{ $t->project?->code }} — {{ $t->label }}</div>
+                            <div class="term-title">{{ $term->project?->code }} — {{ $term->label }}</div>
                             <div class="term-meta">
-                                <span>{{ ucfirst($t->trigger_type) }}</span>
-                                <span>Due {{ $t->due_date?->format('d M') ?? '—' }}</span>
+                                <span>{{ ucfirst($term->trigger_type) }}</span>
+                                <span>Due {{ $term->due_date?->format('d M') ?? '—' }}</span>
                                 <span
-                                    class="badge {{ $t->status === 'Paid' ? 'b-green' : ($t->status === 'Overdue' ? 'b-red' : 'b-amber') }}">{{ $t->status }}</span>
+                                    class="badge {{ $term->status === 'Paid' ? 'b-green' : ($term->status === 'Overdue' ? 'b-red' : 'b-amber') }}">{{ $term->status }}</span>
                             </div>
                         </div>
                         <div class="term-amt">
                             <div class="a">
-                                <x-money :value="$t->amount"/>
+                                <x-money :value="$term->amount"/>
                             </div>
-                            <div class="b text-xs">{{ $bal > 0 ? 'Remaining' : 'Full Paid' }}</div>
+                            <div class="b text-xs">{{ $balance > 0 ? 'Remaining' : 'Full Paid' }}</div>
                         </div>
                     </div>
                 @empty
@@ -354,7 +360,9 @@
                 <div class="card-head" style="padding:0 0 12px;border:none">
                     <div>
                         <h3>Receipts</h3>
-                        <div class="sub">{{ $payments->count() }} {{ \Illuminate\Support\Str::plural('payment', $payments->count()) }} ·
+                        <div
+                            class="sub">{{ $payments->count() }} {{ \Illuminate\Support\Str::plural('payment', $payments->count()) }}
+                            ·
                             <x-money :value="$payments->sum('amount')"/>
                         </div>
                     </div>
@@ -463,7 +471,8 @@
                                 <circle cx="12" cy="12" r="3"/>
                             </svg>
                         </button>
-                        <a href="{{ route('documents.download', $doc->id, absolute: false) }}" download="{{ $doc->file_name }}"
+                        <a href="{{ route('documents.download', $doc->id, absolute: false) }}"
+                           download="{{ $doc->file_name }}"
                            class="mini-btn mr-1" title="Download">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
@@ -510,21 +519,21 @@
                         Log Follow-up
                     </button>
                 </div>
-                @forelse($followups as $fu)
+                @forelse($followups as $followup)
                     <div class="fu flex items-start gap-3 p-3 border-b border-[#eef2f9]">
-                        <span class="fu-ico">{{ substr($fu->type, 0, 1) }}</span>
+                        <span class="fu-ico">{{ substr($followup->type, 0, 1) }}</span>
                         <div style="flex:1;min-width:0">
-                            <div class="fu-s font-bold text-sm">{{ $fu->summary }}</div>
-                            @if($fu->detail)
-                                <div class="fu-t text-xs text-gray-500 mt-0.5">{{ $fu->detail }}</div>
+                            <div class="fu-s font-bold text-sm">{{ $followup->summary }}</div>
+                            @if($followup->detail)
+                                <div class="fu-t text-xs text-gray-500 mt-0.5">{{ $followup->detail }}</div>
                             @endif
-                            <div class="fu-t text-xs text-[#8894ac] mt-1">{{ $fu->type }}
-                                · {{ $fu->happened_on->format('d M H:i') }}</div>
-                            @if($fu->next_date)
+                            <div class="fu-t text-xs text-[#8894ac] mt-1">{{ $followup->type }}
+                                · {{ $followup->happened_on->format('d M H:i') }}</div>
+                            @if($followup->next_date)
                                 <div class="mt-1">
                                     <span
-                                        class="badge b-navy text-xs">Next: {{ $fu->next_date->format('d M Y') }} @if($fu->next_note)
-                                            — {{ $fu->next_note }}
+                                        class="badge b-navy text-xs">Next: {{ $followup->next_date->format('d M Y') }} @if($followup->next_note)
+                                            — {{ $followup->next_note }}
                                         @endif</span>
                                 </div>
                             @endif
@@ -538,7 +547,7 @@
                                     danger: true,
                                     wire: $wire,
                                     action: 'deleteFollowup',
-                                    params: {{ $fu->id }}
+                                    params: {{ $followup->id }}
                                 })">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path

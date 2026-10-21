@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\AuditNotificationService;
 use Carbon\Carbon;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -50,14 +51,42 @@ class TaskIndex extends Component
         $this->due_date = now()->toDateString();
     }
 
+    /**
+     * Resolves user IDs eligible for task assignment based on caller RBAC permissions.
+     *
+     * @return array<int>
+     */
+    protected function getAllowedAssigneeIds(): array
+    {
+        $currentUser = auth()->user();
+        if (! $currentUser) {
+            return [];
+        }
+
+        return match ($currentUser->role) {
+            'Admin' => User::where('status', 'Active')->pluck('id')->all(),
+            'Manager', 'Coordinator' => User::where('status', 'Active')->whereIn('id', $currentUser->getDownlineUserIds())->pluck('id')->all(),
+            default => [$currentUser->id],
+        };
+    }
+
     protected function rules(): array
     {
+        $allowedAssigneeIds = $this->getAllowedAssigneeIds();
+
         return [
             'title' => 'required|string|max:200',
             'project_id' => 'nullable|integer|exists:projects,id',
             'priority' => 'required|in:Low,Medium,High,Urgent',
             'due_date' => 'nullable|date',
-            'assigned_to' => 'nullable|integer|exists:users,id',
+            'assigned_to' => ['required', 'integer', Rule::in($allowedAssigneeIds)],
+        ];
+    }
+
+    protected function messages(): array
+    {
+        return [
+            'assigned_to.in' => 'You can only assign tasks to yourself or team members in your downline.',
         ];
     }
 
@@ -76,8 +105,8 @@ class TaskIndex extends Component
     public function toggleDone(int $taskId): void
     {
         $task = Task::query()
-            ->when(auth()->user()->role !== 'Admin', function ($q) {
-                $q->where('assigned_to', auth()->id());
+            ->when(auth()->user()->role !== 'Admin', function ($query) {
+                $query->where('assigned_to', auth()->id());
             })
             ->findOrFail($taskId);
 
@@ -99,8 +128,8 @@ class TaskIndex extends Component
     public function deleteTask(int $taskId): void
     {
         $task = Task::query()
-            ->when(auth()->user()->role !== 'Admin', function ($q) {
-                $q->where('assigned_to', auth()->id());
+            ->when(auth()->user()->role !== 'Admin', function ($query) {
+                $query->where('assigned_to', auth()->id());
             })
             ->findOrFail($taskId);
 
@@ -123,11 +152,18 @@ class TaskIndex extends Component
 
     public function addTask(): void
     {
+        $currentUser = auth()->user();
+
         // Sanitize empty strings into null before validation
         $this->project_id = ! empty($this->project_id) ? (int) $this->project_id : null;
-        $this->assigned_to = ! empty($this->assigned_to) ? (int) $this->assigned_to : auth()->id();
         $this->due_date = ! empty($this->due_date) ? $this->due_date : null;
         $this->title = trim($this->title);
+
+        if ($currentUser->role === 'Sales') {
+            $this->assigned_to = $currentUser->id;
+        } else {
+            $this->assigned_to = ! empty($this->assigned_to) ? (int) $this->assigned_to : $currentUser->id;
+        }
 
         $this->validate();
 
@@ -143,12 +179,12 @@ class TaskIndex extends Component
             'priority' => $this->priority,
             'due_date' => $this->due_date,
             'assigned_to' => $this->assigned_to,
-            'created_by' => auth()->id(),
+            'created_by' => $currentUser->id,
             'done' => false,
         ]);
 
         app(AuditNotificationService::class)->log(
-            auth()->id(),
+            $currentUser->id,
             'Created Task',
             'Task',
             $task->id,
@@ -169,23 +205,23 @@ class TaskIndex extends Component
 
     public function render()
     {
-        $user = auth()->user();
+        $currentUser = auth()->user();
         $today = Carbon::today()->toDateString();
 
         $query = Task::query()
-            ->when($user->role !== 'Admin', fn ($q) => $q->where('assigned_to', $user->id))
+            ->when($currentUser->role !== 'Admin', fn ($taskQuery) => $taskQuery->where('assigned_to', $currentUser->id))
             ->with(['project.customer', 'customer', 'assignedTo'])
-            ->when($this->filterPriority, fn ($q) => $q->where('priority', $this->filterPriority))
-            ->when($this->filterProjectId, fn ($q) => $q->where('project_id', $this->filterProjectId))
-            ->when($this->filterAssignedTo, fn ($q) => $q->where('assigned_to', $this->filterAssignedTo))
-            ->when($this->filterStatus === 'open', fn ($q) => $q->where('done', false))
-            ->when($this->filterStatus === 'done', fn ($q) => $q->where('done', true))
-            ->when($this->filterSearch, function ($q) {
+            ->when($this->filterPriority, fn ($taskQuery) => $taskQuery->where('priority', $this->filterPriority))
+            ->when($this->filterProjectId, fn ($taskQuery) => $taskQuery->where('project_id', $this->filterProjectId))
+            ->when($this->filterAssignedTo, fn ($taskQuery) => $taskQuery->where('assigned_to', $this->filterAssignedTo))
+            ->when($this->filterStatus === 'open', fn ($taskQuery) => $taskQuery->where('done', false))
+            ->when($this->filterStatus === 'done', fn ($taskQuery) => $taskQuery->where('done', true))
+            ->when($this->filterSearch, function ($searchQuery) {
                 $term = '%'.trim($this->filterSearch).'%';
-                $q->where(function ($sub) use ($term) {
-                    $sub->where('title', 'like', $term)
-                        ->orWhereHas('project', fn ($p) => $p->where('name', 'like', $term)->orWhere('code', 'like', $term))
-                        ->orWhereHas('customer', fn ($c) => $c->where('company', 'like', $term));
+                $searchQuery->where(function ($subQuery) use ($term) {
+                    $subQuery->where('title', 'like', $term)
+                        ->orWhereHas('project', fn ($projectQuery) => $projectQuery->where('name', 'like', $term)->orWhere('code', 'like', $term))
+                        ->orWhereHas('customer', fn ($customerQuery) => $customerQuery->where('company', 'like', $term)->orWhere('contact_name', 'like', $term));
                 });
             })
             ->orderBy('done')
@@ -194,13 +230,13 @@ class TaskIndex extends Component
         $tasks = $query->get();
 
         $baseTasks = Task::query()
-            ->when($user->role !== 'Admin', fn ($q) => $q->where('assigned_to', $user->id))
+            ->when($currentUser->role !== 'Admin', fn ($taskQuery) => $taskQuery->where('assigned_to', $currentUser->id))
             ->get();
         $openCount = $baseTasks->where('done', false)->count();
         $doneCount = $baseTasks->where('done', true)->count();
 
-        $projects = Project::query()->forUser($user)->orderBy('name')->get();
-        $users = User::where('status', 'Active')->orderBy('name')->get();
+        $projects = Project::query()->forUser($currentUser)->orderBy('name')->get();
+        $users = User::whereIn('id', $this->getAllowedAssigneeIds())->orderBy('name')->get();
 
         return view('livewire.tasks.task-index', [
             'tasks' => $tasks,

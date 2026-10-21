@@ -4,6 +4,7 @@ namespace App\Livewire\Followups;
 
 use App\Models\Customer;
 use App\Models\Followup;
+use App\Models\Project;
 use App\Services\AuditNotificationService;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
@@ -71,16 +72,16 @@ class FollowupIndex extends Component
     public function deleteFollowup(int $id): void
     {
         $user = auth()->user();
-        $fu = Followup::findOrFail($id);
+        $followup = Followup::findOrFail($id);
 
-        if ($user->role !== 'Admin' && $fu->created_by !== $user->id) {
+        if ($user->role !== 'Admin' && $followup->created_by !== $user->id) {
             $this->dispatch('toast', ['msg' => 'You can only remove follow-ups you logged.', 'type' => 'err']);
 
             return;
         }
 
-        $summary = $fu->summary;
-        $fu->delete();
+        $summary = $followup->summary;
+        $followup->delete();
 
         app(AuditNotificationService::class)->log(
             auth()->id(),
@@ -98,20 +99,29 @@ class FollowupIndex extends Component
     {
         $user = auth()->user();
         $today = Carbon::today()->toDateString();
+        $projectIds = Project::forUser($user)->pluck('id');
+        $customerIds = Customer::forUser($user)->pluck('id');
 
         $followupsQuery = Followup::with(['customer', 'project', 'createdBy'])
-            ->when($this->type, fn ($q) => $q->where('type', $this->type))
-            ->when($this->customer_id, fn ($q) => $q->where('customer_id', $this->customer_id))
-            ->when($this->date_from, fn ($q) => $q->whereDate('happened_on', '>=', $this->date_from))
-            ->when($this->date_to, fn ($q) => $q->whereDate('happened_on', '<=', $this->date_to))
-            ->when($this->search, function ($q) {
+            ->where(function ($query) use ($projectIds, $customerIds) {
+                $query->whereIn('project_id', $projectIds)
+                    ->orWhere(function ($subQuery) use ($customerIds) {
+                        $subQuery->whereNull('project_id')
+                            ->whereIn('customer_id', $customerIds);
+                    });
+            })
+            ->when($this->type, fn ($query) => $query->where('type', $this->type))
+            ->when($this->customer_id, fn ($query) => $query->where('customer_id', $this->customer_id))
+            ->when($this->date_from, fn ($query) => $query->whereDate('happened_on', '>=', $this->date_from))
+            ->when($this->date_to, fn ($query) => $query->whereDate('happened_on', '<=', $this->date_to))
+            ->when($this->search, function ($searchQuery) {
                 $term = '%'.trim($this->search).'%';
-                $q->where(function ($sub) use ($term) {
-                    $sub->where('summary', 'like', $term)
+                $searchQuery->where(function ($subQuery) use ($term) {
+                    $subQuery->where('summary', 'like', $term)
                         ->orWhere('detail', 'like', $term)
                         ->orWhere('next_note', 'like', $term)
-                        ->orWhereHas('customer', fn ($c) => $c->where('company', 'like', $term))
-                        ->orWhereHas('project', fn ($p) => $p->where('name', 'like', $term)->orWhere('project_code', 'like', $term));
+                        ->orWhereHas('customer', fn ($customerQuery) => $customerQuery->where('company', 'like', $term)->orWhere('contact_name', 'like', $term))
+                        ->orWhereHas('project', fn ($projectQuery) => $projectQuery->where('name', 'like', $term)->orWhere('project_code', 'like', $term));
                 });
             })
             ->orderByDesc('happened_on');
@@ -120,12 +130,20 @@ class FollowupIndex extends Component
 
         // Pending/Overdue touchpoints due on or before today
         $dueList = Followup::with('customer')
+            ->where(function ($query) use ($projectIds, $customerIds) {
+                $query->whereIn('project_id', $projectIds)
+                    ->orWhere(function ($subQuery) use ($customerIds) {
+                        $subQuery->whereNull('project_id')
+                            ->whereIn('customer_id', $customerIds);
+                    });
+            })
             ->whereNotNull('next_date')
             ->where('next_date', '<=', $today)
             ->orderBy('next_date')
             ->get();
 
         $customers = Customer::query()
+            ->forUser($user)
             ->whereHas('followups')
             ->orderBy('company')
             ->get();

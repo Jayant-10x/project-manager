@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Customer;
 use App\Models\User;
+use App\Services\CodeGeneratorService;
 use Illuminate\Database\Seeder;
 
 class CustomersSeeder extends Seeder
@@ -30,7 +31,7 @@ class CustomersSeeder extends Seeder
                 'phone' => '9820011223',
                 'alt_phone' => '02228394011',
                 'city' => 'Mumbai',
-                'state' => 'Maharashtra',
+                'state' => 'MH',
                 'address' => 'Floor 4, Logistics Park, Andheri East, Mumbai 400069',
                 'gst_number' => '27AAACA1234A1Z1',
                 'pan_number' => 'AAACA1234A',
@@ -51,7 +52,7 @@ class CustomersSeeder extends Seeder
                 'phone' => '9845012345',
                 'alt_phone' => '08022334455',
                 'city' => 'Bengaluru',
-                'state' => 'Karnataka',
+                'state' => 'KA',
                 'address' => 'Tech Arcade, Outer Ring Road, Bellandur, Bengaluru 560103',
                 'gst_number' => '29AAACB5678B1Z2',
                 'pan_number' => 'AAACB5678B',
@@ -72,7 +73,7 @@ class CustomersSeeder extends Seeder
                 'phone' => '9811098765',
                 'alt_phone' => '01123456789',
                 'city' => 'Delhi',
-                'state' => 'Delhi',
+                'state' => 'DL',
                 'address' => 'D-14 Connaught Place, Inner Circle, New Delhi 110001',
                 'gst_number' => '07AAACZ9012C1Z3',
                 'pan_number' => 'AAACZ9012C',
@@ -93,7 +94,7 @@ class CustomersSeeder extends Seeder
                 'phone' => '9848023456',
                 'alt_phone' => '04066778899',
                 'city' => 'Hyderabad',
-                'state' => 'Telangana',
+                'state' => 'TS',
                 'address' => 'Cyber Towers, Hitec City, Madhapur, Hyderabad 500081',
                 'gst_number' => '36AAACD3456D1Z4',
                 'pan_number' => 'AAACD3456D',
@@ -114,7 +115,7 @@ class CustomersSeeder extends Seeder
                 'phone' => '9822034567',
                 'alt_phone' => '02025678901',
                 'city' => 'Pune',
-                'state' => 'Maharashtra',
+                'state' => 'MH',
                 'address' => 'Skyline Heights, Senapati Bapat Road, Pune 411016',
                 'gst_number' => '27AAACE7890E1Z5',
                 'pan_number' => 'AAACE7890E',
@@ -135,7 +136,7 @@ class CustomersSeeder extends Seeder
                 'phone' => '9830045678',
                 'alt_phone' => '03322113344',
                 'city' => 'Kolkata',
-                'state' => 'West Bengal',
+                'state' => 'WB',
                 'address' => 'Salt Lake Sector V, Bidhannagar, Kolkata 700091',
                 'gst_number' => '19AAACS2345S1Z6',
                 'pan_number' => 'AAACS2345S',
@@ -156,7 +157,7 @@ class CustomersSeeder extends Seeder
                 'phone' => '9840056789',
                 'alt_phone' => '04428114455',
                 'city' => 'Chennai',
-                'state' => 'Tamil Nadu',
+                'state' => 'TN',
                 'address' => 'Mount Road, Guindy Industrial Estate, Chennai 600032',
                 'gst_number' => '33AAACK6789K1Z7',
                 'pan_number' => 'AAACK6789K',
@@ -177,5 +178,7 @@ class CustomersSeeder extends Seeder
                 $cData
             );
         }
+
+        app(CodeGeneratorService::class)->sync('customer');
     }
 }

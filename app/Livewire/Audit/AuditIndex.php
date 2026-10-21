@@ -46,27 +46,64 @@ class AuditIndex extends Component
 
     public function render()
     {
-        $query = ActivityLog::with('user')
-            ->when($this->action, fn ($q) => $q->where('action', $this->action))
-            ->when($this->user_id, fn ($q) => $q->where('user_id', $this->user_id))
-            ->when($this->search, function ($q) {
+        $currentUser = auth()->user();
+
+        $query = ActivityLog::with('user');
+
+        if ($currentUser->role === 'Admin') {
+            $allowedUserIds = null;
+        } elseif (in_array($currentUser->role, ['Manager', 'Coordinator'])) {
+            $allowedUserIds = $currentUser->getDownlineUserIds();
+            $query->whereIn('user_id', $allowedUserIds);
+        } else {
+            // Sales and other roles are strictly restricted to their own activity
+            $allowedUserIds = [$currentUser->id];
+            $query->where('user_id', $currentUser->id);
+        }
+
+        // Apply user_id filter with anti-tampering protection
+        if ($this->user_id !== '') {
+            $targetUserId = (int) $this->user_id;
+            if ($allowedUserIds === null || in_array($targetUserId, $allowedUserIds, true)) {
+                $query->where('user_id', $targetUserId);
+            } else {
+                $this->user_id = '';
+            }
+        }
+
+        $query->when($this->action, fn ($logQuery) => $logQuery->where('action', $this->action))
+            ->when($this->search, function ($searchQuery) {
                 $term = '%'.trim($this->search).'%';
-                $q->where(function ($sub) use ($term) {
-                    $sub->where('action', 'like', $term)
+                $searchQuery->where(function ($subQuery) use ($term) {
+                    $subQuery->where('action', 'like', $term)
                         ->orWhere('entity', 'like', $term)
                         ->orWhere('entity_code', 'like', $term)
                         ->orWhere('detail', 'like', $term)
-                        ->orWhereHas('user', fn ($u) => $u->where('name', 'like', $term));
+                        ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', $term));
                 });
             })
             ->orderByDesc('id');
 
-        $users = User::query()
-            ->whereIn('id', ActivityLog::whereNotNull('user_id')->distinct()->pluck('user_id'))
-            ->orderBy('name')
-            ->get();
+        if ($allowedUserIds === null) {
+            $users = User::query()
+                ->whereIn('id', ActivityLog::whereNotNull('user_id')->distinct()->pluck('user_id'))
+                ->orderBy('name')
+                ->get();
+        } elseif ($currentUser->role !== 'Sales') {
+            $users = User::query()
+                ->whereIn('id', $allowedUserIds)
+                ->whereIn('id', ActivityLog::whereNotNull('user_id')->distinct()->pluck('user_id'))
+                ->orderBy('name')
+                ->get();
+        } else {
+            $users = collect();
+        }
 
-        $actions = ActivityLog::distinct()->pluck('action');
+        $actionsQuery = ActivityLog::query();
+        if ($allowedUserIds !== null) {
+            $actionsQuery->whereIn('user_id', $allowedUserIds);
+        }
+        $actions = $actionsQuery->distinct()->pluck('action');
 
         return view('livewire.audit.audit-index', [
             'logs' => $query->paginate(30),

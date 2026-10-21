@@ -58,7 +58,7 @@
                                         d="M12 8v5M12 16.5v.5"/></svg>
                             </span>
                             <div class="flex-1 min-w-0">
-                                <div class="t">{{ $t->project?->customer?->company }} —
+                                <div class="t">{{ $t->project?->customer?->display_name }} —
                                     <x-money :value="$bal"/>
                                 </div>
                                 <div class="s">{{ $t->label }} · due {{ $dueDate ? $dueDate->format('d M') : '—' }}
@@ -80,7 +80,7 @@
                                         d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                             </span>
                             <div class="flex-1 min-w-0">
-                                <div class="t">{{ $f->customer?->company }}</div>
+                                <div class="t">{{ $f->customer?->display_name }}</div>
                                 <div class="s">{{ $f->next_note ?: $f->type }}
                                     · {{ $fupDate ? $fupDate->format('d M') : '—' }}</div>
                             </div>
@@ -99,7 +99,7 @@
                             </span>
                             <div class="flex-1 min-w-0">
                                 <div class="t">{{ $p->name }}</div>
-                                <div class="s">{{ $p->customer?->company }} · {{ $p->delay_reason ?: $p->health }}</div>
+                                <div class="s">{{ $p->customer?->display_name }} · {{ $p->delay_reason ?: $p->health }}</div>
                             </div>
                             <div class="r">
                                 <x-health-badge :health="$p->health"/>
@@ -127,8 +127,8 @@
                         @endphp
                         @foreach($healthCounts as $label => $cnt)
                             @php
-                                $p = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
-                                $c = $colors[$label];
+                                $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
+                                $colorCode = $colors[$label];
                             @endphp
                             <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
                                class="block p-2 rounded-xl transition hover:bg-gray-50 cursor-pointer"
@@ -136,14 +136,14 @@
                                title="Filter {{ $label }} projects">
                                 <div
                                     style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;margin-bottom:5px">
-                                    <i style="width:8px;height:8px;border-radius:50%;background:{{ $c }};display:inline-block"></i>{{ $label }}
+                                    <i style="width:8px;height:8px;border-radius:50%;background:{{ $colorCode }};display:inline-block"></i>{{ $label }}
                                 </div>
                                 <div style="display:flex;align-items:baseline;justify-content:space-between">
                                     <span style="font-size:20px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
-                                    <span style="font-size:11px;font-weight:600;color:var(--muted)">{{ $p }}%</span>
+                                    <span style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
                                 </div>
                                 <div class="bar" style="height:5px;margin-top:6px">
-                                    <i style="width:{{ $p }}%;background:{{ $c }}"></i>
+                                    <i style="width:{{ $percentage }}%;background:{{ $colorCode }}"></i>
                                 </div>
                             </a>
                         @endforeach
@@ -162,15 +162,15 @@
                 <div class="card-body">
                     @php $maxVal = max(array_merge([1], array_column($trend, 'value'))); @endphp
                     <div class="spark-chart" style="display:flex;gap:6px;align-items:flex-end">
-                        @foreach($trend as $t)
-                            @php $barHeight = max(4, round(($t['value'] / $maxVal) * 100)); @endphp
+                        @foreach($trend as $point)
+                            @php $barHeight = max(4, round(($point['value'] / $maxVal) * 100)); @endphp
                             <div class="spark-col">
-                                <div class="spark-val" x-text="$store.currency.format({{ (float)$t['value'] }}, true)"></div>
+                                <div class="spark-val" x-text="$store.currency.format({{ (float)$point['value'] }}, true)"></div>
                                 <div class="spark-bar-wrap">
                                     <i style="height:{{ $barHeight }}%"
-                                       :title="'{{ $t['label'] }}: ' + $store.currency.format({{ (float)$t['value'] }}, false)"></i>
+                                       :title="'{{ $point['label'] }}: ' + $store.currency.format({{ (float)$point['value'] }}, false)"></i>
                                 </div>
-                                <div class="spark-label">{{ $t['label'] }}</div>
+                                <div class="spark-label">{{ $point['label'] }}</div>
                             </div>
                         @endforeach
                     </div>
@@ -190,25 +190,25 @@
                 </div>
             </div>
             <div class="card-body">
-                @forelse($upcomingTerms as $t)
+                @forelse($upcomingTerms as $term)
                     @php
-                        $bal = max(0, (float)$t->amount - (float)$t->received - (float)$t->tds);
-                        $dueDate = $t->due_date ? \Carbon\Carbon::parse($t->due_date) : null;
+                        $balance = max(0, (float)$term->amount - (float)$term->received - (float)$term->tds);
+                        $dueDate = $term->due_date ? \Carbon\Carbon::parse($term->due_date) : null;
                     @endphp
                     <div class="term clickable"
-                         @click="Livewire.navigate('{{ route('projects.show', $t->project_id) }}')">
+                         @click="Livewire.navigate('{{ route('projects.show', $term->project_id) }}')">
                         <div class="term-body">
-                            <div class="term-title">{{ $t->project?->customer?->company }}</div>
+                            <div class="term-title">{{ $term->project?->customer?->display_name }}</div>
                             <div class="term-meta">
-                                <span>{{ $t->label }}</span>
+                                <span>{{ $term->label }}</span>
                                 <span>Due {{ $dueDate ? $dueDate->format('d M') : '—' }}</span>
                             </div>
                         </div>
                         <div class="term-amt">
                             <div class="a">
-                                <x-money :value="$bal"/>
+                                <x-money :value="$balance"/>
                             </div>
-                            <div class="b">{{ $t->project?->code }}</div>
+                            <div class="b">{{ $term->project?->code }}</div>
                         </div>
                     </div>
                 @empty
@@ -234,27 +234,27 @@
                 </div>
             </div>
             <div class="card-body">
-                @forelse($fullOverdueTerms as $t)
+                @forelse($fullOverdueTerms as $term)
                     @php
-                        $bal = max(0, (float)$t->amount - (float)$t->received - (float)$t->tds);
-                        $dueDate = $t->due_date ? \Carbon\Carbon::parse($t->due_date) : null;
+                        $balance = max(0, (float)$term->amount - (float)$term->received - (float)$term->tds);
+                        $dueDate = $term->due_date ? \Carbon\Carbon::parse($term->due_date) : null;
                         $daysLate = $dueDate ? abs(\Carbon\Carbon::parse($today)->diffInDays($dueDate, false)) : 0;
                     @endphp
                     <div class="term over clickable"
-                         @click="Livewire.navigate('{{ route('projects.show', $t->project_id) }}')">
+                         @click="Livewire.navigate('{{ route('projects.show', $term->project_id) }}')">
                         <div class="term-body">
-                            <div class="term-title">{{ $t->project?->customer?->company }}</div>
+                            <div class="term-title">{{ $term->project?->customer?->display_name }}</div>
                             <div class="term-meta">
-                                <span>{{ $t->label }}</span>
+                                <span>{{ $term->label }}</span>
                                 <span>Due {{ $dueDate ? $dueDate->format('d M') : '—' }}</span>
                                 <span style="color:#d94b4b;font-weight:600">{{ $daysLate }} days late</span>
                             </div>
                         </div>
                         <div class="term-amt">
                             <div class="a">
-                                <x-money :value="$bal"/>
+                                <x-money :value="$balance"/>
                             </div>
-                            <div class="b">{{ $t->project?->code }}</div>
+                            <div class="b">{{ $term->project?->code }}</div>
                         </div>
                     </div>
                 @empty
@@ -295,22 +295,22 @@
                     </tr>
                     </thead>
                     <tbody>
-                    @forelse($salesRows as $s)
+                    @forelse($salesRows as $salesRow)
                         <tr>
-                            <td class="strong">{{ $s['name'] }}</td>
-                            <td>{{ $s['customers'] }}</td>
-                            <td>{{ $s['projects'] }}</td>
+                            <td class="strong">{{ $salesRow['name'] }}</td>
+                            <td>{{ $salesRow['customers'] }}</td>
+                            <td>{{ $salesRow['projects'] }}</td>
                             <td class="num">
-                                <x-money :value="$s['value']"/>
+                                <x-money :value="$salesRow['value']"/>
                             </td>
                             <td class="num">
-                                <x-money :value="$s['received']"/>
+                                <x-money :value="$salesRow['received']"/>
                             </td>
                             <td style="min-width:120px">
-                                <div class="bar {{ $s['rate'] >= 80 ? 'green' : ($s['rate'] >= 40 ? 'amber' : '') }}">
-                                    <i style="width:{{ $s['rate'] }}%"></i>
+                                <div class="bar {{ $salesRow['rate'] >= 80 ? 'green' : ($salesRow['rate'] >= 40 ? 'amber' : '') }}">
+                                    <i style="width:{{ $salesRow['rate'] }}%"></i>
                                 </div>
-                                <span class="muted" style="font-size:10.8px">{{ $s['rate'] }}%</span>
+                                <span class="muted" style="font-size:10.8px">{{ $salesRow['rate'] }}%</span>
                             </td>
                         </tr>
                     @empty
@@ -351,7 +351,7 @@
                                         d="M21 3v6h-6"/></svg>
                             </span>
                             <div class="flex-1 min-w-0">
-                                <div class="t">{{ $a->customer?->company }}</div>
+                                <div class="t">{{ $a->customer?->display_name }}</div>
                                 <div class="s">{{ $a->name }} · AMC
                                     ends {{ $amcEndDate ? $amcEndDate->format('d M') : '—' }}</div>
                             </div>
@@ -387,7 +387,7 @@
                             </svg>
                             <div style="margin-left:10px;flex:1;min-width:0">
                                 <div class="t">{{ $h->name }}</div>
-                                <div class="s">{{ $h->customer?->company }} · {{ $h->code }}</div>
+                                <div class="s">{{ $h->customer?->display_name }} · {{ $h->code }}</div>
                             </div>
                             <div class="r"><span class="badge b-amber">Pending</span></div>
                         </div>

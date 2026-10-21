@@ -15,11 +15,11 @@
 
             <label class="f">
                 <span>Customer <span class="text-red-500"> *</span></span>
-                <select wire:model.blur="customer_id"
+                <select wire:model.blur="customer_id" @disabled($projectId)
                         class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— Select Customer —</option>
                     @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
                     @endforeach
                 </select>
                 @error('customer_id') <span
@@ -55,7 +55,7 @@
             </label>
 
             <label class="f">
-                <span>Coordinator</span>
+                <span>Coordinator <span class="text-red-500"> *</span></span>
                 <select wire:model.blur="coordinator_id"
                         class="i @error('coordinator_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— Assign Staff Member —</option>
@@ -118,7 +118,7 @@
             </label>
 
             <label class="f">
-                <span>Start date</span>
+                <span>Start date <span class="text-red-500"> *</span></span>
                 <input wire:model.blur="start_date"
                        type="date"
                        class="i @error('start_date') border-red-500! bg-red-50/20! @enderror">

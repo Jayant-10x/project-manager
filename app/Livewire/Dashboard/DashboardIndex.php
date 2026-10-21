@@ -90,8 +90,8 @@ class DashboardIndex extends Component
         $topFollowups = Followup::query()
             ->whereNotNull('next_date')
             ->where('next_date', '<=', $followupSoon)
-            ->where(function ($q) use ($projectIds) {
-                $q->whereIn('project_id', $projectIds)->orWhereNull('project_id');
+            ->where(function ($query) use ($projectIds) {
+                $query->whereIn('project_id', $projectIds)->orWhereNull('project_id');
             })
             ->with('customer')
             ->orderBy('next_date')
@@ -144,18 +144,18 @@ class DashboardIndex extends Component
         $salesRows = [];
         if ($user->role === 'Admin') {
             $salesPeople = User::where('role', 'Sales')
-                ->with(['salesProjects' => fn ($q) => $q->with(['terms', 'payments', 'customer'])])
+                ->with(['salesProjects' => fn ($subQuery) => $subQuery->with(['terms', 'payments', 'customer'])])
                 ->orderBy('name')
                 ->get();
 
-            foreach ($salesPeople as $sp) {
-                $projs = $sp->salesProjects;
+            foreach ($salesPeople as $salesPerson) {
+                $projs = $salesPerson->salesProjects;
                 $valAmt = (float) $projs->sum('value');
                 $recAmt = (float) $projs->flatMap->payments->sum('amount');
                 $rate = $valAmt > 0 ? round(($recAmt / $valAmt) * 100) : 0;
 
                 $salesRows[] = [
-                    'name' => $sp->name,
+                    'name' => $salesPerson->name,
                     'customers' => $projs->pluck('customer_id')->unique()->count(),
                     'projects' => $projs->count(),
                     'value' => $valAmt,
@@ -164,7 +164,7 @@ class DashboardIndex extends Component
                 ];
             }
 
-            usort($salesRows, fn ($a, $b) => $b['value'] <=> $a['value']);
+            usort($salesRows, fn ($firstRow, $secondRow) => $secondRow['value'] <=> $firstRow['value']);
         }
 
         // 7. AMC / Renewal

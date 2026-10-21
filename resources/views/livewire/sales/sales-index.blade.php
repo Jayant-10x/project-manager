@@ -13,13 +13,15 @@
             </svg>
             Export CSV
         </button>
-        <button type="button" class="btn btn-primary btn-sm"
-                @click="Livewire.dispatch('open-sales-modal', { id: null })">
-            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                <path d="M12 5v14M5 12h14"/>
-            </svg>
-            Add Salesperson
-        </button>
+        @if(auth()->user()->role === 'Admin')
+            <button type="button" class="btn btn-primary btn-sm"
+                    @click="Livewire.dispatch('open-user-modal', { id: null, role: 'Sales' })">
+                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Add Salesperson
+            </button>
+        @endif
     </div>
 
     <!-- 1. Grid of Salesperson Cards -->
@@ -47,7 +49,7 @@
                         <div class="k text-[10px]">Onboarded</div>
                         <div class="v text-base text-[#0b3d91] font-bold">{{ $r['customers'] }}</div>
                     </a>
-                    <a href="{{ route('projects.index') }}" wire:navigate
+                    <a href="{{ route('projects.index', ['sales_person_id' => $sp->id]) }}" wire:navigate
                        class="money-cell p-2 block transition hover:bg-blue-50/50 cursor-pointer rounded-xl"
                        style="text-decoration:none;color:inherit"
                        title="View projects">
@@ -84,16 +86,16 @@
                     </div>
                 @endif
 
-                <div class="row-actions mt-3 justify-start flex gap-2">
-                    <button type="button" class="mini-btn"
-                            @click="Livewire.dispatch('open-sales-modal', { id: {{ $sp->id }} })"
-                            title="Edit">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M12 20h9"/>
-                            <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
-                        </svg>
-                    </button>
-                    @if(auth()->user()->role === 'Admin')
+                @if(auth()->user()->role === 'Admin')
+                    <div class="row-actions mt-3 justify-start flex gap-2">
+                        <button type="button" class="mini-btn"
+                                @click="Livewire.dispatch('open-user-modal', { id: {{ $sp->id }} })"
+                                title="Edit">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                <path d="M12 20h9"/>
+                                <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                            </svg>
+                        </button>
                         <button type="button" class="mini-btn danger"
                                 @click="$dispatch('confirm-dialog', {
                                     title: 'Remove Salesperson?',
@@ -111,8 +113,8 @@
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                             </svg>
                         </button>
-                    @endif
-                </div>
+                    </div>
+                @endif
             </div>
         @empty
             <div class="col-span-3">
@@ -153,25 +155,25 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($rows as $r)
+                @forelse($rows as $row)
                     <tr>
-                        <td class="strong">{{ $r['salesPerson']->name }}</td>
-                        <td>{{ $r['customers'] }}</td>
-                        <td>{{ $r['projects'] }}</td>
+                        <td class="strong">{{ $row['salesPerson']->name }}</td>
+                        <td>{{ $row['customers'] }}</td>
+                        <td>{{ $row['projects'] }}</td>
                         <td class="num">
-                            <x-money :value="$r['value']"/>
+                            <x-money :value="$row['value']"/>
                         </td>
                         <td class="num font-bold text-[#3d7a24]">
-                            <x-money :value="$r['received']"/>
+                            <x-money :value="$row['received']"/>
                         </td>
-                        <td class="num" style="color:{{ $r['overdue'] > 0 ? '#d94b4b' : 'inherit' }}">
-                            <x-money :value="$r['overdue']"/>
+                        <td class="num" style="color:{{ $row['overdue'] > 0 ? '#d94b4b' : 'inherit' }}">
+                            <x-money :value="$row['overdue']"/>
                         </td>
                         <td style="min-width:130px">
-                            <div class="bar {{ $r['rate'] >= 80 ? 'green' : ($r['rate'] >= 40 ? '' : 'amber') }}">
-                                <i style="width:{{ $r['rate'] }}%"></i>
+                            <div class="bar {{ $row['rate'] >= 80 ? 'green' : ($row['rate'] >= 40 ? '' : 'amber') }}">
+                                <i style="width:{{ $row['rate'] }}%"></i>
                             </div>
-                            <span class="muted" style="font-size:10.8px">{{ $r['rate'] }}%</span>
+                            <span class="muted" style="font-size:10.8px">{{ $row['rate'] }}%</span>
                         </td>
                     </tr>
                 @empty
@@ -187,7 +189,4 @@
             </table>
         </div>
     </div>
-
-    <!-- Modal Component -->
-    <livewire:sales.sales-modal/>
 </div>

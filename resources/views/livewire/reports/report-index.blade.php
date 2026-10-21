@@ -177,7 +177,7 @@
                             <div class="strong">{{ $p->name }}</div>
                             <div class="muted" style="font-size:10.8px">{{ $p->code }}</div>
                         </td>
-                        <td class="muted">{{ $p->customer?->company ?? '—' }}</td>
+                        <td class="muted">{{ $p->customer?->display_name ?? '—' }}</td>
                         <td style="min-width:110px">
                             <div class="bar green">
                                 <i style="width:{{ $row['msPct'] }}%"></i>

@@ -68,6 +68,12 @@ class NotificationIndex extends Component
             return $this->redirect(route('customers.show', $notif->link_id), navigate: true);
         }
 
+        if ($notif->link_type === 'settings') {
+            $params = $notif->link_id ? ['highlight_user' => $notif->link_id] : [];
+
+            return $this->redirect(route('settings.index', $params), navigate: true);
+        }
+
         return $this->redirect(route('notifications.show', $notif->id), navigate: true);
     }
 

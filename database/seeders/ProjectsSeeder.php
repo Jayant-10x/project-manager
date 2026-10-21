@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Customer;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\CodeGeneratorService;
 use Illuminate\Database\Seeder;
 
 class ProjectsSeeder extends Seeder
@@ -230,5 +231,7 @@ class ProjectsSeeder extends Seeder
                 $pData
             );
         }
+
+        app(CodeGeneratorService::class)->sync('project');
     }
 }

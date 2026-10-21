@@ -34,6 +34,9 @@ class ProjectIndex extends Component
     #[Url]
     public string $project_type = '';
 
+    #[Url]
+    public string $sales_person_id = '';
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -64,9 +67,14 @@ class ProjectIndex extends Component
         $this->resetPage();
     }
 
+    public function updatingSalesPersonId(): void
+    {
+        $this->resetPage();
+    }
+
     public function clearFilters(): void
     {
-        $this->reset(['search', 'health', 'status', 'customer_id', 'coordinator_id', 'project_type']);
+        $this->reset(['search', 'health', 'status', 'customer_id', 'coordinator_id', 'project_type', 'sales_person_id']);
         $this->resetPage();
     }
 
@@ -82,31 +90,33 @@ class ProjectIndex extends Component
 
         $query = Project::query()
             ->forUser($user)
-            ->with(['customer', 'terms', 'payments', 'milestones', 'coordinator'])
-            ->when($this->search, function ($q) {
-                $term = '%'.trim($this->search).'%';
-                $q->where(function ($sub) use ($term) {
-                    $sub->where('name', 'like', $term)
-                        ->orWhere('project_code', 'like', $term)
-                        ->orWhere('project_type', 'like', $term)
-                        ->orWhereHas('customer', fn ($c) => $c->where('company', 'like', $term))
-                        ->orWhereHas('coordinator', fn ($u) => $u->where('name', 'like', $term));
+            ->with(['customer', 'terms', 'payments', 'milestones', 'coordinator', 'salesPerson'])
+            ->when($this->search, function ($builder) {
+                $searchTerm = '%'.trim($this->search).'%';
+                $builder->where(function ($subQuery) use ($searchTerm) {
+                    $subQuery->where('name', 'like', $searchTerm)
+                        ->orWhere('project_code', 'like', $searchTerm)
+                        ->orWhere('project_type', 'like', $searchTerm)
+                        ->orWhereHas('customer', fn ($customerQuery) => $customerQuery->where('company', 'like', $searchTerm)->orWhere('contact_name', 'like', $searchTerm))
+                        ->orWhereHas('coordinator', fn ($coordinatorQuery) => $coordinatorQuery->where('name', 'like', $searchTerm))
+                        ->orWhereHas('salesPerson', fn ($salesQuery) => $salesQuery->where('name', 'like', $searchTerm));
                 });
             })
-            ->when($this->health, fn ($q) => $q->where('health', $this->health))
-            ->when($this->status, fn ($q) => $q->where('status', $this->status))
-            ->when($this->customer_id, fn ($q) => $q->where('customer_id', $this->customer_id))
-            ->when($this->coordinator_id, fn ($q) => $q->where('coordinator_id', $this->coordinator_id))
-            ->when($this->project_type, fn ($q) => $q->where('project_type', $this->project_type))
+            ->when($this->health, fn ($builder) => $builder->where('health', $this->health))
+            ->when($this->status, fn ($builder) => $builder->where('status', $this->status))
+            ->when($this->customer_id, fn ($builder) => $builder->where('customer_id', $this->customer_id))
+            ->when($this->coordinator_id, fn ($builder) => $builder->where('coordinator_id', $this->coordinator_id))
+            ->when($this->sales_person_id, fn ($builder) => $builder->where('sales_person_id', $this->sales_person_id))
+            ->when($this->project_type, fn ($builder) => $builder->where('project_type', $this->project_type))
             ->orderByRaw("CASE health WHEN 'Delayed' THEN 1 WHEN 'At Risk' THEN 2 WHEN 'On Track' THEN 3 WHEN 'Completed' THEN 4 ELSE 5 END")
             ->orderBy('delivery_date');
 
         $allProjects = (clone $query)->get();
-        $totalDue = $allProjects->sum(fn ($p) => $p->money['due']);
-        $totalOverdue = $allProjects->sum(fn ($p) => $p->money['overdue']);
+        $totalDue = $allProjects->sum(fn ($project) => $project->money['due']);
+        $totalOverdue = $allProjects->sum(fn ($project) => $project->money['overdue']);
 
         $customers = Customer::query()
-            ->whereHas('projects', fn ($q) => $q->forUser($user))
+            ->whereHas('projects', fn ($projQuery) => $projQuery->forUser($user))
             ->orderBy('company')
             ->get();
 
@@ -114,6 +124,8 @@ class ProjectIndex extends Component
             ->whereIn('id', Project::forUser($user)->whereNotNull('coordinator_id')->distinct()->pluck('coordinator_id'))
             ->orderBy('name')
             ->get();
+
+        $salesPeople = User::where('role', 'Sales')->orderBy('name')->get();
 
         $projectTypes = Project::forUser($user)
             ->whereNotNull('project_type')
@@ -125,6 +137,7 @@ class ProjectIndex extends Component
             'projects' => $query->paginate(15),
             'customers' => $customers,
             'coordinators' => $coordinators,
+            'salesPeople' => $salesPeople,
             'projectTypes' => $projectTypes,
             'totalDue' => $totalDue,
             'totalOverdue' => $totalOverdue,

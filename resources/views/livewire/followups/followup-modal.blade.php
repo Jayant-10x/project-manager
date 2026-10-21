@@ -7,7 +7,7 @@
                         class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">— Select Customer —</option>
                     @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
                     @endforeach
                 </select>
                 @error('customer_id')

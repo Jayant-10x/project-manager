@@ -32,7 +32,7 @@
                 <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
                     <option value="">All customers</option>
                     @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
                     @endforeach
                 </select>
 
@@ -62,6 +62,15 @@
                     </select>
                 @endif
 
+                @if($salesPeople->isNotEmpty())
+                    <select wire:model.live="sales_person_id" class="i" style="width:auto; max-width: 160px;">
+                        <option value="">All salespeople</option>
+                        @foreach($salesPeople as $sp)
+                            <option value="{{ $sp->id }}">{{ $sp->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+
                 @if($projectTypes->isNotEmpty())
                     <select wire:model.live="project_type" class="i" style="width:auto">
                         <option value="">All types</option>
@@ -71,7 +80,7 @@
                     </select>
                 @endif
 
-                @if($search !== '' || $health !== '' || $status !== '' || $customer_id !== '' || $coordinator_id !== '' || $project_type !== '')
+                @if($search !== '' || $health !== '' || $status !== '' || $customer_id !== '' || $coordinator_id !== '' || $sales_person_id !== '' || $project_type !== '')
                     <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
@@ -93,51 +102,55 @@
                     <th>Customer</th>
                     <th>Coordinator</th>
                     <th>Health</th>
-                    <th class="num">Value</th>
-                    <th class="num">Received</th>
-                    <th class="num">Due</th>
+                    @if(auth()->user()->role !== 'Sales')
+                        <th class="num">Value</th>
+                        <th class="num">Received</th>
+                        <th class="num">Due</th>
+                    @endif
                     <th>Delivery</th>
                     <th></th>
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($projects as $p)
+                @forelse($projects as $project)
                     @php
-                        $msCount = $p->milestones->count();
-                        $doneMsCount = $p->milestones->where('done', true)->count();
+                        $msCount = $project->milestones->count();
+                        $doneMsCount = $project->milestones->where('done', true)->count();
                     @endphp
-                    <tr class="clickable" @click="Livewire.navigate('{{ route('projects.show', $p) }}')">
+                    <tr class="clickable" @click="Livewire.navigate('{{ route('projects.show', $project) }}')">
                         <td>
-                            <div class="strong">{{ $p->name }}</div>
+                            <div class="strong">{{ $project->name }}</div>
                             <div class="muted" style="font-size:10.9px">
-                                {{ $p->code }}
-                                @if($p->project_type)
-                                    · {{ $p->project_type }}
+                                {{ $project->code }}
+                                @if($project->project_type)
+                                    · {{ $project->project_type }}
                                 @endif
                                 @if($msCount > 0)
                                     · {{ $doneMsCount }}/{{ $msCount }} milestones
                                 @endif
                             </div>
                         </td>
-                        <td>{{ $p->customer?->company ?? '—' }}</td>
-                        <td class="muted">{{ $p->coordinator?->name ?? '—' }}</td>
+                        <td>{{ $project->customer?->display_name ?? '—' }}</td>
+                        <td class="muted">{{ $project->coordinator?->name ?? '—' }}</td>
                         <td>
-                            <x-health-badge :health="$p->health"/>
+                            <x-health-badge :health="$project->health"/>
                         </td>
-                        <td class="num">
-                            <x-money :value="$p->money['scheduled']"/>
-                        </td>
-                        <td class="num" style="color:#3d7a24">
-                            <x-money :value="$p->money['received']"/>
-                        </td>
-                        <td class="num font-bold"
-                            style="color:{{ $p->money['overdue'] > 0 ? '#d94b4b' : ($p->money['due'] > 0 ? '#96660f' : 'inherit') }}">
-                            <x-money :value="$p->money['due']"/>
-                        </td>
-                        <td class="nowrap muted">{{ $p->delivery_date?->format('d M') ?? '—' }}</td>
+                        @if(auth()->user()->role !== 'Sales')
+                            <td class="num">
+                                <x-money :value="$project->money['scheduled']"/>
+                            </td>
+                            <td class="num" style="color:#3d7a24">
+                                <x-money :value="$project->money['received']"/>
+                            </td>
+                            <td class="num font-bold"
+                                style="color:{{ $project->money['overdue'] > 0 ? '#d94b4b' : ($project->money['due'] > 0 ? '#96660f' : 'inherit') }}">
+                                <x-money :value="$project->money['due']"/>
+                            </td>
+                        @endif
+                        <td class="nowrap muted">{{ $project->delivery_date?->format('d M') ?? '—' }}</td>
                         <td>
                             <div class="row-actions">
-                                <a href="{{ route('projects.show', $p) }}" wire:navigate class="mini-btn inline-grid"
+                                <a href="{{ route('projects.show', $project) }}" wire:navigate class="mini-btn inline-grid"
                                    title="View" @click.stop>
                                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                         <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
@@ -145,7 +158,7 @@
                                     </svg>
                                 </a>
                                 <button type="button" class="mini-btn" title="Edit"
-                                        @click.stop="Livewire.dispatch('open-project-modal', { id: {{ $p->id }} })">
+                                        @click.stop="Livewire.dispatch('open-project-modal', { id: {{ $project->id }} })">
                                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                         <path d="M12 20h9"/>
                                         <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>

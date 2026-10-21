@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\AuditNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -30,16 +32,33 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        $user = User::where('email', $request->email)->where('status', 'Active')->first();
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        if ($user) {
+            $adminIds = User::where('role', 'Admin')->where('status', 'Active')->pluck('id');
+            $auditService = app(AuditNotificationService::class);
+
+            foreach ($adminIds as $adminId) {
+                $auditService->notify(
+                    $adminId,
+                    'auth',
+                    'Password Reset Requested',
+                    "{$user->name} ({$user->email}) requested a password reset.",
+                    'settings',
+                    $user->id
+                );
+            }
+
+            $auditService->log(
+                $user->id,
+                'Password Reset Requested',
+                'User',
+                $user->id,
+                '',
+                "User {$user->email} requested password reset from IP {$request->ip()}"
+            );
+        }
+
+        return back()->with('status', 'Password reset request has been sent to the admin. Please ask or wait for your temporary credentials.');
     }
 }

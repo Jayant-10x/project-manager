@@ -40,8 +40,11 @@ class UserModal extends Component
     #[Validate]
     public ?int $reporting_to = null;
 
+    #[Validate]
+    public ?float $target = 0.0;
+
     #[On('open-user-modal')]
-    public function openModal(?int $id = null): void
+    public function openModal(?int $id = null, ?string $role = null): void
     {
         $this->resetValidation();
         $this->reset();
@@ -51,17 +54,19 @@ class UserModal extends Component
             $user = User::findOrFail($id);
             $this->name = $user->name;
             $this->email = $user->email;
-            $this->phone = $user->phone ?? null;
+            $this->phone = $user->phone ?? '';
             $this->role = $user->role ?? 'Sales';
             $this->designation = $user->designation ?? 'Sales Person';
-            $this->city = $user->city ?? null;
-            $this->status = $user->status ?? 'Inactive';
+            $this->city = $user->city ?? '';
+            $this->status = $user->status ?? 'Active';
             $this->reporting_to = $user->reporting_to;
+            $this->target = $user->target !== null ? (float) $user->target : 0.0;
         } else {
-            $this->role = 'Sales';
-            $this->designation = 'Sales Person';
+            $this->role = $role ?? 'Sales';
+            $this->designation = $this->role === 'Sales' ? 'Sales Person' : '';
             $this->status = 'Active';
             $this->reporting_to = null;
+            $this->target = 0.0;
         }
 
         $this->dispatch('open-modal', 'user-modal');
@@ -77,8 +82,9 @@ class UserModal extends Component
             'reporting_to' => 'nullable|integer|exists:users,id',
             'designation' => 'nullable|string|min:2|max:60',
             'city' => 'nullable|string|min:2|max:60',
+            'target' => 'nullable|numeric|min:0',
             'status' => 'required|string|in:Active,Inactive',
-            'password' => [$this->userId ? 'nullable' : 'required', 'string', 'min:8', 'max:200', 'regex:/[A-Z]/', 'regex:/[a-z]/', 'regex:/[0-9]/'],
+            'password' => ['nullable', 'string', 'min:8', 'max:200', 'regex:/[A-Z]/', 'regex:/[a-z]/', 'regex:/[0-9]/'],
         ];
     }
 
@@ -90,8 +96,20 @@ class UserModal extends Component
         ];
     }
 
+    protected function validationAttributes(): array
+    {
+        return [
+            'target' => 'monthly target',
+            'reporting_to' => 'supervisor',
+        ];
+    }
+
     public function updated(string $propertyName): void
     {
+        if ($propertyName === 'target') {
+            $this->target = ($this->target === null || $this->target === '') ? 0.0 : (float) $this->target;
+        }
+
         $this->validateOnly($propertyName);
     }
 
@@ -108,8 +126,24 @@ class UserModal extends Component
         $this->phone = trim($this->phone);
         $this->designation = trim($this->designation);
         $this->city = trim($this->city);
+        if ($this->role === 'Sales') {
+            $this->target = ($this->target === null || $this->target === '') ? 0.0 : (float) $this->target;
+        } else {
+            $this->target = 0.0;
+        }
 
         $validated = $this->validate();
+
+        $validated['phone'] = ! empty($validated['phone']) ? $validated['phone'] : null;
+        $validated['city'] = ! empty($validated['city']) ? $validated['city'] : null;
+        $validated['designation'] = ! empty($validated['designation']) ? $validated['designation'] : null;
+        $validated['reporting_to'] = ! empty($validated['reporting_to']) ? (int) $validated['reporting_to'] : null;
+
+        if ($this->role === 'Sales') {
+            $validated['target'] = ($this->target === null || $this->target === '') ? 0.0 : (float) $this->target;
+        } else {
+            $validated['target'] = 0.0;
+        }
 
         if ($this->userId) {
             $user = User::findOrFail($this->userId);
@@ -151,6 +185,8 @@ class UserModal extends Component
             $tempPass = ! empty($validated['password']) ? $validated['password'] : 'Welcome@10x';
             $validated['password'] = $tempPass;
             $validated['must_change'] = true;
+            $validated['fail_count'] = 0;
+            $validated['locked_until'] = null;
             $validated['created_by'] = auth()->id();
             $newUser = User::create($validated);
 
@@ -166,9 +202,9 @@ class UserModal extends Component
 
         $this->reset();
         $this->dispatch('user-saved');
+        $this->dispatch('sales-saved');
         $this->dispatch('close-modal', 'user-modal');
         $this->dispatch('toast', ['msg' => 'User saved successfully', 'type' => 'ok']);
-        $this->redirect(route('settings.index'), navigate: true);
     }
 
     public function render()

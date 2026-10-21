@@ -17,12 +17,14 @@
   <img src="https://img.shields.io/badge/License-Proprietary-0B3D91?style=for-the-badge" alt="Proprietary License">
 </p>
 
+> [!TIP]
+> **Comprehensive Master Technical Reference Available**: For complete technical specifications, architectural evolution history, full database schema & ERD, deep component matrix, and consolidated historical defect registry (ISS-001 through ISS-053), see [**`project.md`**](project.md).
+
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [Architecture & Evolutionary Migration](#architecture--evolutionary-migration)
 - [Key Features](#key-features)
 - [System Architecture Diagram](#system-architecture-diagram)
 - [Livewire 4 & Alpine Runtime Conventions](#livewire-4--alpine-runtime-conventions)
@@ -32,8 +34,7 @@
 - [Livewire 4 Component Matrix](#livewire-4-component-matrix)
 - [Financial Engine & Calculations](#financial-engine--calculations)
 - [Production Deployment & Server Config](#production-deployment--server-config)
-- [Troubleshooting & Runbook](#troubleshooting--runbook)
-- [Defects & Cleanup Audit (`issues.md`)](#defects--cleanup-audit-issuesmd)
+- [Operational Maintenance & Runbook](#operational-maintenance--runbook)
 - [License](#license)
 
 ---
@@ -46,28 +47,16 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 
 ---
 
-## Architecture & Evolutionary Migration
-
-The project evolved through three foundational architectural stages:
-1. **Procedural Core PHP & Core JS**: Initial flat scripts (`index.php`, `api.php`, `config.php`, `public/js/crm-app.js`) handling database operations and client rendering.
-2. **Laravel REST API + Core JS**: An intermediate stage where database models and REST controllers (`app/Http/Controllers/Api/*`) were created while keeping the core JS (`public/js/crm-app.js`) intact to fetch from `/api.php` and `/v1/*`.
-3. **Full Livewire 4 SPA**: The current architecture, where all UI, forms, tables, modals, and actions were re-engineered as native Livewire 4 components (`app/Livewire/*` and `resources/views/livewire/*`).
-
-> [!NOTE]
-> All legacy API controllers, legacy routes (`routes/api.php`), dead services, and `public/js/crm-app.js` have been removed from the repository. All application interactions and endpoints are powered by native Livewire 4 components. See [**`issues.md`**](file:///c:/wamp64/www/project-manager/issues.md) for the complete defect registry and audit history.
-
----
-
 ## Key Features
 
 ### 📊 1. Executive Dashboard & Real-Time KPIs
 
-* **Receivables Strip:** Real-time aggregates for Total Scheduled Value, Collected Cash, Net Due, Overdue Installments, and Current Month Collections.
-* **Aging Buckets:** Automatic breakdown of delayed receivables into `0–30`, `31–60`, `61–90`, and `90+` day intervals.
-* **Collection Trend Analysis:** Trailing 6-month visual revenue performance sparkline.
-* **Daily Triage Queue:** Direct access to overdue payments, approaching client follow-ups, and at-risk project deadlines.
-* **Commercial Performance:** Sales-wise contracted volume, collected revenue, and collection progress bars.
-* **Operational Alerts:** Proactive tracking of upcoming Annual Maintenance Contract (AMC) expirations and pending project handovers.
+* **Receivables Strip:** Real-time financial aggregates including Total Scheduled Value `(sum(terms) where status != 'Cancelled')`, Collected Cash `(sum(payments))`, Net Due `(max(0, scheduled - received - tds))`, Overdue Installments `(sum(balance) where status = 'Overdue')`, and Current Month Collections `(sum(payments) where month(paid_on) = current_month)`.
+* **Aging Buckets:** Automatic breakdown of delayed receivables `(overdue terms grouped by days past due: 0–30, 31–60, 61–90, 90+)` to highlight aged receivables risk.
+* **Collection Trend Analysis:** Trailing 6-month visual revenue performance sparkline `(monthly sum(payments) over trailing 6 calendar months)`.
+* **Daily Triage Queue:** Direct access to overdue payments `(overdue terms sorted by due_date ASC)`, approaching client follow-ups `(next_date <= today + followup_alert_days)`, and at-risk project deadlines `(health in ['Delayed', 'At Risk'] sorted by delivery_date ASC)`.
+* **Commercial Performance:** Sales-wise contracted volume `(sum(project_value))`, collected revenue `(sum(payments))`, and collection progress bars `(round((collected / contracted) * 100, 1))`.
+* **Operational Alerts:** Proactive tracking of upcoming Annual Maintenance Contract (AMC) expirations `(amc_required = true AND amc_end <= today + renew_alert_days)` and pending project handovers `(status = 'Delivered' AND handover_done = false)`.
 * **Live Event Reactivity:** Listens for `payment-saved`, `payment-deleted`, `project-saved`, and `customer-saved` events to automatically refresh cards without full browser reloads.
 
 ### 🔔 2. Multi-Channel Notification Engine & Desktop Alerts
@@ -81,40 +70,47 @@ The project evolved through three foundational architectural stages:
 
 * **Mandatory Initial Password Change:** Middleware (`EnsurePasswordIsChanged`) intercepts authenticated sessions when `must_change = true`, redirecting users to the dedicated `/change-password` interface.
 * **Password Complexity Enforcement:** Strict validation requiring minimum 8 characters, at least 1 uppercase letter, 1 lowercase letter, and 1 numeric digit.
-* **Downline Hierarchy & Scoping:** Self-referencing user hierarchy (`reporting_to`) allowing managers to track coordinator team activity and project delivery downlines.
+* **Downline Hierarchy & RBAC Data Scoping:** Self-referencing user hierarchy (`reporting_to`) allowing managers to track coordinator team activity and project delivery downlines `(recursively resolved via getDownlineUserIds())`. Strict local query scopes (`Customer::forUser()` and `Project::forUser()`) enforce data privacy across roles: Sales users see only self-attributed customer records and basic project overviews; Coordinators see assigned projects and clients with financial reports hidden; Managers see departmental downlines; and Admins retain full global visibility.
+* **Financial Ledger Access Protection:** Sensitive money views (Payments, Payment Schedules, Reports) and column ledgers (Contract Value, Received, Due) are strictly gated and hidden from unauthorized sales personnel and coordinator tiers.
 
 ### 🎯 4. Today's Work Queue
 
-* **Daily Action Command Center:** Prioritized view of client follow-ups due today, overdue installments requiring collection, and deliverable risks.
+* **Daily Action Command Center:** Prioritized view of overdue installments `(today > due_date + grace_days AND balance > 0)`, upcoming installments `(due_date between today AND today + payment_alert_days)`, pending follow-ups `(next_date <= today + followup_alert_days)`, deliverable risks `(health in ['Delayed', 'At Risk'])`, and assigned tasks `(assigned_to = auth_id AND done = false)`.
 * **Interactive Triage:** Quick links to customer profiles and inline payment buttons pre-populating project and term parameters via `Livewire.dispatch('open-payment-modal', ...)`.
 
-### 📁 5. Customer Lifecycle & Bulk Onboarding
+### 📁 5. Customer Lifecycle, Identity & Fallback Display
 
-* **Comprehensive Client Dossiers:** Centralized company profiles with tax IDs (GSTIN/PAN), multi-address billing records, and industry tags.
-* **Sales Attribution:** Track which salesperson onboarded each client and monitor revenue vs. individual monthly targets.
+* **Comprehensive Client Dossiers:** Centralized customer profiles with tax IDs (GSTIN/PAN), multi-address billing records, 2-letter state codes, and industry tags.
+* **Nullable Company Support:** Individual clients and sole proprietorships can be onboarded without a registered company name (`company` is nullable with unique constraints).
+* **Deterministic Display Fallback:** Whenever a company name is not provided, the CRM displays `"{contact_name} (Client)"` (or `customer_code` if both are empty) across all data tables, dropdown selects, global search, and audit logs via `$customer->display_name` `(company ?: (contact_name ? "$contact_name (Client)" : customer_code))`.
+* **Sales Attribution & Quota Tracking:** Track which salesperson onboarded each client `(customers.sales_person_id)` and monitor revenue vs. individual monthly targets configured in the `users.target` column `(achieved_% = (collected / target) * 100)`.
 * **Bulk CSV Import:** Built-in spreadsheet parser supporting bulk client insertion with automatic atomic code generation (`CUS-XXXX`).
 * **Export Engine:** Filtered, UTF-8 BOM-encoded CSV data exports compatible with Microsoft Excel.
 
 ### 🚀 6. Project Delivery, Milestones & AMC Tracking
 
 * **Delivery Health States:** Discrete confidence states (`On Track`, `At Risk`, `Delayed`, `Completed`) with mandatory delay reasoning.
+* **Mandatory Coordinator & Start Date:** Projects strictly enforce assignment of an active Project Coordinator (`coordinator_id`) and project start date (`start_date`) for operational accountability.
+* **Reactive Customer Selection:** The Project Modal dynamically enables customer selection when creating new projects, and locks customer assignment (`@disabled($projectId)`) when editing existing contracts to preserve financial relationships.
+* **Auto-Split 30/40/30 Installment Wizard:** Single-click schedule calculation dividing contracted project value into Advance `(round(value * 0.30, 2))`, Mid-project `(round(value * 0.40, 2))`, and Final Delivery balance `(value - term1 - term2)`. Maps to delivery milestones when present, or staggers due dates (+0, +15, +30 days from start_date) if milestones have not yet been defined.
 * **Interactive Milestones:** Dynamic milestone checklist with completion checkboxes, due dates, sort ordering, and payment trigger linking.
-* **Multi-Mode Installment Schedulers:** Fixed-date calendar milestones, delivery-milestone-linked triggers, and single-click monthly recurring retainer generation.
 * **Annual Maintenance Contracts (AMC):** Dedicated contract tracking with configurable alert lead times and zero-default normalization (`cost`, `amc_amount`, `renew_alert_days`).
 * **Handover Governance:** Post-delivery checklist and formal client handover documentation.
 
 ### 💳 7. Financial Receivables & Installment Engine
 
-* **Automated Status Transitions:** Installments automatically transition between `Pending`, `Partial`, `Paid`, and `Overdue` based on actual receipts, TDS deductions, and grace periods.
+* **Automated Status Transitions:** Installments automatically transition between `Pending` `(payments = 0)`, `Partial` `(0 < received + tds < amount - 0.01)`, `Paid` `(received + tds >= amount - 0.01)`, and `Overdue` `(today > due_date + grace_days AND balance > 0)` based on actual receipts, TDS deductions, and grace periods.
 * **Zero-Default TDS Handling:** Normalized numerical inputs prevent MySQL `1048 Column 'tds' cannot be null` errors on untaxed settlements.
+* **Concurrency-Safe Sequence Generation:** `CodeGeneratorService` uses exclusive database row locks (`FOR UPDATE`) with automated counter self-healing `(next_code = max(counter, max(db_suffix)) + 1)` to prevent duplicate key collisions.
 * **Dual Currency Display:** Live in-memory toggle between INR (`₹`) and USD (`$`) via an Alpine store (`$store.currency`) initialized on `alpine:init`, fully preserved across SPA page transitions.
 
-### 📋 8. Tasks, Follow-ups, Documents & Audit
+### 📋 8. Tasks, Follow-ups, Documents, Audit & Password Administration
 
-* **Personal Checklist:** Coordinator task management with priority levels (`Low`, `Medium`, `High`, `Urgent`) and overdue indicators.
+* **Personal Checklist:** Coordinator task management with priority levels (`Low`, `Medium`, `High`, `Urgent`) and overdue indicators `(due_date < today AND done = false)`.
 * **Touchpoint Logger:** Multi-channel client interaction logging (`Call`, `Email`, `Meeting`, `WhatsApp`, `Note`) with next action alarms and role-scoped project binding.
 * **Document Management:** Secure storage of contracts, KYC documents, and delivery proofs up to 10 MB with public disk root isolation and in-browser PDF/image lightbox previews.
 * **Activity Audit Trail:** Immutable log of system mutations (`ActivityLog` / `activity_logs` table) recording creates, updates, payments, uploads, and deletions.
+* **Admin-Mediated Password Reset Workflow:** 1-Click temporary credential generation `(Temp{Year}@{PIN})` from `/settings`, automatically clearing account lockouts `(fail_count = 0, locked_until = null)`, setting `must_change = true`, logging audit trails, and dispatching in-app alerts without third-party email dependencies.
 
 ---
 
@@ -148,7 +144,7 @@ graph TD
         RoleScope --> M2["Customers: CustomerIndex, CustomerDetail, CustomerModal, CustomerImportModal"]
         RoleScope --> M3["Projects: ProjectIndex, ProjectDetail, ProjectModal, ScheduleModal, RecurringModal, MilestoneModal"]
         RoleScope --> M4["Money: PaymentIndex, PaymentModal, ScheduleIndex, ReportIndex"]
-        RoleScope --> M5["Records: DocumentIndex, DocumentUploadModal, DocumentPreviewModal, FollowupIndex, SalesIndex, SalesModal"]
+        RoleScope --> M5["Records: DocumentIndex, DocumentUploadModal, DocumentPreviewModal, FollowupIndex, SalesIndex"]
         RoleScope --> M6["System: NotificationIndex, NotificationDetail, NotificationBell, NotificationDrawer, AuditIndex, SettingIndex, UserModal"]
         AuthMiddleware --> M7["Auth: ForcePasswordChange (/change-password)"]
     end
@@ -185,7 +181,7 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
 2. **Global Event Broadcasting (`Livewire.dispatch`)**:
    Global layout-level modals (e.g. `<livewire:customers.customer-modal/>` or `<livewire:payments.payment-modal/>`) reside outside the DOM hierarchy of page tables. Triggers must use `Livewire.dispatch('event-name', payload)` instead of Alpine `$dispatch` to broadcast across independent component trees.
 3. **SPA Transitions (`Livewire.navigate`)**:
-   Navigating between views from clickable table rows must invoke `Livewire.navigate('url')` rather than legacy `window.location`. This avoids full browser reloads and maintains active Alpine store states (`$store.currency`, `$store.notifications`).
+   Navigating between views from clickable table rows must invoke `Livewire.navigate('url')` rather than full-page `window.location` browser reloads. This maintains active Alpine store states (`$store.currency`, `$store.notifications`) without flickering.
 4. **In-App Confirmation Modal System (`<x-confirm-modal>`)**:
    Destructive actions (deletions, logouts, unlinking, mark-all-read) and form modal discards use the unified in-app confirmation component (`<x-confirm-modal/>`) rather than native browser `confirm()` or `wire:confirm`. The component provides hardware-accelerated frosted glass backdrop blur (`backdrop-filter: blur(8px)`), distinct contextual operation icons (danger, warning, logout, info), customizable actions, and outside-click collision guards (`data-confirm-modal`).
 5. **Modal Unsaved Changes Guard (`isDirty`)**:
@@ -197,7 +193,7 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
 8. **Navigation & Dynamic Back History**:
    Secondary views and detail pages use `window.history.length > 1 ? window.history.back() : window.location.href = '...'` to navigate back to the user's previous filtered list state instead of hardcoded route jumps.
 9. **Schema Null vs. Default Synchronization**:
-   For database columns defined as `NOT NULL DEFAULT 0.00` (e.g., `projects.cost`, `projects.amc_amount`, `payments.tds`, `sales_persons.target`), Livewire components explicitly convert empty strings (`""`) to `0.00` before persistence, preventing MySQL `1048 Column cannot be null` errors.
+   For database columns defined as `NOT NULL DEFAULT 0.00` (e.g., `projects.cost`, `projects.amc_amount`, `payments.tds`, `users.target`), Livewire components explicitly convert empty strings (`""`) to `0.00` before persistence, preventing MySQL `1048 Column cannot be null` errors.
 
 ---
 
@@ -254,13 +250,12 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
 │   │   ├── Reports/
 │   │   │   └── ReportIndex.php                     # Collection rate, monthly sparkline, mode bars, aging, and variance
 │   │   ├── Sales/
-│   │   │   ├── SalesIndex.php                      # Salesperson revenue attribution, targets, and comparative table
-│   │   │   └── SalesModal.php                      # Sales representative registration and quota manager
+│   │   │   └── SalesIndex.php                      # Salesperson revenue attribution, targets, and comparative table
 │   │   ├── Schedule/
 │   │   │   └── ScheduleIndex.php                   # Master chronological installment timeline and CSV export
 │   │   ├── Settings/
 │   │   │   ├── SettingIndex.php                    # Operational threshold configuration, password manager, and user list
-│   │   │   └── UserModal.php                       # Staff account creator/editor with temporary password generator
+│   │   │   └── UserModal.php                       # Staff and sales account creator/editor with quota and credential provisioning
 │   │   ├── Tasks/
 │   │   │   └── TaskIndex.php                       # Coordinator checklist manager with priority flags and late indicators
 │   │   └── Today/
@@ -291,7 +286,6 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
 │       │   └── partials/sidebar.blade.php          # 14-module navigation sidebar with live counters
 │       └── livewire/                               # Paired Blade templates for all Livewire components
 ├── boost.json                              # Laravel Boost agent and skill registry
-├── issues.md                               # Local defect registry & audit scratchpad (gitignored)
 └── routes/
     ├── auth.php                            # Breeze authentication routes
     └── web.php                             # Authenticated routes mapping all Livewire modules & polling API
@@ -402,10 +396,10 @@ All operational modules are built as dedicated Livewire 4 full-page components a
 | | **5. My Tasks** | `tasks.index` | `Tasks\TaskIndex` | Priority checklist, due date late flags, sanitized selects |
 | **Money** | **6. Payments** | `payments.index` | `Payments\PaymentIndex` | `PaymentModal` with auto-balance calculation, non-null TDS defaults |
 | | **7. Payment Schedule** | `schedule.index` | `Schedule\ScheduleIndex` | Master timeline, trigger badges, CSV export, live recalculations |
-| | **8. Reports** | `reports.index` | `Reports\ReportIndex` | Monthly sparkline, mode bars, aging bars, variance table, SPA routing |
+| | **8. Reports** | `reports.index` | `Reports\ReportIndex` | Executive analytics: collection rate % `((received / scheduled) * 100)`, trailing 6-month sparkline `(monthly sum(payments))`, mode bars `(sum(payments) grouped by mode)`, aging bars `(overdue terms bucketed: 0–30, 31–60, 61–90, 90+ days)`, and delivery variance table `(milestone_% - collection_%)` |
 | **Records** | **9. Documents** | `documents.index` | `Documents\DocumentIndex` | `DocumentUploadModal` (public disk root), `DocumentPreviewModal` (lightbox) |
 | | **10. Follow-ups** | `followups.index` | `Followups\FollowupIndex` | Touchpoint feed, overdue alert banner, scoped project relations |
-| | **11. Sales Team** | `sales.index` | `Sales\SalesIndex` | `SalesModal` with unique name validation and quota tracking |
+| | **11. Sales Team** | `sales.index` | `Sales\SalesIndex` | Shared `UserModal` for quota tracking and credential management |
 | **System** | **12. Notifications** | `notifications.index`<br>`notifications.show` | `Notifications\NotificationIndex`<br>`Notifications\NotificationDetail` | `Components\NotificationBell`, `Components\NotificationDrawer`, deep linking |
 | | **13. Activity Log** | `audit.index` | `Audit\AuditIndex` | Color-coded action timeline, user attribution (`ActivityLog`) |
 | | **14. Settings** | `settings.index` | `Settings\SettingIndex` | `UserModal`, password complexity manager, threshold configurations |
@@ -413,37 +407,75 @@ All operational modules are built as dedicated Livewire 4 full-page components a
 
 ---
 
-## Financial Engine & Calculations
+## Financial Engine, Business Logic & Calculations
 
-Financial accounting rules are centralized within `App\Services\MoneyCalculationService` to ensure calculations match across dashboards, customer cards, project pages, and CSV exports:
+Financial accounting rules and domain automations are centralized within `App\Services\MoneyCalculationService`, `App\Services\CodeGeneratorService`, and model accessors to ensure consistent, predictable business logic throughout the application:
 
-### Core Formulations
+### 1. Core Financial Formulations (`MoneyCalculationService`)
 
-* **Total Scheduled Value:**
-  $$\text{Scheduled Gross} = \sum_{t \in \text{Terms}, \, t.\text{status} \neq \text{'Cancelled'}} t.\text{amount}$$
+* **Total Scheduled Value**:
+  * **Formula**: `scheduled = sum(term_amount) [where status != 'Cancelled']`
+  * **Working**: Sums active contract payment terms. Cancelled terms are excluded so only live commitments are counted.
 
-* **Net Cash Collected:**
-  $$\text{Cash Received} = \sum_{p \in \text{Payments}} p.\text{amount}$$
+* **Net Cash Collected**:
+  * **Formula**: `received = sum(payment_amount)`
+  * **Working**: Accumulates all verified monetary receipts across all payment channels (NEFT, RTGS, UPI, Cash, Cheque, Card).
 
-* **Tax Deducted at Source (TDS):**
-  $$\text{Withheld TDS} = \sum_{p \in \text{Payments}} p.\text{tds}$$
+* **Tax Deducted at Source (TDS)**:
+  * **Formula**: `tds = sum(tds_amount)`
+  * **Working**: In statutory compliance with Indian tax regulations, clients withhold TDS prior to settlement. The CRM credits this withheld tax directly against the invoice term balance alongside received cash.
 
-* **Remaining Balance Due:**
-  $$\text{Balance Due} = \max\left(0.00, \; \text{Scheduled Gross} - \text{Cash Received} - \text{Withheld TDS}\right)$$
+* **Remaining Balance Due**:
+  * **Formula**: `balance_due = max(0, scheduled - received - tds)`
+  * **Working**: Reflects outstanding receivables owed by clients. Clamped to `0.00` using `max(0, ...)` to prevent negative balance display in the event of minor rounding differences or overpayments.
 
-* **Overdue Balance:**
-  $$\text{Overdue Amount} = \sum_{t \in \text{Terms}, \, t.\text{status} = \text{'Overdue'}} \max\left(0.00, \; t.\text{amount} - t.\text{received} - t.\text{tds}\right)$$
+* **Overdue Balance**:
+  * **Formula**: `overdue = sum(term_balance) [where status = 'Overdue']`
+  * **Working**: Identifies delinquent revenue requiring immediate coordinator follow-up.
 
-* **Collection Rate Percentage:**
-  $$\text{Collection Rate (\%)} = \begin{cases} \text{round}\left(\frac{\text{Cash Received}}{\text{Scheduled Gross}} \times 100, 1\right) & \text{if } \text{Scheduled Gross} > 0 \\ 0.0 & \text{otherwise} \end{cases}$$
+* **Collection Rate Percentage**:
+  * **Formula**: `collection_rate_% = (received / scheduled) * 100` (rounded to 1 decimal place; `0.0%` if scheduled == 0)
+  * **Working**: Evaluates financial collection velocity across agency projects, customers, and salesperson portfolios.
 
-### Installment State Progression
+### 2. Installment State Machine & Transition Rules
 
-1. **`Cancelled`:** Manually cancelled installment terms.
-2. **`Paid`:** Cash received plus TDS equals or exceeds installment value ($(\text{Received} + \text{TDS}) \ge \text{Amount} - 0.01$).
-3. **`Partial`:** Partial payment has been received, but an outstanding balance remains ($0 < (\text{Received} + \text{TDS}) < \text{Amount} - 0.01$).
-4. **`Overdue`:** The current date exceeds the due date plus grace window ($\text{CurrentDate} > \text{DueDate} + \text{GraceDays}$) with an outstanding balance.
-5. **`Pending`:** Future-dated installment with zero payments logged.
+Installment statuses automatically refresh during read queries and payment entries based on the following deterministic criteria:
+1. **`Cancelled`**: Explicitly voided installment terms.
+2. **`Paid`**: `received + tds >= amount - 0.01` (fully cleared within 1-cent floating point tolerance).
+3. **`Partial`**: `0 < received + tds < amount - 0.01` (settlement initiated, outstanding balance remains).
+4. **`Overdue`**: `today > due_date + grace_days` AND `balance_due > 0`.
+5. **`Pending`**: `today <= due_date + grace_days` AND `received + tds == 0`.
+
+### 3. Auto-Split 30/40/30 Installment Wizard (`ProjectScheduleModal`)
+
+* **Formula**:
+  * **Advance (Term 1)**: `round(value * 0.30, 2)` (30% upfront retainer)
+  * **Mid-Project (Term 2)**: `round(value * 0.40, 2)` (40% milestone billing)
+  * **Final Delivery (Term 3)**: `value - term1 - term2` (30% remaining balance, guaranteeing exact penny settlement with zero floating-point drift)
+* **Working**:
+  * If project milestones exist: Links Term 1 to Milestone 1, Term 2 to the middle milestone, and Term 3 to the final milestone, synchronizing payment due dates with milestone target dates.
+  * If no milestones exist: Gracefully staggers installment due dates (+0 days for Advance, +15 days for Mid-Project, and +30 days for Final Delivery) without throwing validation errors.
+
+### 4. Concurrency-Safe Sequence Engine & Counter Auto-Healing (`CodeGeneratorService`)
+
+* **Formula**: `next_counter = max(current_counter, max(db_suffix)) + 1`
+* **Working**:
+  1. Issues an exclusive row-level lock: `SELECT value FROM counters WHERE name = ? FOR UPDATE`.
+  2. Queries the target table for the highest existing numerical suffix (`MAX(CAST(SUBSTRING(code, prefix_length + 1) AS UNSIGNED))`).
+  3. If the counter value has fallen behind existing records (due to seeders or manual SQL inserts), it automatically updates the counter ceiling to match reality before generating the next formatted code (e.g. `CUS-0005`, `PJT-0008`, `RCP-0004`). This permanently prevents `500 UniqueConstraintViolationException` errors.
+
+### 5. Customer Identity & Fallback Display Rule (`Customer` Model)
+
+* **Formula**:
+  * When `company` is provided: `Company Name` (e.g. *"Apex Global Logistics Pvt Ltd"*)
+  * When `company` is absent: `Contact Person (Client)` (e.g. *"Rajesh Khanna (Client)"*)
+  * When both are empty: `Customer Code` (e.g. *"CUS-0008"*)
+* **Working**: Centralized in the `display_name` Eloquent accessor (`$customer->display_name`), ensuring clean, non-empty labels across all tables, modal dropdown selects, global search results, and activity audit logs.
+
+### 6. Admin-Mediated Password Reset Workflow (`SettingIndex`)
+
+* **Formula**: `Temporary Password = "Temp" . Current Year . "@" . 4-Digit Secure Random PIN` (e.g. `"Temp2026@4892"`)
+* **Working**: Generates a compliant temporary password on-demand from the Settings user list, resets failed login counters (`fail_count = 0`), clears lockout timestamps (`locked_until = null`), flags `must_change = true`, records an audit log entry, and dispatches an in-app alert to the user.
 
 ---
 
@@ -508,30 +540,47 @@ server {
 
 ---
 
-## Troubleshooting & Runbook
+## Operational Maintenance & Runbook
 
-### 1. Form Submissions Fail Silently or Event Listeners Do Not Respond
-* **Cause:** Standalone Alpine was manually imported in `resources/js/app.js` (`import Alpine from 'alpinejs'; Alpine.start();`), creating two concurrent Alpine runtimes that detached Livewire's `wire:submit` and `wire:model` listeners.
-* **Fix:** Remove the standalone import and startup invocation from `resources/js/app.js`. Livewire 4 boots Alpine automatically.
+### 1. Application Cache & Optimization
+After deploying code updates or modifying environment configurations, clear and rebuild application caches:
+```bash
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
 
-### 2. SQL Integrity Violation: `Column 'customer_code' (or 'project_code') doesn't have a default value`
-* **Cause:** The form or service submitted `'code'` instead of `'customer_code'` or `'project_code'`.
-* **Fix:** Ensure code generation assigns directly to `$validated['customer_code']` and `$validated['project_code']`. See [**`issues.md`**](file:///c:/wamp64/www/project-manager/issues.md) for affected files.
+### 2. Frontend Asset Recompilation
+When modifying Blade templates, Tailwind classes, or Alpine components:
+```bash
+# Production production build
+npm run build
 
-### 3. TypeError: `Cannot assign null to property of type float`
-* **Cause:** Form fields bound to typed properties (e.g. `public float $cost = 0.0;`) receive empty strings `""` when cleared by users.
-* **Fix:** Declare properties as nullable (`public ?float $cost = 0.0;`) and cast them within the component's `updated()` lifecycle hook.
+# Local live-reload development
+npm run dev
+```
 
-### 4. Modals Fail to Open from Table Buttons
-* **Cause:** The button used Alpine DOM `$dispatch('open-modal', 'modal-name')`, but the target modal component was registered globally in `resources/views/layouts/app.blade.php` outside the table's DOM hierarchy.
-* **Fix:** Dispatch the event across Livewire components via `Livewire.dispatch('open-modal-name', { ... })`.
+### 3. Public File Storage Verification
+Ensure user-uploaded KYC documents, contracts, and proposals are publicly accessible:
+```bash
+php artisan storage:link
+```
+Verify that `storage/app/public` exists and web server has read/write permissions on `storage/` and `bootstrap/cache/`:
+```bash
+chmod -R 775 storage bootstrap/cache
+```
 
----
+### 4. Sequence Generator & Counter Synchronization
+Entity identifiers (`CUS-XXXX`, `PJT-XXXX`, `RCP-XXXX`) utilize row-locking with automated ceiling self-healing. If seeders or manual SQL records are inserted directly into the database, `CodeGeneratorService` automatically reconciles the counter table to `max(counter, highest existing suffix) + 1` upon the next create request without manual intervention.
 
-## Defects & Cleanup Audit (`issues.md`)
-
-For a line-by-line defect register, column mismatch breakdown, and an audit of the purged legacy API controllers, unused services, and core JS files, consult:
-📄 [**`issues.md` — Project Issues, Defect Registry & Unused Code Audit**](file:///c:/wamp64/www/project-manager/issues.md)
+### 5. Desktop Notification Polling Verification
+Verify the lightweight 30-second polling endpoint responds with valid JSON for the authenticated user session:
+```bash
+# Inspect API route list
+php artisan route:list --path=api/notifications/poll
+```
+In the browser network tab, verify `GET /api/notifications/poll` returns status `200 OK` with payload `{"unread_count": N, "notifications": [...]}`.
 
 ---
 

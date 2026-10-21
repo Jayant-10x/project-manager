@@ -7,13 +7,18 @@ use App\Models\User;
 use App\Services\AuditNotificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
 class SettingIndex extends Component
 {
+    #[Url]
+    public ?int $highlight_user = null;
+
     // Alert & System Settings
     public ?int $paymentAlertDays = 7;
 
@@ -150,6 +155,74 @@ class SettingIndex extends Component
         $this->dispatch('toast', ['msg' => 'Password updated successfully', 'type' => 'ok']);
     }
 
+    public ?array $tempCredentials = null;
+
+    public function resetUserPassword(int $id): void
+    {
+        if (auth()->user()->role !== 'Admin') {
+            $this->dispatch('toast', ['msg' => 'Only administrators can reset user credentials.', 'type' => 'err']);
+
+            return;
+        }
+
+        $user = User::with('reportingTo')->findOrFail($id);
+
+        // Generate a secure alphanumeric temporary password
+        $randomPart = Str::random(6);
+        $temporaryPassword = 'Temp#'.ucfirst($randomPart).rand(10, 99);
+
+        $user->password = $temporaryPassword;
+        $user->must_change = true;
+        $user->fail_count = 0;
+        $user->locked_until = null;
+        $user->save();
+
+        app(AuditNotificationService::class)->log(
+            auth()->id(),
+            'Reset User Password',
+            'User',
+            $user->id,
+            '',
+            'Admin '.auth()->user()->name." generated temporary password for {$user->name}"
+        );
+
+        app(AuditNotificationService::class)->notify(
+            $user->id,
+            'auth',
+            'Password Reset by Administrator',
+            'Your password was reset by an administrator. Please log in with your temporary password and set a new personal password.',
+            'settings'
+        );
+
+        $loginUrl = url('/login');
+        $phone = preg_replace('/[^0-9]/', '', $user->phone ?? '');
+        $whatsappText = "10X Agency CRM Login Credentials:\nURL: {$loginUrl}\nEmail: {$user->email}\nTemporary Password: {$temporaryPassword}\nNote: You will be prompted to set your personal password upon sign-in.";
+
+        $this->tempCredentials = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone ?? '',
+            'role' => $user->role,
+            'designation' => $user->designation ?? $user->role,
+            'supervisor' => $user->reportingTo?->name,
+            'password' => $temporaryPassword,
+            'loginUrl' => $loginUrl,
+            'fullText' => $whatsappText,
+            'whatsappUrl' => $phone ? "https://wa.me/{$phone}?text=".rawurlencode($whatsappText) : null,
+            'mailtoUrl' => "mailto:{$user->email}?subject=".rawurlencode('10X Agency CRM — Your Temporary Password').'&body='.rawurlencode($whatsappText),
+        ];
+
+        $this->dispatch('open-modal', 'temp-credentials-modal');
+        $this->dispatch('toast', ['msg' => 'Temporary password generated successfully', 'type' => 'ok']);
+    }
+
+    public function closeTempCredentialsModal(): void
+    {
+        $this->tempCredentials = null;
+        $this->dispatch('close-modal', 'temp-credentials-modal');
+    }
+
     public function deleteUser(int $id): void
     {
         if (auth()->user()->role !== 'Admin') {
@@ -210,11 +283,26 @@ class SettingIndex extends Component
 
     public function render()
     {
-        $users = User::with('reportingTo')->orderByRaw("CASE role WHEN 'Admin' THEN 1 WHEN 'Manager' THEN 2 WHEN 'Coordinator' THEN 3 WHEN 'Sales' THEN 4 ELSE 5 END")->orderBy('name')->get();
+        $currentUser = auth()->user();
+
+        if ($currentUser->role === 'Admin') {
+            $users = User::with('reportingTo')
+                ->orderByRaw("CASE role WHEN 'Admin' THEN 1 WHEN 'Manager' THEN 2 WHEN 'Coordinator' THEN 3 WHEN 'Sales' THEN 4 ELSE 5 END")
+                ->orderBy('name')
+                ->get();
+        } elseif (in_array($currentUser->role, ['Manager', 'Coordinator'])) {
+            $users = User::whereIn('id', $currentUser->getDownlineUserIds())
+                ->with('reportingTo')
+                ->orderByRaw("CASE role WHEN 'Admin' THEN 1 WHEN 'Manager' THEN 2 WHEN 'Coordinator' THEN 3 WHEN 'Sales' THEN 4 ELSE 5 END")
+                ->orderBy('name')
+                ->get();
+        } else {
+            $users = collect();
+        }
 
         return view('livewire.settings.setting-index', [
             'users' => $users,
-            'me' => auth()->user(),
+            'me' => $currentUser,
         ])->layoutData([
             'header' => 'Settings',
             'subtitle' => 'Alert days, company profile and your password',

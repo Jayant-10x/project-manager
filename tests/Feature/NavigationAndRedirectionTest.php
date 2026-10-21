@@ -23,11 +23,18 @@ class NavigationAndRedirectionTest extends TestCase
 
     protected User $admin;
 
+    protected User $coordinator;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->admin = User::factory()->create([
             'role' => 'Admin',
+            'status' => 'Active',
+            'must_change' => false,
+        ]);
+        $this->coordinator = User::factory()->create([
+            'role' => 'Coordinator',
             'status' => 'Active',
             'must_change' => false,
         ]);
@@ -84,7 +91,9 @@ class NavigationAndRedirectionTest extends TestCase
             'customer_id' => $customer->id,
             'status' => 'In Progress',
             'health' => 'On Track',
+            'coordinator_id' => $this->coordinator->id,
             'sales_person_id' => $this->admin->id,
+            'start_date' => now()->toDateString(),
         ]);
 
         Livewire::test(ProjectModal::class)
@@ -111,6 +120,7 @@ class NavigationAndRedirectionTest extends TestCase
             ->call('loadProject')
             ->set('name', 'Brand New Project')
             ->set('customer_id', $customer->id)
+            ->set('coordinator_id', $this->coordinator->id)
             ->set('sales_person_id', $this->admin->id)
             ->set('value', 25000)
             ->set('cost', 10000)

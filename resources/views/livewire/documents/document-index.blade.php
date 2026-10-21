@@ -27,7 +27,7 @@
                 <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
                     <option value="">All customers</option>
                     @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
                     @endforeach
                 </select>
 
@@ -91,7 +91,7 @@
                         <div class="doc-m text-xs text-[#8894ac] mt-0.5">
                             {{ $doc->file_name }} · {{ $doc->size_kb }} KB
                             @if($doc->customer)
-                                · {{ $doc->customer->company }}
+                                · {{ $doc->customer->display_name }}
                             @endif
                             @if($doc->project)
                                 / {{ $doc->project->code }}

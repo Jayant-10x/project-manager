@@ -77,7 +77,7 @@ class PaymentModal extends Component
             $project = Project::with('customer')->find($this->project_id);
             if ($project) {
                 $dueFormatted = number_format($project->money['due'], 0);
-                $this->projectSub = ($project->customer ? $project->customer->company.' · ' : '').'due ₹'.$dueFormatted;
+                $this->projectSub = ($project->customer ? $project->customer->display_name.' · ' : '').'due ₹'.$dueFormatted;
 
                 return;
             }

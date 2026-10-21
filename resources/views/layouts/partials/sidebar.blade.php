@@ -57,28 +57,32 @@
         </a>
 
         <!-- 3. Money -->
-        <div class="nav-label">Money</div>
-        <a href="{{ route('payments.index') }}" wire:navigate
-           class="nav-item {{ request()->routeIs('payments.*') ? 'active' : '' }}" title="Payments">
-            <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle
-                        cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg></span>
-            <span class="lbl">Payments</span>
-        </a>
-        <a href="{{ route('schedule.index') }}" wire:navigate
-           class="nav-item {{ request()->routeIs('schedule.*') ? 'active' : '' }}" title="Payment Schedule">
-            <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path
-                        d="M16 2v4M8 2v4M3 10h18"/></svg></span>
-            <span class="lbl">Payment Schedule</span>
-        </a>
-        <a href="{{ route('reports.index') }}" wire:navigate
-           class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}" title="Reports">
-            <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="11" width="3"
-                                                                                       height="6"/><rect x="12" y="7"
-                                                                                                         width="3"
-                                                                                                         height="10"/><rect
-                        x="17" y="13" width="3" height="4"/></svg></span>
-            <span class="lbl">Reports</span>
-        </a>
+        @if(in_array($user->role, ['Admin', 'Manager', 'Coordinator']))
+            <div class="nav-label">Money</div>
+            <a href="{{ route('payments.index') }}" wire:navigate
+               class="nav-item {{ request()->routeIs('payments.*') ? 'active' : '' }}" title="Payments">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle
+                            cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg></span>
+                <span class="lbl">Payments</span>
+            </a>
+            <a href="{{ route('schedule.index') }}" wire:navigate
+               class="nav-item {{ request()->routeIs('schedule.*') ? 'active' : '' }}" title="Payment Schedule">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path
+                            d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+                <span class="lbl">Payment Schedule</span>
+            </a>
+            @if(in_array($user->role, ['Admin', 'Manager']))
+                <a href="{{ route('reports.index') }}" wire:navigate
+                   class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}" title="Reports">
+                    <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="11" width="3"
+                                                                                                height="6"/><rect x="12" y="7"
+                                                                                                                  width="3"
+                                                                                                                  height="10"/><rect
+                                x="17" y="13" width="3" height="4"/></svg></span>
+                    <span class="lbl">Reports</span>
+                </a>
+            @endif
+        @endif
 
         <!-- 4. Records -->
         <div class="nav-label">Records</div>

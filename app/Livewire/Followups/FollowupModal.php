@@ -118,7 +118,7 @@ class FollowupModal extends Component
             : collect();
 
         return view('livewire.followups.followup-modal', [
-            'customers' => Customer::orderBy('company')->get(),
+            'customers' => Customer::orderByRaw('COALESCE(NULLIF(company, ""), contact_name) ASC')->get(),
             'availableProjects' => $availableProjects,
         ]);
     }

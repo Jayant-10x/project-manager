@@ -26,7 +26,7 @@
             <div class="text-xs">
                 <b>{{ $dueList->count() }} follow-ups are pending.</b><br>
                 @foreach($dueList->take(4) as $d)
-                    <div>{{ $d->customer?->company }} — {{ $d->next_note ?: $d->summary }}
+                    <div>{{ $d->customer?->display_name }} — {{ $d->next_note ?: $d->summary }}
                         ({{ $d->next_date?->format('d M') }})
                     </div>
                 @endforeach
@@ -49,7 +49,7 @@
                 <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
                     <option value="">All customers</option>
                     @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
                     @endforeach
                 </select>
 
@@ -84,7 +84,7 @@
     <!-- Follow-ups History Card -->
     <div class="card">
         <div class="card-body p-0">
-            @forelse($followups as $f)
+            @forelse($followups as $followup)
                 @php
                     $kindColors = [
                         'Call'     => '#0b3d91',
@@ -93,22 +93,22 @@
                         'WhatsApp' => '#5aa236',
                         'Note'     => '#8894ac',
                     ];
-                    $c = $kindColors[$f->type] ?? '#8894ac';
-                    $isOverdue = $f->next_date && $f->next_date->toDateString() < $today;
+                    $badgeColor = $kindColors[$followup->type] ?? '#8894ac';
+                    $isOverdue = $followup->next_date && $followup->next_date->toDateString() < $today;
                 @endphp
                 <div
                     class="fu flex items-start gap-3 p-3.5 border-b last:border-b-0 border-[#eef2f9] hover:bg-slate-50 transition">
-                    <span class="fu-ico flex-shrink-0" style="background: {{ $c }}1a; color: {{ $c }}">
-                        @if($f->type === 'Meeting')
+                    <span class="fu-ico flex-shrink-0" style="background: {{ $badgeColor }}1a; color: {{ $badgeColor }}">
+                        @if($followup->type === 'Meeting')
                             <svg viewBox="0 0 24 24" class="w-4 h-4"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle
                                     cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>
-                        @elseif($f->type === 'Email')
+                        @elseif($followup->type === 'Email')
                             <svg viewBox="0 0 24 24" class="w-4 h-4"><rect x="2" y="4" width="20" height="16" rx="2"/><path
                                     d="M22 6l-10 7L2 6"/></svg>
-                        @elseif($f->type === 'WhatsApp')
+                        @elseif($followup->type === 'WhatsApp')
                             <svg viewBox="0 0 24 24" class="w-4 h-4"><path
                                     d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                        @elseif($f->type === 'Note')
+                        @elseif($followup->type === 'Note')
                             <svg viewBox="0 0 24 24" class="w-4 h-4"><path
                                     d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path
                                     d="M14 2v6h6"/></svg>
@@ -119,31 +119,31 @@
                     </span>
 
                     <div style="flex:1;min-width:0">
-                        <div class="fu-s font-semibold text-sm text-[#0d1b34]">{{ $f->summary }}</div>
-                        @if($f->detail)
-                            <div class="fu-t text-xs text-gray-600 mt-1 leading-relaxed">{{ $f->detail }}</div>
+                        <div class="fu-s font-semibold text-sm text-[#0d1b34]">{{ $followup->summary }}</div>
+                        @if($followup->detail)
+                            <div class="fu-t text-xs text-gray-600 mt-1 leading-relaxed">{{ $followup->detail }}</div>
                         @endif
                         <div class="fu-t text-xs text-[#8894ac] mt-1">
-                            @if($f->customer)
-                                <a href="{{ route('customers.show', $f->customer_id) }}" wire:navigate class="link">
-                                    {{ $f->customer->company }}
+                            @if($followup->customer)
+                                <a href="{{ route('customers.show', $followup->customer_id) }}" wire:navigate class="link">
+                                    {{ $followup->customer->display_name }}
                                 </a>
                             @endif
-                            @if($f->project)
-                                · {{ $f->project->code }}
+                            @if($followup->project)
+                                · {{ $followup->project->code }}
                             @endif
-                            · {{ $f->type }} · {{ $f->happened_on->format('d M H:i') }}
-                            @if($f->createdBy)
-                                · {{ $f->createdBy->name }}
+                            · {{ $followup->type }} · {{ $followup->happened_on->format('d M H:i') }}
+                            @if($followup->createdBy)
+                                · {{ $followup->createdBy->name }}
                             @endif
                         </div>
 
-                        @if($f->next_date)
+                        @if($followup->next_date)
                             <div class="mt-2">
                                 <span class="badge {{ $isOverdue ? 'b-red' : 'b-navy' }}">
-                                    Next: {{ $f->next_date->format('d M Y') }}
-                                    @if($f->next_note)
-                                        — {{ $f->next_note }}
+                                    Next: {{ $followup->next_date->format('d M Y') }}
+                                    @if($followup->next_note)
+                                        — {{ $followup->next_note }}
                                     @endif
                                 </span>
                             </div>
@@ -160,7 +160,7 @@
                                 danger: true,
                                 wire: $wire,
                                 action: 'deleteFollowup',
-                                params: {{ $f->id }}
+                                params: {{ $followup->id }}
                             })"
                             title="Remove follow-up">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">

@@ -96,29 +96,34 @@ class DocumentIndex extends Component
     {
         $user = auth()->user();
         $projectIds = Project::forUser($user)->pluck('id');
+        $customerIds = Customer::forUser($user)->pluck('id');
 
         $query = Document::query()
-            ->where(function ($q) use ($projectIds) {
-                $q->whereIn('project_id', $projectIds)
-                    ->orWhereNull('project_id');
+            ->where(function ($documentQuery) use ($projectIds, $customerIds) {
+                $documentQuery->whereIn('project_id', $projectIds)
+                    ->orWhere(function ($subQuery) use ($customerIds) {
+                        $subQuery->whereNull('project_id')
+                            ->whereIn('customer_id', $customerIds);
+                    });
             })
             ->with(['customer', 'project', 'uploadedBy'])
-            ->when($this->category, fn ($q) => $q->where('category', $this->category))
-            ->when($this->customer_id, fn ($q) => $q->where('customer_id', $this->customer_id))
-            ->when($this->project_id, fn ($q) => $q->where('project_id', $this->project_id))
-            ->when($this->search, function ($q) {
+            ->when($this->category, fn ($documentQuery) => $documentQuery->where('category', $this->category))
+            ->when($this->customer_id, fn ($documentQuery) => $documentQuery->where('customer_id', $this->customer_id))
+            ->when($this->project_id, fn ($documentQuery) => $documentQuery->where('project_id', $this->project_id))
+            ->when($this->search, function ($documentQuery) {
                 $term = '%'.trim($this->search).'%';
-                $q->where(function ($sub) use ($term) {
-                    $sub->where('title', 'like', $term)
+                $documentQuery->where(function ($subQuery) use ($term) {
+                    $subQuery->where('title', 'like', $term)
                         ->orWhere('file_name', 'like', $term)
                         ->orWhere('category', 'like', $term)
-                        ->orWhereHas('customer', fn ($c) => $c->where('company', 'like', $term))
-                        ->orWhereHas('project', fn ($p) => $p->where('name', 'like', $term)->orWhere('code', 'like', $term));
+                        ->orWhereHas('customer', fn ($customerQuery) => $customerQuery->where('company', 'like', $term)->orWhere('contact_name', 'like', $term))
+                        ->orWhereHas('project', fn ($projectQuery) => $projectQuery->where('name', 'like', $term)->orWhere('code', 'like', $term));
                 });
             })
             ->orderByDesc('id');
 
         $customers = Customer::query()
+            ->forUser($user)
             ->whereHas('documents')
             ->orderBy('company')
             ->get();

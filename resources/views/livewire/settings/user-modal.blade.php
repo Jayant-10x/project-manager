@@ -1,6 +1,6 @@
 <x-modal name="user-modal"
-         :title="$userId ? 'Edit User' : 'Add User'"
-         sub="Staff account and role management with credential provisioning">
+         :title="$userId ? ($role === 'Sales' ? 'Edit Salesperson' : 'Edit User') : ($role === 'Sales' ? 'Add Salesperson' : 'Add User')"
+         :sub="$role === 'Sales' ? 'Sales account and target management with credential provisioning' : 'Staff account and role management with credential provisioning'">
     <form wire:submit="save" novalidate>
         <div class="form-grid">
             <label class="f full">
@@ -99,12 +99,25 @@
                 @enderror
             </label>
 
+            @if($role === 'Sales')
+                <label class="f">
+                    <span>Monthly Target (₹)</span>
+                    <input wire:model.live.blur="target"
+                           type="number" step="0.01" min="0"
+                           class="i @error('target') border-red-500! bg-red-50/20! @enderror"
+                           placeholder="e.g. 500000">
+                    @error('target')
+                    <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
+                    @enderror
+                </label>
+            @endif
+
             <label class="f">
-                <span>{{ $userId ? 'New password (optional)' : str('Temporary password'." <span class='text-red-500'>*</span>")->toHtmlString() }}</span>
+                <span>{{ $userId ? 'New password (optional)' : 'Temporary password (optional, defaults to Welcome@10x)' }}</span>
                 <input wire:model.live.blur="password"
                        type="password"
                        class="i @error('password') border-red-500! bg-red-50/20! @enderror"
-                       placeholder="{{ $userId ? 'Leave blank to preserve existing password' : 'Min 8 chars, 1 uppercase, 1 lowercase, 1 number' }}">
+                       placeholder="{{ $userId ? 'Leave blank to preserve existing password' : 'Leave blank for default (Welcome@10x)' }}">
                 @error('password')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
@@ -113,7 +126,7 @@
 
         <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
             <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
-            <button type="submit" class="btn btn-primary">{{ $userId ? 'Save changes' : 'Add user' }}</button>
+            <button type="submit" class="btn btn-primary">{{ $userId ? 'Save changes' : ($role === 'Sales' ? 'Add salesperson' : 'Add user') }}</button>
         </div>
     </form>
 </x-modal>

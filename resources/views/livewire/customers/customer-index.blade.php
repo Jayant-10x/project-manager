@@ -101,64 +101,68 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($customers as $c)
+                @forelse($customers as $customer)
                     @php
-                        $sched = (float) $c->projects->sum(fn($p) => $p->money['scheduled']);
-                        $rec = (float) $c->projects->sum(fn($p) => $p->money['received']);
-                        $due = (float) $c->projects->sum(fn($p) => $p->money['due']);
-                        $overdue = (float) $c->projects->sum(fn($p) => $p->money['overdue']);
-                        $r = $sched > 0 ? min(100, round(($rec / $sched) * 100)) : 0;
-                        $payCls = $overdue > 0 ? 'b-red' : ($due > 0 ? 'b-amber' : ($sched > 0 ? 'b-green' : 'b-grey'));
-                        $payLbl = $overdue > 0 ? 'Overdue' : ($due > 0 ? 'Pending' : ($sched > 0 ? 'Cleared' : '—'));
+                        $scheduledAmount = (float) $customer->projects->sum(fn ($proj) => $proj->money['scheduled']);
+                        $receivedAmount = (float) $customer->projects->sum(fn ($proj) => $proj->money['received']);
+                        $dueAmount = (float) $customer->projects->sum(fn ($proj) => $proj->money['due']);
+                        $overdueAmount = (float) $customer->projects->sum(fn ($proj) => $proj->money['overdue']);
+                        $collectionRate = $scheduledAmount > 0 ? min(100, round(($receivedAmount / $scheduledAmount) * 100)) : 0;
+                        $paymentClass = $overdueAmount > 0 ? 'b-red' : ($dueAmount > 0 ? 'b-amber' : ($scheduledAmount > 0 ? 'b-green' : 'b-grey'));
+                        $paymentLabel = $overdueAmount > 0 ? 'Overdue' : ($dueAmount > 0 ? 'Pending' : ($scheduledAmount > 0 ? 'Cleared' : '—'));
                     @endphp
-                    <tr class="clickable" onclick="window.location='{{ route('customers.show', $c) }}'">
+                    <tr class="clickable" onclick="window.location='{{ route('customers.show', $customer) }}'">
                         <td>
-                            <div class="strong">{{ $c->company }}</div>
+                            <div
+                                class="strong">{{ $customer->display_name }}</div>
                             <div class="muted" style="font-size:10.9px">
-                                {{ $c->code }}
-                                @if($c->contact_name)
-                                    · {{ $c->contact_name }}
+                                {{ $customer->code }}
+                                @if($customer->contact_name)
+                                    · {{ $customer->contact_name }}
                                 @endif
-                                @if($c->city)
-                                    · {{ $c->city }}
+                                @if($customer->city)
+                                    · {{ $customer->city }}
                                 @endif
                             </div>
                         </td>
                         <td>
-                            @if($c->salesPerson)
-                                <span class="pill">{{ $c->salesPerson->name }}</span>
+                            @if($customer->salesPerson)
+                                <span class="pill">{{ $customer->salesPerson->name }}</span>
                             @else
                                 <span class="muted">—</span>
                             @endif
                         </td>
-                        <td>{{ $c->projects->count() }}</td>
+                        <td>{{ $customer->projects->count() }}</td>
                         <td class="num">
-                            <x-money :value="$sched"/>
+                            <x-money :value="$scheduledAmount"/>
                         </td>
                         <td class="num" style="color:#3d7a24">
-                            <x-money :value="$rec"/>
+                            <x-money :value="$receivedAmount"/>
                         </td>
-                        <td class="num font-bold" style="color:{{ $due > 0 ? '#96660f' : 'inherit' }}">
-                            <x-money :value="$due"/>
+                        <td class="num font-bold" style="color:{{ $dueAmount > 0 ? '#96660f' : 'inherit' }}">
+                            <x-money :value="$dueAmount"/>
                         </td>
                         <td style="min-width:120px">
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                                <span class="badge dot {{ $payCls }}">{{ $payLbl }}</span>
-                                <span class="text-xs text-muted font-semibold" style="font-size:11px;color:var(--muted);font-weight:600">{{ $r }}%</span>
+                            <div
+                                style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                                <span class="badge dot {{ $paymentClass }}">{{ $paymentLabel }}</span>
+                                <span class="text-xs text-muted font-semibold"
+                                      style="font-size:11px;color:var(--muted);font-weight:600">{{ $collectionRate }}%</span>
                             </div>
                             <div class="bar" style="height:5px">
-                                <i style="width:{{ $r }}%"></i>
+                                <i style="width:{{ $collectionRate }}%"></i>
                             </div>
                         </td>
                         <td>
                             <span
-                                class="badge {{ $c->status === 'Active' ? 'b-green' : ($c->status === 'Churned' ? 'b-red' : 'b-grey') }}">
-                                {{ $c->status }}
+                                class="badge {{ $customer->status === 'Active' ? 'b-green' : ($customer->status === 'Churned' ? 'b-red' : 'b-grey') }}">
+                                {{ $customer->status }}
                             </span>
                         </td>
                         <td>
                             <div class="row-actions">
-                                <a href="{{ route('customers.show', $c) }}" wire:navigate class="mini-btn inline-grid"
+                                <a href="{{ route('customers.show', $customer) }}" wire:navigate
+                                   class="mini-btn inline-grid"
                                    title="View">
                                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                         <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
@@ -167,7 +171,7 @@
                                 </a>
                                 <button type="button" class="mini-btn" title="Edit"
                                         onclick="event.stopPropagation();"
-                                        @click="Livewire.dispatch('open-customer-modal', { id: {{ $c->id }} })">
+                                        @click="Livewire.dispatch('open-customer-modal', { id: {{ $customer->id }} })">
                                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                         <path d="M12 20h9"/>
                                         <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>

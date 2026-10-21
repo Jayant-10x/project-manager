@@ -67,35 +67,39 @@ class ProjectModal extends Component
     }
 
     #[On('open-project-modal')]
-    public function loadProject(?int $id = null): void
+    public function loadProject(?int $id = null, ?int $customerId = null): void
     {
         $this->resetValidation();
         $this->reset();
         $this->projectId = $id;
 
+        if ($customerId) {
+            $this->customer_id = $customerId;
+        }
+
         if ($id) {
-            $p = Project::findOrFail($id);
-            $this->customer_id = $p->customer_id;
-            $this->name = $p->name ?? '';
-            $this->project_type = $p->project_type ?? 'Website';
-            $this->value = $p->value !== null ? (float) $p->value : null;
-            $this->cost = $p->cost !== null ? (float) $p->cost : 0.0;
-            $this->coordinator_id = $p->coordinator_id;
-            $this->start_date = $p->start_date instanceof Carbon ? $p->start_date->toDateString() : ($p->start_date ? substr((string) $p->start_date, 0, 10) : null);
-            $this->delivery_date = $p->delivery_date instanceof Carbon ? $p->delivery_date->toDateString() : ($p->delivery_date ? substr((string) $p->delivery_date, 0, 10) : null);
-            $this->status = $p->status ?? 'Onboarding';
-            $this->health = $p->health ?? 'On Track';
-            $this->delay_reason = $p->delay_reason ?? '';
-            $this->description = $p->description ?? '';
-            $this->amc_required = (bool) $p->amc_required;
-            $this->amc_start = $p->amc_start instanceof Carbon ? $p->amc_start->toDateString() : ($p->amc_start ? substr((string) $p->amc_start, 0, 10) : null);
-            $this->amc_end = $p->amc_end instanceof Carbon ? $p->amc_end->toDateString() : ($p->amc_end ? substr((string) $p->amc_end, 0, 10) : null);
-            $this->amc_amount = $p->amc_amount !== null ? (float) $p->amc_amount : 0.0;
-            $this->renew_alert_days = (int) ($p->renew_alert_days ?: 7);
-            $this->handover_done = (bool) $p->handover_done;
-            $this->handover_notes = $p->handover_notes ?? '';
-            $this->notes = $p->notes ?? '';
-            $this->sales_person_id = $p->sales_person_id;
+            $project = Project::findOrFail($id);
+            $this->customer_id = $project->customer_id;
+            $this->name = $project->name ?? '';
+            $this->project_type = $project->project_type ?? 'Website';
+            $this->value = $project->value !== null ? (float) $project->value : null;
+            $this->cost = $project->cost !== null ? (float) $project->cost : 0.0;
+            $this->coordinator_id = $project->coordinator_id;
+            $this->start_date = $project->start_date instanceof Carbon ? $project->start_date->toDateString() : ($project->start_date ? substr((string) $project->start_date, 0, 10) : null);
+            $this->delivery_date = $project->delivery_date instanceof Carbon ? $project->delivery_date->toDateString() : ($project->delivery_date ? substr((string) $project->delivery_date, 0, 10) : null);
+            $this->status = $project->status ?? 'Onboarding';
+            $this->health = $project->health ?? 'On Track';
+            $this->delay_reason = $project->delay_reason ?? '';
+            $this->description = $project->description ?? '';
+            $this->amc_required = (bool) $project->amc_required;
+            $this->amc_start = $project->amc_start instanceof Carbon ? $project->amc_start->toDateString() : ($project->amc_start ? substr((string) $project->amc_start, 0, 10) : null);
+            $this->amc_end = $project->amc_end instanceof Carbon ? $project->amc_end->toDateString() : ($project->amc_end ? substr((string) $project->amc_end, 0, 10) : null);
+            $this->amc_amount = $project->amc_amount !== null ? (float) $project->amc_amount : 0.0;
+            $this->renew_alert_days = (int) ($project->renew_alert_days ?: 7);
+            $this->handover_done = (bool) $project->handover_done;
+            $this->handover_notes = $project->handover_notes ?? '';
+            $this->notes = $project->notes ?? '';
+            $this->sales_person_id = $project->sales_person_id;
         } else {
             $this->start_date = now()->toDateString();
             $this->cost = 0.0;
@@ -118,8 +122,8 @@ class ProjectModal extends Component
             'project_type' => 'nullable|string|max:60',
             'value' => 'required|numeric|min:0',
             'cost' => 'required|numeric|min:0',
-            'coordinator_id' => 'nullable|integer|exists:users,id',
-            'start_date' => 'nullable|date',
+            'coordinator_id' => 'required|integer|exists:users,id',
+            'start_date' => 'required|date',
             'delivery_date' => 'nullable|date|after_or_equal:start_date',
             'status' => 'required|in:Onboarding,In Progress,On Hold,Delivered,Cancelled',
             'health' => 'required|in:On Track,At Risk,Delayed,Completed',
@@ -216,9 +220,9 @@ class ProjectModal extends Component
     public function render()
     {
         return view('livewire.projects.project-modal', [
-            'customers' => Customer::orderBy('company')->get(),
+            'customers' => Customer::orderByRaw('COALESCE(NULLIF(company, ""), contact_name) ASC')->get(),
             'salesUsers' => User::where('role', 'Sales')->where('status', 'Active')->orderBy('name')->get(),
-            'coordinators' => User::where('status', 'Active')->orderBy('name')->get(),
+            'coordinators' => User::where('role', 'Coordinator')->where('status', 'Active')->orderBy('name')->get(),
         ]);
     }
 }

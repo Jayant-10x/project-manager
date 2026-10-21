@@ -33,11 +33,39 @@ class ProjectDetail extends Component
     public function mount(Project $project): void
     {
         $user = auth()->user();
-        if ($user->role !== 'Admin' && $project->coordinator_id !== $user->id) {
+        if (! $user) {
+            abort(403, 'Unauthorized.');
+        }
+
+        $allowed = false;
+        if ($user->role === 'Admin') {
+            $allowed = true;
+        } elseif ($user->role === 'Manager') {
+            $downlineIds = $user->getDownlineUserIds();
+            $allowed = ($project->coordinator_id && in_array($project->coordinator_id, $downlineIds, true))
+                || ($project->sales_person_id && in_array($project->sales_person_id, $downlineIds, true));
+        } elseif ($user->role === 'Sales') {
+            $allowed = ($project->sales_person_id === $user->id);
+        } else {
+            $allowed = ($project->coordinator_id === $user->id);
+        }
+
+        if (! $allowed) {
             abort(403, 'Unauthorized access to unassigned project.');
         }
 
+        if ($user->role === 'Sales' && in_array($this->activeTab, ['schedule', 'payments'])) {
+            $this->activeTab = 'overview';
+        }
+
         $this->project = $project;
+    }
+
+    public function updatedActiveTab(string $value): void
+    {
+        if (auth()->user()?->role === 'Sales' && in_array($value, ['schedule', 'payments'])) {
+            $this->activeTab = 'overview';
+        }
     }
 
     public function toggleMilestone(int $milestoneId): void
@@ -63,6 +91,10 @@ class ProjectDetail extends Component
 
     public function deleteTerm(int $termId): void
     {
+        if (auth()->user()?->role === 'Sales') {
+            abort(403, 'Unauthorized.');
+        }
+
         $term = PaymentTerm::where('project_id', $this->project->id)->findOrFail($termId);
         if ($term->received > 0) {
             $this->dispatch('toast', ['msg' => 'Payments exist for this installment. Remove payment first.', 'type' => 'err']);
@@ -88,6 +120,10 @@ class ProjectDetail extends Component
 
     public function deletePayment(int $paymentId): void
     {
+        if (auth()->user()?->role === 'Sales') {
+            abort(403, 'Unauthorized.');
+        }
+
         $pay = Payment::where('project_id', $this->project->id)->findOrFail($paymentId);
         $termId = $pay->term_id;
         $payCode = $pay->code;
@@ -171,10 +207,10 @@ class ProjectDetail extends Component
 
     public function render()
     {
-        $m = $this->project->money;
-        $sched = (float) $m['scheduled'];
-        $rec = (float) $m['received'];
-        $r = $sched > 0 ? min(100, round(($rec / $sched) * 100)) : 0;
+        $money = $this->project->money;
+        $sched = (float) $money['scheduled'];
+        $rec = (float) $money['received'];
+        $collectionRate = $sched > 0 ? min(100, round(($rec / $sched) * 100)) : 0;
 
         $today = Carbon::today()->toDateString();
         $daysLate = 0;
@@ -190,11 +226,11 @@ class ProjectDetail extends Component
             'milestones' => $this->project->milestones()->orderBy('sort_order')->get(),
             'payments' => $this->project->payments()->orderByDesc('paid_on')->get(),
             'documents' => $this->project->documents()->orderByDesc('id')->get(),
-            'r' => $r,
+            'r' => $collectionRate,
             'daysLate' => $daysLate,
         ])->layoutData([
             'header' => $this->project->name,
-            'subtitle' => $this->project->code.' · '.($this->project->customer?->company ?? '').($this->project->coordinator ? ' · '.$this->project->coordinator->name : ''),
+            'subtitle' => $this->project->code.' · '.($this->project->customer?->display_name ?? '').($this->project->coordinator ? ' · '.$this->project->coordinator->name : ''),
         ]);
     }
 }

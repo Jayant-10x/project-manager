@@ -81,10 +81,6 @@
                 </button>
             </form>
 
-            <div class="login-hint">
-                Sign in with your company email and password.<br>
-                Coordinator accounts only.
-            </div>
         </div>
     </div>
 </x-guest-layout>

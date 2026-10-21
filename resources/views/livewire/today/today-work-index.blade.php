@@ -36,7 +36,7 @@
                          @click="Livewire.navigate('{{ route('projects.show', $t->project_id) }}')">
                         <div class="term-no" style="background:#fdeaea;color:#d94b4b">{{ $t->seq }}</div>
                         <div class="term-body">
-                            <div class="term-title">{{ $t->project?->customer?->company ?? '—' }}</div>
+                            <div class="term-title">{{ $t->project?->customer?->display_name ?? '—' }}</div>
                             <div class="term-meta">
                                 <span>{{ $t->label }}</span>
                                 <span>{{ $t->project?->code }}</span>
@@ -90,7 +90,7 @@
                         <div class="mini-item clickable"
                              @click="Livewire.navigate('{{ route('projects.show', $t->project_id) }}')">
                             <div class="flex-1 min-w-0">
-                                <div class="t">{{ $t->project?->customer?->company }} —
+                                <div class="t">{{ $t->project?->customer?->display_name }} —
                                     <x-money :value="$bal"/>
                                 </div>
                                 <div class="s">{{ $t->label }} · {{ $t->project?->code }}</div>
@@ -124,7 +124,7 @@
                         <div class="mini-item clickable"
                              @click="Livewire.navigate('{{ route('customers.show', $f->customer_id) }}')">
                             <div class="flex-1 min-w-0">
-                                <div class="t">{{ $f->customer?->company ?? '—' }}</div>
+                                <div class="t">{{ $f->customer?->display_name ?? '—' }}</div>
                                 <div class="s">{{ $f->next_note ?: $f->summary }}</div>
                             </div>
                             <div class="r flex items-center gap-1.5">
@@ -177,7 +177,7 @@
                             <div class="strong">{{ $p->name }}</div>
                             <div class="muted" style="font-size:10.8px">{{ $p->code }}</div>
                         </td>
-                        <td>{{ $p->customer?->company ?? '—' }}</td>
+                        <td>{{ $p->customer?->display_name ?? '—' }}</td>
                         <td>
                             <x-health-badge :health="$p->health"/>
                         </td>

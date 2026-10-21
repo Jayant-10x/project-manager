@@ -24,7 +24,7 @@ class SalesIndex extends Component
         $salesPeople = User::where('role', 'Sales')
             ->whereIn('id', $user->role === 'Admin' ? User::where('role', 'Sales')->pluck('id') : $user->getDownlineUserIds())
             ->with([
-                'salesProjects' => fn ($q) => $q->forUser($user)->with(['terms', 'payments', 'customer']),
+                'salesProjects' => fn ($projectQuery) => $projectQuery->forUser($user)->with(['terms', 'payments', 'customer']),
             ])->orderBy('name')->get();
 
         app(AuditNotificationService::class)->log(
@@ -43,14 +43,14 @@ class SalesIndex extends Component
             fwrite($handle, "\xEF\xBB\xBF"); // BOM for Excel
             fputcsv($handle, ['Sales Person', 'Customers', 'Projects', 'Total Value', 'Received', 'Overdue']);
 
-            foreach ($salesPeople as $s) {
-                $projs = $s->salesProjects;
+            foreach ($salesPeople as $salesPerson) {
+                $projs = $salesPerson->salesProjects;
                 $val = (float) $projs->sum('value');
                 $rec = (float) $projs->flatMap->payments->sum('amount');
-                $over = (float) $projs->flatMap->terms->where('status', 'Overdue')->sum(fn ($t) => max(0, $t->amount - $t->received - $t->tds));
+                $over = (float) $projs->flatMap->terms->where('status', 'Overdue')->sum(fn ($term) => max(0, $term->amount - $term->received - $term->tds));
 
                 fputcsv($handle, [
-                    $s->name,
+                    $salesPerson->name,
                     $projs->pluck('customer_id')->unique()->count(),
                     $projs->count(),
                     $val,
@@ -70,14 +70,14 @@ class SalesIndex extends Component
             return;
         }
 
-        $sp = User::where('role', 'Sales')->findOrFail($id);
+        $salesPerson = User::where('role', 'Sales')->findOrFail($id);
 
         if (Customer::where('sales_person_id', $id)->exists()) {
-            $sp->status = 'Inactive';
-            $sp->save();
+            $salesPerson->status = 'Inactive';
+            $salesPerson->save();
             $this->dispatch('toast', ['msg' => 'Salesperson marked Inactive to preserve customer attribution', 'type' => 'ok']);
         } else {
-            $sp->delete();
+            $salesPerson->delete();
             $this->dispatch('toast', ['msg' => 'Salesperson removed', 'type' => 'ok']);
         }
     }
@@ -89,19 +89,19 @@ class SalesIndex extends Component
         $salesPeople = User::where('role', 'Sales')
             ->whereIn('id', $user->role === 'Admin' ? User::where('role', 'Sales')->pluck('id') : $user->getDownlineUserIds())
             ->with([
-                'salesProjects' => fn ($q) => $q->forUser($user)->with(['terms', 'payments', 'customer']),
+                'salesProjects' => fn ($projectQuery) => $projectQuery->forUser($user)->with(['terms', 'payments', 'customer']),
             ])->orderBy('name')->get();
 
         $rows = [];
-        foreach ($salesPeople as $sp) {
-            $projs = $sp->salesProjects;
+        foreach ($salesPeople as $salesPerson) {
+            $projs = $salesPerson->salesProjects;
             $val = (float) $projs->sum('value');
             $rec = (float) $projs->flatMap->payments->sum('amount');
-            $over = (float) $projs->flatMap->terms->where('status', 'Overdue')->sum(fn ($t) => max(0, $t->amount - $t->received - $t->tds));
+            $over = (float) $projs->flatMap->terms->where('status', 'Overdue')->sum(fn ($term) => max(0, $term->amount - $term->received - $term->tds));
             $rate = $val > 0 ? min(100, round(($rec / $val) * 100)) : 0;
 
             $rows[] = [
-                'salesPerson' => $sp,
+                'salesPerson' => $salesPerson,
                 'customers' => $projs->pluck('customer_id')->unique()->count(),
                 'projects' => $projs->count(),
                 'value' => $val,
@@ -111,7 +111,7 @@ class SalesIndex extends Component
             ];
         }
 
-        usort($rows, fn ($a, $b) => $b['value'] <=> $a['value']);
+        usort($rows, fn ($firstRow, $secondRow) => $secondRow['value'] <=> $firstRow['value']);
 
         $totalOnboarded = Customer::whereNotNull('sales_person_id')->count();
 

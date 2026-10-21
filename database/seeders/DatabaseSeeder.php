@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Services\CodeGeneratorService;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -25,5 +26,7 @@ class DatabaseSeeder extends Seeder
             NotificationsSeeder::class,
             ActivityLogsSeeder::class,
         ]);
+
+        app(CodeGeneratorService::class)->syncAll();
     }
 }

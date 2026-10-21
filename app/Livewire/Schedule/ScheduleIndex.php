@@ -27,6 +27,14 @@ class ScheduleIndex extends Component
     #[Url]
     public string $trigger_type = '';
 
+    public function mount(): void
+    {
+        $user = auth()->user();
+        if (! $user || $user->role === 'Sales') {
+            abort(403, 'Unauthorized access to payment schedule.');
+        }
+    }
+
     public function setStatus(string $status): void
     {
         $this->status = ($this->status === $status) ? '' : $status;
@@ -72,29 +80,29 @@ class ScheduleIndex extends Component
             fwrite($handle, "\xEF\xBB\xBF"); // BOM for Excel UTF-8
             fputcsv($handle, ['Customer', 'Project Code', 'Project', '#', 'Installment', 'Trigger', 'Amount', 'Received', 'TDS', 'Balance', 'Due Date', 'Status']);
 
-            foreach ($terms as $t) {
-                $bal = max(0, (float) $t->amount - (float) $t->received - (float) $t->tds);
-                $triggerLabel = match ($t->trigger_type) {
+            foreach ($terms as $term) {
+                $balance = max(0, (float) $term->amount - (float) $term->received - (float) $term->tds);
+                $triggerLabel = match ($term->trigger_type) {
                     'milestone' => 'Milestone linked',
                     'recurring' => 'Recurring monthly',
                     default => 'Fixed date',
                 };
 
-                $dueDate = $t->due_date ? Carbon::parse($t->due_date)->format('Y-m-d') : '';
+                $dueDate = $term->due_date ? Carbon::parse($term->due_date)->format('Y-m-d') : '';
 
                 fputcsv($handle, [
-                    $t->project?->customer?->company ?? '',
-                    $t->project?->code ?? '',
-                    $t->project?->name ?? '',
-                    $t->seq,
-                    $t->label,
+                    $term->project?->customer?->display_name ?? '',
+                    $term->project?->code ?? '',
+                    $term->project?->name ?? '',
+                    $term->seq,
+                    $term->label,
                     $triggerLabel,
-                    $t->amount,
-                    $t->received,
-                    $t->tds,
-                    round($bal, 2),
+                    $term->amount,
+                    $term->received,
+                    $term->tds,
+                    round($balance, 2),
                     $dueDate,
-                    $t->status,
+                    $term->status,
                 ]);
             }
             fclose($handle);
@@ -118,10 +126,10 @@ class ScheduleIndex extends Component
 
         // 4 KPI metrics computed across all terms
         $upcomingTerms = $allTerms->whereIn('status', ['Pending', 'Partial']);
-        $upcomingSum = (float) $upcomingTerms->sum(fn ($t) => max(0, (float) $t->amount - (float) $t->received - (float) $t->tds));
+        $upcomingSum = (float) $upcomingTerms->sum(fn ($term) => max(0, (float) $term->amount - (float) $term->received - (float) $term->tds));
 
         $overdueTerms = $allTerms->where('status', 'Overdue');
-        $overdueSum = (float) $overdueTerms->sum(fn ($t) => max(0, (float) $t->amount - (float) $t->received - (float) $t->tds));
+        $overdueSum = (float) $overdueTerms->sum(fn ($term) => max(0, (float) $term->amount - (float) $term->received - (float) $term->tds));
 
         $paidTerms = $allTerms->where('status', 'Paid');
         $collectedSum = (float) $allTerms->sum('received');
@@ -144,18 +152,18 @@ class ScheduleIndex extends Component
                 return $collection->where('project.customer_id', (int) $this->customer_id);
             })
             ->when($this->search, function ($collection) {
-                $term = strtolower(trim($this->search));
+                $searchQuery = strtolower(trim($this->search));
 
-                return $collection->filter(function ($t) use ($term) {
-                    return str_contains(strtolower($t->label ?? ''), $term) ||
-                           str_contains(strtolower($t->project?->name ?? ''), $term) ||
-                           str_contains(strtolower($t->project?->code ?? ''), $term) ||
-                           str_contains(strtolower($t->project?->customer?->company ?? ''), $term);
+                return $collection->filter(function ($term) use ($searchQuery) {
+                    return str_contains(strtolower($term->label ?? ''), $searchQuery) ||
+                           str_contains(strtolower($term->project?->name ?? ''), $searchQuery) ||
+                           str_contains(strtolower($term->project?->code ?? ''), $searchQuery) ||
+                           str_contains(strtolower($term->project?->customer?->display_name ?? ''), $searchQuery);
                 });
             });
 
         $customers = Customer::query()
-            ->whereHas('projects', fn ($q) => $q->forUser($user))
+            ->whereHas('projects', fn ($projectQuery) => $projectQuery->forUser($user))
             ->orderBy('company')
             ->get();
 

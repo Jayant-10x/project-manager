@@ -18,6 +18,7 @@ return new class extends Migration
             $table->enum('status', ['Active', 'Inactive'])->default('Inactive');
             $table->string('designation', 60)->nullable()->default(null);
             $table->string('city', 60)->nullable()->default(null);
+            $table->decimal('target', 14, 2)->default(0.00);
 
             // Presence tracking
             $table->boolean('is_online')->default(false);

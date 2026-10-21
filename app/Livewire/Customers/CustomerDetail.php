@@ -30,8 +30,31 @@ class CustomerDetail extends Component
         $this->customer->load(['payments', 'followups', 'projects', 'documents']);
     }
 
+    public function updatedActiveTab(string $value): void
+    {
+        if (auth()->user()?->role === 'Sales' && $value === 'payments') {
+            $this->activeTab = 'overview';
+        }
+    }
+
     public function mount(Customer $customer): void
     {
+        $user = auth()->user();
+        if (! $user) {
+            abort(403, 'Unauthorized.');
+        }
+
+        if ($user->role !== 'Admin') {
+            $isAllowed = Customer::query()->forUser($user)->where('id', $customer->id)->exists();
+            if (! $isAllowed) {
+                abort(403, 'Unauthorized access to unassigned customer.');
+            }
+        }
+
+        if ($user->role === 'Sales' && $this->activeTab === 'payments') {
+            $this->activeTab = 'overview';
+        }
+
         $this->customer = $customer;
     }
 
@@ -56,7 +79,7 @@ class CustomerDetail extends Component
         }
 
         $code = $this->customer->customer_code;
-        $company = $this->customer->company;
+        $company = $this->customer->display_name;
         $id = $this->customer->id;
 
         $this->customer->delete();
@@ -99,7 +122,7 @@ class CustomerDetail extends Component
             'Payment',
             $paymentId,
             $payCode ?: '',
-            "Deleted payment receipt {$payCode} of ₹".number_format($payAmt, 2)." from customer {$this->customer->company}"
+            "Deleted payment receipt {$payCode} of ₹".number_format($payAmt, 2)." from customer {$this->customer->display_name}"
         );
 
         $this->dispatch('payment-deleted');
@@ -121,7 +144,7 @@ class CustomerDetail extends Component
             'Document',
             $docId,
             $this->customer->customer_code,
-            "Deleted document '{$docName}' from customer {$this->customer->company}"
+            "Deleted document '{$docName}' from customer {$this->customer->display_name}"
         );
     }
 
@@ -137,7 +160,7 @@ class CustomerDetail extends Component
             'Followup',
             $fuId,
             $this->customer->customer_code,
-            "Deleted follow-up '{$summary}' for customer {$this->customer->company}"
+            "Deleted follow-up '{$summary}' for customer {$this->customer->display_name}"
         );
     }
 
@@ -153,10 +176,10 @@ class CustomerDetail extends Component
         $projectIds = $projects->pluck('id');
 
         $contractVal = (float) $projects->sum('value');
-        $sched = (float) $projects->sum(fn ($p) => $p->money['scheduled']);
-        $rec = (float) $projects->sum(fn ($p) => $p->money['received']);
-        $tds = (float) $projects->sum(fn ($p) => $p->money['tds']);
-        $overdue = (float) $projects->sum(fn ($p) => $p->money['overdue']);
+        $sched = (float) $projects->sum(fn ($project) => $project->money['scheduled']);
+        $rec = (float) $projects->sum(fn ($project) => $project->money['received']);
+        $tds = (float) $projects->sum(fn ($project) => $project->money['tds']);
+        $overdue = (float) $projects->sum(fn ($project) => $project->money['overdue']);
         $due = round(max(0, $sched - $rec - $tds), 2);
         $collRate = $sched > 0 ? min(100, round(($rec / $sched) * 100)) : 0;
 
@@ -185,7 +208,7 @@ class CustomerDetail extends Component
                 'rate' => $collRate,
             ],
         ])->layoutData([
-            'header' => $this->customer->company,
+            'header' => $this->customer->display_name,
             'subtitle' => $this->customer->code.($this->customer->city ? ' · '.$this->customer->city : '').($this->customer->salesPerson ? ' · onboarded by '.$this->customer->salesPerson->name : ''),
         ]);
     }

@@ -42,7 +42,7 @@
                 <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 200px;">
                     <option value="">All customers</option>
                     @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
                     @endforeach
                 </select>
 
@@ -95,41 +95,41 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($payments as $p)
+                @forelse($payments as $payment)
                     <tr>
-                        <td class="strong">{{ $p->code }}</td>
-                        <td class="nowrap muted">{{ $p->paid_on?->format('d M') ?? '—' }}</td>
+                        <td class="strong">{{ $payment->code }}</td>
+                        <td class="nowrap muted">{{ $payment->paid_on?->format('d M') ?? '—' }}</td>
                         <td class="clickable"
-                            @click="Livewire.navigate('{{ route('customers.show', $p->customer_id) }}')">
-                            {{ $p->customer?->company ?? '—' }}
+                            @click="Livewire.navigate('{{ route('customers.show', $payment->customer_id) }}')">
+                            {{ $payment->customer?->display_name ?? '—' }}
                         </td>
                         <td class="muted">
-                            <a href="{{ route('projects.show', $p->project_id) }}" wire:navigate class="link">
-                                {{ $p->project?->code }}
+                            <a href="{{ route('projects.show', $payment->project_id) }}" wire:navigate class="link">
+                                {{ $payment->project?->code }}
                             </a>
-                            @if($p->term)
-                                <div style="font-size:10.6px">{{ $p->term->label }}</div>
+                            @if($payment->term)
+                                <div style="font-size:10.6px">{{ $payment->term->label }}</div>
                             @endif
                         </td>
                         <td class="num font-bold text-[#3d7a24]">
-                            <x-money :value="$p->amount"/>
+                            <x-money :value="$payment->amount"/>
                         </td>
                         <td class="num muted">
-                            @if($p->tds > 0)
-                                <x-money :value="$p->tds"/>
+                            @if($payment->tds > 0)
+                                <x-money :value="$payment->tds"/>
                             @else
                                 —
                             @endif
                         </td>
-                        <td><span class="pill">{{ $p->mode }}</span></td>
+                        <td><span class="pill">{{ $payment->mode }}</span></td>
                         <td class="muted" style="font-size:11.2px">
-                            {{ $p->reference ?: '—' }}
-                            @if($p->bank)
-                                <br>{{ $p->bank }}
+                            {{ $payment->reference ?: '—' }}
+                            @if($payment->bank)
+                                <br>{{ $payment->bank }}
                             @endif
                         </td>
                         <td class="num">
-                            <x-money :value="$p->project?->money['due'] ?? 0"/>
+                            <x-money :value="$payment->project?->money['due'] ?? 0"/>
                         </td>
                         <td>
                             <div class="row-actions">
@@ -137,13 +137,13 @@
                                         class="mini-btn danger"
                                         @click="$dispatch('confirm-dialog', {
                                             title: 'Delete Payment Receipt?',
-                                            message: 'Remove payment entry {{ $p->code ?: '' }}? The receipt will be deleted and the installment balance will adjust.',
+                                            message: 'Remove payment entry {{ $payment->code ?: '' }}? The receipt will be deleted and the installment balance will adjust.',
                                             confirmText: 'Delete Payment',
                                             cancelText: 'Cancel',
                                             danger: true,
                                             wire: $wire,
                                             action: 'deletePayment',
-                                            params: {{ $p->id }}
+                                            params: {{ $payment->id }}
                                         })"
                                         title="Delete receipt">
                                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">

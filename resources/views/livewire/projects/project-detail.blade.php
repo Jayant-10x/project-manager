@@ -45,7 +45,7 @@
                     <div class="muted" style="font-size:12.4px;margin-top:3px">
                         @if($project->customer)
                             <a href="{{ route('customers.show', $project->customer_id) }}" wire:navigate class="link">
-                                {{ $project->customer->company }}
+                                {{ $project->customer->display_name }}
                             </a> ·
                         @endif
                         {{ $project->project_type ?: '—' }} · start {{ $project->start_date?->format('d M') ?? '—' }} ·
@@ -64,23 +64,25 @@
                         </svg>
                         Milestones
                     </button>
+                    @if(auth()->user()->role !== 'Sales')
+                        <button type="button" class="btn btn-ghost btn-sm"
+                                @click="$dispatch('open-schedule-modal', { projectId: {{ $project->id }} })">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                                <path d="M16 2v4M8 2v4M3 10h18"/>
+                            </svg>
+                            Schedule
+                        </button>
+                        <button type="button" class="btn btn-green btn-sm"
+                                @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $project->id }} })">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            Payment
+                        </button>
+                    @endif
                     <button type="button" class="btn btn-ghost btn-sm"
-                            @click="$dispatch('open-schedule-modal', { projectId: {{ $project->id }} })">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <rect x="3" y="4" width="18" height="18" rx="2"/>
-                            <path d="M16 2v4M8 2v4M3 10h18"/>
-                        </svg>
-                        Schedule
-                    </button>
-                    <button type="button" class="btn btn-green btn-sm"
-                            @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $project->id }} })">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M12 5v14M5 12h14"/>
-                        </svg>
-                        Payment
-                    </button>
-                    <button type="button" class="btn btn-ghost btn-sm"
-                            @click="$dispatch('open-project-modal', { id: {{ $project->id }} })"
+                            @click="Livewire.dispatch('open-project-modal', { id: {{ $project->id }} })"
                             title="Edit project" aria-label="Edit project">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M12 20h9"/>
@@ -108,55 +110,57 @@
                 </div>
             </div>
 
-            <div class="money-grid">
-                <div class="money-cell cursor-pointer hover:bg-gray-50 transition rounded-xl p-1.5"
-                     wire:click="$set('activeTab', 'milestones')" title="View milestones">
-                    <div class="k">Project Value</div>
-                    <div class="v">
-                        <x-money :value="$project->value > 0 ? $project->value : $project->money['scheduled']"/>
-                    </div>
-                    @if($project->value > 0 && abs((float)$project->value - (float)$project->money['scheduled']) > 0.01)
-                        <div class="text-[11px] text-[#8894ac] mt-0.5">
-                            Sched: <x-money :value="$project->money['scheduled']"/>
+            @if(auth()->user()->role !== 'Sales')
+                <div class="money-grid">
+                    <div class="money-cell cursor-pointer hover:bg-gray-50 transition rounded-xl p-1.5"
+                         wire:click="$set('activeTab', 'milestones')" title="View milestones">
+                        <div class="k">Project Value</div>
+                        <div class="v">
+                            <x-money :value="$project->value > 0 ? $project->value : $project->money['scheduled']"/>
                         </div>
-                    @endif
-                </div>
-                <div class="money-cell rec cursor-pointer hover:bg-green-50/50 transition rounded-xl p-1.5"
-                     wire:click="$set('activeTab', 'payments')" title="View receipts">
-                    <div class="k">Received</div>
-                    <div class="v text-[#5aa236]">
-                        <x-money :value="$project->money['received']"/>
+                        @if($project->value > 0 && abs((float)$project->value - (float)$project->money['scheduled']) > 0.01)
+                            <div class="text-[11px] text-[#8894ac] mt-0.5">
+                                Sched: <x-money :value="$project->money['scheduled']"/>
+                            </div>
+                        @endif
+                    </div>
+                    <div class="money-cell rec cursor-pointer hover:bg-green-50/50 transition rounded-xl p-1.5"
+                         wire:click="$set('activeTab', 'payments')" title="View receipts">
+                        <div class="k">Received</div>
+                        <div class="v text-[#5aa236]">
+                            <x-money :value="$project->money['received']"/>
+                        </div>
+                    </div>
+                    <div class="money-cell due cursor-pointer hover:bg-amber-50/50 transition rounded-xl p-1.5"
+                         wire:click="$set('activeTab', 'schedule')" title="View payment schedule">
+                        <div class="k">Due</div>
+                        <div class="v text-[#e0a13a]">
+                            <x-money :value="$project->money['due']"/>
+                        </div>
+                    </div>
+                    <div class="money-cell over cursor-pointer hover:bg-red-50/50 transition rounded-xl p-1.5"
+                         wire:click="$set('activeTab', 'schedule')" title="View overdue installments">
+                        <div class="k">Overdue</div>
+                        <div class="v text-[#d94b4b]">
+                            <x-money :value="$project->money['overdue']"/>
+                        </div>
                     </div>
                 </div>
-                <div class="money-cell due cursor-pointer hover:bg-amber-50/50 transition rounded-xl p-1.5"
-                     wire:click="$set('activeTab', 'schedule')" title="View payment schedule">
-                    <div class="k">Due</div>
-                    <div class="v text-[#e0a13a]">
-                        <x-money :value="$project->money['due']"/>
-                    </div>
-                </div>
-                <div class="money-cell over cursor-pointer hover:bg-red-50/50 transition rounded-xl p-1.5"
-                     wire:click="$set('activeTab', 'schedule')" title="View overdue installments">
-                    <div class="k">Overdue</div>
-                    <div class="v text-[#d94b4b]">
-                        <x-money :value="$project->money['overdue']"/>
-                    </div>
-                </div>
-            </div>
 
-            <div style="margin-top:14px">
-                <div class="progress-row">
-                    <span>Collection</span>
-                    <b>{{ $r }}%</b>
+                <div style="margin-top:14px">
+                    <div class="progress-row">
+                        <span>Collection</span>
+                        <b>{{ $r }}%</b>
+                    </div>
+                    <div class="bar {{ $r >= 80 ? 'green' : ($r >= 40 ? '' : 'amber') }}" style="height:8px">
+                        <i style="width:{{ $r }}%"></i>
+                    </div>
                 </div>
-                <div class="bar {{ $r >= 80 ? 'green' : ($r >= 40 ? '' : 'amber') }}" style="height:8px">
-                    <i style="width:{{ $r }}%"></i>
-                </div>
-            </div>
+            @endif
 
             @if($project->amc_required)
                 <div class="divider"></div>
-                <div class="money-grid" style="grid-template-columns:repeat(3,1fr)">
+                <div class="money-grid" style="grid-template-columns:repeat({{ auth()->user()->role === 'Sales' ? 2 : 3 }},1fr)">
                     <div class="money-cell">
                         <div class="k">AMC Start</div>
                         <div class="v" style="font-size:14px">{{ $project->amc_start?->format('d M Y') ?? '—' }}</div>
@@ -165,12 +169,14 @@
                         <div class="k">AMC End</div>
                         <div class="v" style="font-size:14px">{{ $project->amc_end?->format('d M Y') ?? '—' }}</div>
                     </div>
-                    <div class="money-cell">
-                        <div class="k">AMC Amount</div>
-                        <div class="v" style="font-size:14px">
-                            <x-money :value="$project->amc_amount"/>
+                    @if(auth()->user()->role !== 'Sales')
+                        <div class="money-cell">
+                            <div class="k">AMC Amount</div>
+                            <div class="v" style="font-size:14px">
+                                <x-money :value="$project->amc_amount"/>
+                            </div>
                         </div>
-                    </div>
+                    @endif
                 </div>
             @endif
 
@@ -196,14 +202,16 @@
                     class="tab {{ $activeTab === 'milestones' ? 'active' : '' }}">
                 Milestones <span class="n">{{ $milestones->count() }}</span>
             </button>
-            <button wire:click="$set('activeTab', 'schedule')"
-                    class="tab {{ $activeTab === 'schedule' ? 'active' : '' }}">
-                Payment schedule <span class="n">{{ $terms->count() }}</span>
-            </button>
-            <button wire:click="$set('activeTab', 'payments')"
-                    class="tab {{ $activeTab === 'payments' ? 'active' : '' }}">
-                Receipts <span class="n">{{ $payments->count() }}</span>
-            </button>
+            @if(auth()->user()->role !== 'Sales')
+                <button wire:click="$set('activeTab', 'schedule')"
+                        class="tab {{ $activeTab === 'schedule' ? 'active' : '' }}">
+                    Payment schedule <span class="n">{{ $terms->count() }}</span>
+                </button>
+                <button wire:click="$set('activeTab', 'payments')"
+                        class="tab {{ $activeTab === 'payments' ? 'active' : '' }}">
+                    Receipts <span class="n">{{ $payments->count() }}</span>
+                </button>
+            @endif
             <button wire:click="$set('activeTab', 'documents')"
                     class="tab {{ $activeTab === 'documents' ? 'active' : '' }}">
                 Documents <span class="n">{{ $documents->count() }}</span>
@@ -236,6 +244,10 @@
                             <div class="k text-xs font-bold text-gray-400 uppercase">Coordinator</div>
                             <div class="v font-semibold">{{ $project->coordinator?->name ?? '—' }}</div>
                         </div>
+                        <div class="field mb-3">
+                            <div class="k text-xs font-bold text-gray-400 uppercase">Salesperson</div>
+                            <div class="v font-semibold">{{ $project->salesPerson?->name ?? '—' }}</div>
+                        </div>
                         <div class="field">
                             <div class="k text-xs font-bold text-gray-400 uppercase">Delay reason</div>
                             <div class="v font-semibold">{{ $project->delay_reason ?: '—' }}</div>
@@ -247,10 +259,12 @@
                             <div class="v font-semibold">{{ $milestones->where('done', true)->count() }}
                                 / {{ $milestones->count() }}</div>
                         </div>
-                        <div class="field">
-                            <div class="k text-xs font-bold text-gray-400 uppercase">Collection</div>
-                            <div class="v font-semibold">{{ $r }}%</div>
-                        </div>
+                        @if(auth()->user()->role !== 'Sales')
+                            <div class="field">
+                                <div class="k text-xs font-bold text-gray-400 uppercase">Collection</div>
+                                <div class="v font-semibold">{{ $r }}%</div>
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -279,23 +293,23 @@
                             </div>
                         </div>
                     </div>
-                    @foreach($milestones as $idx => $m)
+                    @foreach($milestones as $idx => $milestone)
                         <div class="ms-row flex items-start gap-3 py-2.5 border-b border-[#eef2f9]">
                             <span
-                                class="ms-dot {{ $m->done ? 'done' : ($m->status === 'In Progress' ? 'prog' : ($m->status === 'Blocked' ? 'block' : '')) }}">
-                                {{ $m->done ? '✓' : ($idx + 1) }}
+                                class="ms-dot {{ $milestone->done ? 'done' : ($milestone->status === 'In Progress' ? 'prog' : ($milestone->status === 'Blocked' ? 'block' : '')) }}">
+                                {{ $milestone->done ? '✓' : ($idx + 1) }}
                             </span>
                             <div class="ms-body flex-1 min-w-0">
                                 <div
-                                    class="ms-name font-bold text-sm {{ $m->done ? 'text-gray-400' : '' }}">{{ $m->name }}</div>
+                                    class="ms-name font-bold text-sm {{ $milestone->done ? 'text-gray-400' : '' }}">{{ $milestone->name }}</div>
                                 <div class="ms-meta text-xs text-[#8894ac] mt-0.5">
-                                    {{ $m->due_date ? 'Due ' . $m->due_date->format('d M Y') : 'No date' }}
-                                    @if($m->done && $m->done_on)
-                                        · done {{ $m->done_on->format('d M') }}
+                                    {{ $milestone->due_date ? 'Due ' . $milestone->due_date->format('d M Y') : 'No date' }}
+                                    @if($milestone->done && $milestone->done_on)
+                                        · done {{ $milestone->done_on->format('d M') }}
                                     @endif
-                                    · {{ $m->status }}
-                                    @if(!$m->done && $m->due_date && $m->due_date->toDateString() < now()->toDateString())
-                                        · <b style="color:#d94b4b">{{ abs(now()->diffInDays($m->due_date, false)) }}
+                                    · {{ $milestone->status }}
+                                    @if(!$milestone->done && $milestone->due_date && $milestone->due_date->toDateString() < now()->toDateString())
+                                        · <b style="color:#d94b4b">{{ abs(now()->diffInDays($milestone->due_date, false)) }}
                                             days late</b>
                                     @endif
                                 </div>
@@ -316,23 +330,23 @@
                         Edit milestones
                     </button>
                 </div>
-                @forelse($milestones as $idx => $m)
-                    <div wire:key="milestone-row-{{ $m->id }}" class="ms-row flex items-center justify-between p-3 border border-[#e2e8f3] rounded-lg mb-2">
+                @forelse($milestones as $idx => $milestone)
+                    <div wire:key="milestone-row-{{ $milestone->id }}" class="ms-row flex items-center justify-between p-3 border border-[#e2e8f3] rounded-lg mb-2">
                         <div class="flex items-center gap-3">
                             <input type="checkbox"
-                                   wire:key="milestone-chk-{{ $m->id }}-{{ $m->done ? 'done' : 'open' }}"
-                                   wire:click="toggleMilestone({{ $m->id }})"
-                                   {{ $m->done ? 'checked' : '' }} class="h-4 w-4 rounded accent-[#0b3d91] cursor-pointer">
+                                   wire:key="milestone-chk-{{ $milestone->id }}-{{ $milestone->done ? 'done' : 'open' }}"
+                                   wire:click="toggleMilestone({{ $milestone->id }})"
+                                   {{ $milestone->done ? 'checked' : '' }} class="h-4 w-4 rounded accent-[#0b3d91] cursor-pointer">
                             <div>
                                 <div
-                                    class="text-sm font-bold {{ $m->done ? 'line-through text-gray-400' : '' }}">{{ $m->name }}</div>
+                                    class="text-sm font-bold {{ $milestone->done ? 'line-through text-gray-400' : '' }}">{{ $milestone->name }}</div>
                                 <div class="text-xs text-[#8894ac]">
-                                    Due: {{ $m->due_date?->format('d M Y') ?? 'Flexible' }}</div>
+                                    Due: {{ $milestone->due_date?->format('d M Y') ?? 'Flexible' }}</div>
                             </div>
                         </div>
                         <span
-                            class="badge {{ $m->done ? 'b-green' : ($m->status === 'In Progress' ? 'b-navy' : ($m->status === 'Blocked' ? 'b-red' : 'b-amber')) }}">
-                            {{ $m->status }}
+                            class="badge {{ $milestone->done ? 'b-green' : ($milestone->status === 'In Progress' ? 'b-navy' : ($milestone->status === 'Blocked' ? 'b-red' : 'b-amber')) }}">
+                            {{ $milestone->status }}
                         </span>
                     </div>
                 @empty
@@ -348,7 +362,7 @@
                 @endforelse
 
                 <!-- 3. SCHEDULE -->
-            @elseif($activeTab === 'schedule')
+            @elseif(auth()->user()->role !== 'Sales' && $activeTab === 'schedule')
                 @php
                     $schedSum = $terms->sum('amount');
                     $paidSum = $terms->sum('received');
@@ -451,7 +465,7 @@
                 @endforelse
 
                 <!-- 4. PAYMENTS -->
-            @elseif($activeTab === 'payments')
+            @elseif(auth()->user()->role !== 'Sales' && $activeTab === 'payments')
                 <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
                     <button type="button" class="btn btn-green btn-sm"
                             @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $project->id }} })">

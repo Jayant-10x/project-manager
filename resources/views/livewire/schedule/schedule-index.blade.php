@@ -51,7 +51,7 @@
                 <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
                     <option value="">All customers</option>
                     @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->company }}</option>
+                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
                     @endforeach
                 </select>
 
@@ -108,18 +108,18 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($terms as $t)
+                @forelse($terms as $term)
                     @php
-                        $bal = max(0, (float)$t->amount - (float)$t->received - (float)$t->tds);
-                        $isLate = $t->status === 'Overdue';
-                        $dueDate = $t->due_date ? \Carbon\Carbon::parse($t->due_date) : null;
+                        $balance = max(0, (float)$term->amount - (float)$term->received - (float)$term->tds);
+                        $isLate = $term->status === 'Overdue';
+                        $dueDate = $term->due_date ? \Carbon\Carbon::parse($term->due_date) : null;
                         $daysLate = ($isLate && $dueDate) ? abs(\Carbon\Carbon::parse($today)->diffInDays($dueDate, false)) : 0;
-                        $triggerLabel = match ($t->trigger_type) {
+                        $triggerLabel = match ($term->trigger_type) {
                             'milestone' => 'Milestone linked',
                             'recurring' => 'Recurring monthly',
                             default     => 'Fixed date',
                         };
-                        $badgeCls = match ($t->status) {
+                        $badgeCls = match ($term->status) {
                             'Paid'    => 'b-green',
                             'Overdue' => 'b-red',
                             'Partial' => 'b-amber',
@@ -134,28 +134,28 @@
                             @endif
                         </td>
                         <td class="clickable"
-                            @click="Livewire.navigate('{{ $t->project?->customer_id ? route('customers.show', $t->project->customer_id) : '#' }}')">
-                            {{ $t->project?->customer?->company ?? '—' }}
+                            @click="Livewire.navigate('{{ $term->project?->customer_id ? route('customers.show', $term->project->customer_id) : '#' }}')">
+                            {{ $term->project?->customer?->display_name ?? '—' }}
                         </td>
                         <td class="muted">
-                            <a href="{{ route('projects.show', $t->project_id) }}" wire:navigate class="link">
-                                {{ $t->project?->code }}
+                            <a href="{{ route('projects.show', $term->project_id) }}" wire:navigate class="link">
+                                {{ $term->project?->code }}
                             </a>
                         </td>
-                        <td>{{ $t->label }}</td>
+                        <td>{{ $term->label }}</td>
                         <td><span class="pill">{{ $triggerLabel }}</span></td>
                         <td class="num">
-                            <x-money :value="$t->amount"/>
+                            <x-money :value="$term->amount"/>
                         </td>
                         <td class="num font-bold">
-                            <x-money :value="$bal"/>
+                            <x-money :value="$balance"/>
                         </td>
-                        <td><span class="badge dot {{ $badgeCls }}">{{ $t->status }}</span></td>
+                        <td><span class="badge dot {{ $badgeCls }}">{{ $term->status }}</span></td>
                         <td>
-                            @if($bal > 0)
+                            @if($balance > 0)
                                 <button type="button"
                                         class="mini-btn"
-                                        @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $t->project_id }}, termId: {{ $t->id }} })"
+                                        @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $term->project_id }}, termId: {{ $term->id }} })"
                                         title="Record payment">
                                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                         <path d="M12 5v14M5 12h14"/>

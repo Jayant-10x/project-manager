@@ -33,6 +33,14 @@ class PaymentIndex extends Component
     #[Url]
     public string $date_to = '';
 
+    public function mount(): void
+    {
+        $user = auth()->user();
+        if (! $user || $user->role === 'Sales') {
+            abort(403, 'Unauthorized access to payment ledger.');
+        }
+    }
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -131,18 +139,18 @@ class PaymentIndex extends Component
                     $t->whereIn('status', ['Pending', 'Partial', 'Overdue']);
                 });
             })
-            ->when($this->mode, fn ($q) => $q->where('mode', $this->mode))
-            ->when($this->customer_id, fn ($q) => $q->where('customer_id', $this->customer_id))
-            ->when($this->date_from, fn ($q) => $q->whereDate('paid_on', '>=', $this->date_from))
-            ->when($this->date_to, fn ($q) => $q->whereDate('paid_on', '<=', $this->date_to))
-            ->when($this->search, function ($q) {
-                $term = '%'.trim($this->search).'%';
-                $q->where(function ($sub) use ($term) {
-                    $sub->where('code', 'like', $term)
-                        ->orWhere('reference', 'like', $term)
-                        ->orWhere('bank', 'like', $term)
-                        ->orWhereHas('customer', fn ($c) => $c->where('company', 'like', $term))
-                        ->orWhereHas('project', fn ($p) => $p->where('name', 'like', $term)->orWhere('project_code', 'like', $term));
+            ->when($this->mode, fn ($builder) => $builder->where('mode', $this->mode))
+            ->when($this->customer_id, fn ($builder) => $builder->where('customer_id', $this->customer_id))
+            ->when($this->date_from, fn ($builder) => $builder->whereDate('paid_on', '>=', $this->date_from))
+            ->when($this->date_to, fn ($builder) => $builder->whereDate('paid_on', '<=', $this->date_to))
+            ->when($this->search, function ($builder) {
+                $searchTerm = '%'.trim($this->search).'%';
+                $builder->where(function ($subQuery) use ($searchTerm) {
+                    $subQuery->where('code', 'like', $searchTerm)
+                        ->orWhere('reference', 'like', $searchTerm)
+                        ->orWhere('bank', 'like', $searchTerm)
+                        ->orWhereHas('customer', fn ($customerQuery) => $customerQuery->where('company', 'like', $searchTerm)->orWhere('contact_name', 'like', $searchTerm))
+                        ->orWhereHas('project', fn ($projectQuery) => $projectQuery->where('name', 'like', $searchTerm)->orWhere('project_code', 'like', $searchTerm));
                 });
             })
             ->orderByDesc('paid_on')
@@ -164,20 +172,20 @@ class PaymentIndex extends Component
             fwrite($handle, "\xEF\xBB\xBF"); // BOM for Excel
             fputcsv($handle, ['Receipt', 'Date', 'Customer', 'Project Code', 'Project', 'Amount', 'TDS', 'Mode', 'Reference', 'Bank', 'Entered By', 'Note']);
 
-            foreach ($payments as $p) {
+            foreach ($payments as $payment) {
                 fputcsv($handle, [
-                    $p->code,
-                    $p->paid_on?->format('Y-m-d') ?? '',
-                    $p->customer?->company ?? '',
-                    $p->project?->code ?? '',
-                    $p->project?->name ?? '',
-                    $p->amount,
-                    $p->tds,
-                    $p->mode,
-                    $p->reference,
-                    $p->bank,
-                    $p->enteredBy?->name ?? '',
-                    $p->note,
+                    $payment->code,
+                    $payment->paid_on?->format('Y-m-d') ?? '',
+                    $payment->customer?->display_name ?? '',
+                    $payment->project?->code ?? '',
+                    $payment->project?->name ?? '',
+                    $payment->amount,
+                    $payment->tds,
+                    $payment->mode,
+                    $payment->reference,
+                    $payment->bank,
+                    $payment->enteredBy?->name ?? '',
+                    $payment->note,
                 ]);
             }
             fclose($handle);
@@ -189,26 +197,26 @@ class PaymentIndex extends Component
         $user = auth()->user();
 
         $query = Payment::query()
-            ->whereHas('project', fn ($q) => $q->forUser($user))
+            ->whereHas('project', fn ($projectQuery) => $projectQuery->forUser($user))
             ->with(['project.customer', 'customer', 'term', 'enteredBy'])
-            ->when($user->role === 'Coordinator', function ($q) {
+            ->when($user->role === 'Coordinator', function ($coordinatorQuery) {
                 // Coordinators only see payments with active due balances
-                $q->whereHas('project.terms', function ($t) {
-                    $t->whereIn('status', ['Pending', 'Partial', 'Overdue']);
+                $coordinatorQuery->whereHas('project.terms', function ($termQuery) {
+                    $termQuery->whereIn('status', ['Pending', 'Partial', 'Overdue']);
                 });
             })
-            ->when($this->mode, fn ($q) => $q->where('mode', $this->mode))
-            ->when($this->customer_id, fn ($q) => $q->where('customer_id', $this->customer_id))
-            ->when($this->date_from, fn ($q) => $q->whereDate('paid_on', '>=', $this->date_from))
-            ->when($this->date_to, fn ($q) => $q->whereDate('paid_on', '<=', $this->date_to))
-            ->when($this->search, function ($q) {
-                $term = '%'.trim($this->search).'%';
-                $q->where(function ($sub) use ($term) {
-                    $sub->where('code', 'like', $term)
-                        ->orWhere('reference', 'like', $term)
-                        ->orWhere('bank', 'like', $term)
-                        ->orWhereHas('customer', fn ($c) => $c->where('company', 'like', $term))
-                        ->orWhereHas('project', fn ($p) => $p->where('name', 'like', $term)->orWhere('project_code', 'like', $term));
+            ->when($this->mode, fn ($builder) => $builder->where('mode', $this->mode))
+            ->when($this->customer_id, fn ($builder) => $builder->where('customer_id', $this->customer_id))
+            ->when($this->date_from, fn ($builder) => $builder->whereDate('paid_on', '>=', $this->date_from))
+            ->when($this->date_to, fn ($builder) => $builder->whereDate('paid_on', '<=', $this->date_to))
+            ->when($this->search, function ($builder) {
+                $searchTerm = '%'.trim($this->search).'%';
+                $builder->where(function ($subQuery) use ($searchTerm) {
+                    $subQuery->where('code', 'like', $searchTerm)
+                        ->orWhere('reference', 'like', $searchTerm)
+                        ->orWhere('bank', 'like', $searchTerm)
+                        ->orWhereHas('customer', fn ($customerQuery) => $customerQuery->where('company', 'like', $searchTerm)->orWhere('contact_name', 'like', $searchTerm))
+                        ->orWhereHas('project', fn ($projectQuery) => $projectQuery->where('name', 'like', $searchTerm)->orWhere('project_code', 'like', $searchTerm));
                 });
             })
             ->orderByDesc('paid_on')
@@ -219,7 +227,7 @@ class PaymentIndex extends Component
         $totalTds = (float) $allMatching->sum('tds');
 
         $customers = Customer::query()
-            ->whereHas('projects', fn ($q) => $q->forUser($user))
+            ->whereHas('projects', fn ($projectQuery) => $projectQuery->forUser($user))
             ->orderBy('company')
             ->get();
 

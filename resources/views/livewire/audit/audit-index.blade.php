@@ -21,17 +21,17 @@
                 @if($actions->isNotEmpty())
                     <select wire:model.live="action" class="i" style="width:auto">
                         <option value="">All actions</option>
-                        @foreach($actions as $act)
-                            <option value="{{ $act }}">{{ $act }}</option>
+                        @foreach($actions as $actionType)
+                            <option value="{{ $actionType }}">{{ $actionType }}</option>
                         @endforeach
                     </select>
                 @endif
 
-                @if($users->isNotEmpty())
+                @if(auth()->user()->role !== 'Sales' && $users->isNotEmpty())
                     <select wire:model.live="user_id" class="i" style="width:auto; max-width: 180px;">
                         <option value="">All users</option>
-                        @foreach($users as $u)
-                            <option value="{{ $u->id }}">{{ $u->name }}</option>
+                        @foreach($users as $auditUser)
+                            <option value="{{ $auditUser->id }}">{{ $auditUser->name }}</option>
                         @endforeach
                     </select>
                 @endif
@@ -51,32 +51,32 @@
     <!-- Activity Feed Card -->
     <div class="card">
         <div class="card-body p-5">
-            @forelse($logs as $a)
+            @forelse($logs as $activityLog)
                 @php
-                    $act = strtolower($a->action ?? '');
-                    $dotClass = match ($act) {
+                    $actionName = strtolower($activityLog->action ?? '');
+                    $dotClass = match ($actionName) {
                         'payment' => 'g',
                         'delete'  => 'r',
                         'create', 'login', 'reset' => 'n',
                         'upload'  => 'v',
                         default   => 'a',
                     };
-                    $actor = $a->user?->name ?? ($a->who ?? 'System');
+                    $actor = $activityLog->user?->name ?? ($activityLog->who ?? 'System');
                 @endphp
                 <div class="tl flex gap-3 py-2.5 border-b last:border-b-0 border-[#eef2f9]">
                     <i class="dot {{ $dotClass }} mt-1 flex-shrink-0"></i>
                     <div style="flex:1;min-width:0">
                         <div class="t text-xs text-[#0d1b34] leading-relaxed">
-                            <b class="font-semibold">{{ $actor }}</b> · {{ $a->action }}
-                            @if($a->entity_code)
-                                <span class="pill">{{ $a->entity_code }}</span>
+                            <b class="font-semibold">{{ $actor }}</b> · {{ $activityLog->action }}
+                            @if($activityLog->entity_code)
+                                <span class="pill">{{ $activityLog->entity_code }}</span>
                             @endif
-                            @if($a->detail)
-                                <div class="text-xs text-[#4a5875] mt-0.5 leading-normal">{{ $a->detail }}</div>
+                            @if($activityLog->detail)
+                                <div class="text-xs text-[#4a5875] mt-0.5 leading-normal">{{ $activityLog->detail }}</div>
                             @endif
                         </div>
                         <div class="w text-[11px] text-[#8894ac] mt-1">
-                            {{ $a->at_time ? \Carbon\Carbon::parse($a->at_time)->format('d M Y, H:i') : $a->created_at?->format('d M Y, H:i') }}
+                            {{ $activityLog->at_time ? \Carbon\Carbon::parse($activityLog->at_time)->format('d M Y, H:i') : $activityLog->created_at?->format('d M Y, H:i') }}
                         </div>
                     </div>
                 </div>

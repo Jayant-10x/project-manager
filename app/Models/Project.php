@@ -48,7 +48,14 @@ class Project extends Model
         if ($user->role === 'Manager') {
             $downlineIds = $user->getDownlineUserIds();
 
-            return $query->whereIn('coordinator_id', $downlineIds);
+            return $query->where(function ($subQuery) use ($downlineIds) {
+                $subQuery->whereIn('coordinator_id', $downlineIds)
+                    ->orWhereIn('sales_person_id', $downlineIds);
+            });
+        }
+
+        if ($user->role === 'Sales') {
+            return $query->where('sales_person_id', $user->id);
         }
 
         return $query->where('coordinator_id', $user->id);
@@ -62,6 +69,11 @@ class Project extends Model
     public function coordinator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'coordinator_id');
+    }
+
+    public function salesPerson(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sales_person_id')->where('role', 'Sales');
     }
 
     public function terms(): HasMany
@@ -94,7 +106,7 @@ class Project extends Model
         $scheduled = (float) $this->terms->where('status', '!=', 'Cancelled')->sum('amount');
         $received = (float) $this->payments->sum('amount');
         $tds = (float) $this->payments->sum('tds');
-        $overdue = (float) $this->terms->where('status', 'Overdue')->sum(fn ($t) => max(0, $t->amount - $t->received - $t->tds));
+        $overdue = (float) $this->terms->where('status', 'Overdue')->sum(fn ($term) => max(0, $term->amount - $term->received - $term->tds));
 
         return [
             'scheduled' => $scheduled,

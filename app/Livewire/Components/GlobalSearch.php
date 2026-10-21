@@ -37,7 +37,7 @@ class GlobalSearch extends Component
                 ->get();
 
             foreach ($customers as $c) {
-                $results[] = ['type' => 'Customer', 'title' => $c->company, 'sub' => $c->customer_code, 'url' => route('customers.show', $c)];
+                $results[] = ['type' => 'Customer', 'title' => $c->display_name, 'sub' => $c->customer_code, 'url' => route('customers.show', $c)];
             }
             foreach ($projects as $p) {
                 $results[] = ['type' => 'Project', 'title' => $p->name, 'sub' => $p->project_code.' ('.$p->health.')', 'url' => route('projects.show', $p)];

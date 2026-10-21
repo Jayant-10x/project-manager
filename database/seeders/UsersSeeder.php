@@ -156,6 +156,15 @@ class UsersSeeder extends Seeder
                 'target' => 3000000.00,
                 'coordinator' => $coordinator1,
             ],
+            [
+                'name' => 'Yash Gupta',
+                'email' => 'sales.yash@the10xagency.in',
+                'phone' => '9876543245',
+                'designation' => 'Inside Sales Specialist',
+                'city' => 'Kanpur',
+                'target' => 3500000.00,
+                'coordinator' => $coordinator1,
+            ],
         ];
 
         foreach ($salesReps as $rep) {
