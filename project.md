@@ -33,7 +33,7 @@ The application was transitioned across three foundational architecture paradigm
 
 ```mermaid
 graph TD
-    subgraph Client Layer [Client Layer (Browser SPA)]
+    subgraph ClientLayer ["Client Layer (Browser SPA)"]
         UI["Livewire 4 Reactive Views & Blade Components"]
         ModalGuard["Alpine.js Modal Component & Unsaved Changes Guard (isDirty)"]
         AlpineStore["Alpine.js Stores ($store.currency, $store.notifications, Sidebar State)"]
@@ -45,7 +45,7 @@ graph TD
         DesktopNotif <--> LocalStorage
     end
 
-    subgraph Entry Points [HTTP Routing & Middleware]
+    subgraph RoutingLayer ["HTTP Routing and Middleware"]
         WebRoute["routes/web.php<br/>(Livewire Full-Page Component Routing with wire:navigate)"]
         AuthMiddleware["Middleware: auth, verified, EnsurePasswordIsChanged"]
         PollRoute["GET /api/notifications/poll<br/>(NotificationPollController)"]
@@ -54,7 +54,7 @@ graph TD
         DesktopNotif -.->|Fetch 30s Poll| PollRoute
     end
 
-    subgraph Livewire Component Layer
+    subgraph ComponentLayer ["Livewire Component Layer"]
         NavComponents["Navigation & System Components<br/>(GlobalSearch, NotificationBell, NotificationDrawer)"]
         OverviewModules["Overview Modules<br/>(DashboardIndex, TodayWorkIndex)"]
         CustomerModules["Customer Modules<br/>(CustomerIndex, CustomerDetail, CustomerModal, CustomerImportModal)"]
@@ -65,13 +65,13 @@ graph TD
         AuthModules["Security & Auth<br/>(ForcePasswordChange at /change-password)"]
     end
 
-    subgraph Domain Services Layer
+    subgraph DomainServices ["Domain Services Layer"]
         MoneyService["MoneyCalculationService<br/>(Financial Aggregations & Status Automations)"]
         CodeService["CodeGeneratorService<br/>(Atomic Row-Locking Sequence Engine)"]
         CurrencyService["CurrencyRateService<br/>(USD / INR Conversion Rates)"]
     end
 
-    subgraph Persistence Layer
+    subgraph PersistenceLayer ["Persistence Layer"]
         Eloquent["Eloquent ORM Models (Relationships, Casts & Scopes)"]
         MySQL[("MySQL 8.0+ Database (17 Migrated Tables)")]
         DiskStorage[("Local Public Disk Storage (storage/app/public)")]
@@ -221,11 +221,11 @@ pjt-crm/
 erDiagram
     USERS ||--o{ PROJECTS : "coordinates"
     USERS ||--o{ CUSTOMERS : "creates"
-    USERS ||--o{ CUSTOMERS : "onboards (sales_person_id)"
+    USERS ||--o{ CUSTOMERS : "onboards"
     USERS ||--o{ TASKS : "assigned_to"
     USERS ||--o{ NOTIFICATIONS : "receives"
     USERS ||--o{ ACTIVITY_LOGS : "performs"
-    USERS ||--o{ USERS : "supervises (reporting_to)"
+    USERS ||--o{ USERS : "supervises"
 
     CUSTOMERS ||--o{ PROJECTS : "owns"
     CUSTOMERS ||--o{ PAYMENTS : "remits"

@@ -118,7 +118,7 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 
 ```mermaid
 graph TD
-    subgraph Client Layer [Frontend Client (SPA)]
+    subgraph ClientLayer ["Frontend Client (SPA)"]
         UI["Livewire 4 Components & Blade Templates"]
         ModalGuard["Alpine.js Modal Component & Unsaved Changes Guard (isDirty)"]
         AlpineStore["Alpine.js Stores ($store.currency, $store.notifications, Sidebar State)"]
@@ -130,7 +130,7 @@ graph TD
         DesktopNotif <--> LocalStorage
     end
 
-    subgraph HTTP Routing & Middleware Layer
+    subgraph RoutingLayer ["HTTP Routing and Middleware Layer"]
         Routes["routes/web.php (wire:navigate Enabled)"]
         AuthMiddleware["Middleware: auth, verified, EnsurePasswordIsChanged"]
         PollRoute["GET /api/notifications/poll (NotificationPollController)"]
@@ -139,7 +139,7 @@ graph TD
         DesktopNotif -.->|Fetch 30s Poll| PollRoute
     end
 
-    subgraph Livewire 4 Component Registry
+    subgraph ComponentRegistry ["Livewire 4 Component Registry"]
         RoleScope --> M1["Overview: DashboardIndex, TodayWorkIndex"]
         RoleScope --> M2["Customers: CustomerIndex, CustomerDetail, CustomerModal, CustomerImportModal"]
         RoleScope --> M3["Projects: ProjectIndex, ProjectDetail, ProjectModal, ScheduleModal, RecurringModal, MilestoneModal"]
@@ -149,7 +149,7 @@ graph TD
         AuthMiddleware --> M7["Auth: ForcePasswordChange (/change-password)"]
     end
 
-    subgraph Domain Services Layer
+    subgraph DomainServices ["Domain Services Layer"]
         MoneyService["MoneyCalculationService (Financial Math & Auto-Overdue)"]
         CodeService["CodeGeneratorService (Atomic Row-Locking Sequence)"]
         CurrencyService["CurrencyRateService (USD/INR Exchange Rates)"]
@@ -159,7 +159,7 @@ graph TD
         M1 & M4 --> CurrencyService
     end
 
-    subgraph Data & Storage Layer
+    subgraph StorageLayer ["Data and Storage Layer"]
         Eloquent["Eloquent ORM Models (with Casts & Relationships)"]
         MySQL[("MySQL 8.0+ Database")]
         DiskStorage[("Public Disk Storage (storage/app/public)")]
