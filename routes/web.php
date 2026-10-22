@@ -84,3 +84,8 @@ Route::get('/storage/{filename}', function (string $filename) {
 })->where('filename', '.*')->name('storage.file');
 
 require __DIR__.'/auth.php';
+
+// Fallback route ensuring unmatched URLs execute the web middleware group with session/auth initialized
+Route::fallback(function () {
+    abort(404);
+});

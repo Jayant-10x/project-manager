@@ -133,7 +133,8 @@
 
         <!-- Main Page View Slot -->
         <main class="content" id="content">
-            {{ $slot }}
+            {{ $slot ?? '' }}
+            @yield('content')
         </main>
     </div>
 </div>

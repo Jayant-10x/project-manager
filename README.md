@@ -18,7 +18,7 @@
 </p>
 
 > [!TIP]
-> **Comprehensive Master Technical Reference Available**: For complete technical specifications, architectural evolution history, full database schema & ERD, deep component matrix, and consolidated historical defect registry (ISS-001 through ISS-053), see [**`project.md`**](project.md).
+> **Comprehensive Master Technical Reference Available**: For complete technical specifications, architectural evolution history, full database schema & ERD, deep component matrix, and consolidated historical defect registry (ISS-001 through ISS-056), see [**`project.md`**](project.md).
 
 ---
 
@@ -222,6 +222,12 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
    Secondary views and detail pages use `window.history.length > 1 ? window.history.back() : window.location.href = '...'` to navigate back to the user's previous filtered list state instead of hardcoded route jumps.
 9. **Schema Null vs. Default Synchronization**:
    For database columns defined as `NOT NULL DEFAULT 0.00` (e.g., `projects.cost`, `projects.amc_amount`, `payments.tds`, `users.target`), Livewire components explicitly convert empty strings (`""`) to `0.00` before persistence, preventing MySQL `1048 Column cannot be null` errors.
+10. **Modal Scroll Isolation & Body Locking**:
+    Both `<x-modal>` and `<x-confirm-modal>` feature reactive Alpine watchers (`$watch('show')`) that automatically apply `overflow-hidden` to `document.body` while active, preventing underlying background page scrolling. In addition, `overscroll-contain` is enforced on both modal overlays and internal containers to eliminate touch bounce and scroll-chaining.
+11. **In-Workspace Context-Aware Error Views & Fallbacks**:
+    System HTTP errors (404, 403, 500, 419, 503) extend the application shell (`layouts.app`) for authenticated users, preserving the top navigation header, search bar, and sidebar. A route fallback handler catches missing pages within the `web` session pipeline to provide intelligent, contextual recovery suggestions (e.g. "Customer Not Found" with "View All Customers", "Project Not Found" with "View All Projects"). Guests receive a clean branded card inside `layouts.guest`.
+12. **Development & Production Asset Parity**:
+    Vite configuration specifies `hmr: { host: 'localhost' }`, `cors: true`, and automatic lifecycle signal cleanup for `public/hot`, ensuring zero styling distortion or network address errors whether running `npm run dev` or `npm run build`.
 
 ---
 
@@ -307,7 +313,8 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
 │   ├── css/app.css                                 # Tailwind CSS setup
 │   ├── js/app.js                                   # Clean JS entry without manual Alpine imports
 │   └── views/
-│       ├── components/                             # Blade UI components (money, kpi-card, health-badge, modal)
+│       ├── components/                             # Blade UI components (money, kpi-card, health-badge, modal, confirm-modal)
+│       ├── errors/                                 # Context-aware error views (403, 404, 419, 500, 503) extending workspace shell
 │       ├── layouts/
 │       │   ├── app.blade.php                       # Master responsive application layout with slide-over drawer & notifier
 │       │   ├── guest.blade.php                     # Clean layout for login and password change

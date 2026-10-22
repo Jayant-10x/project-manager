@@ -102,6 +102,9 @@ graph TD
 * **Unsaved Changes Safeguard**: The modal container (`<x-modal>`) monitors user modification states (`isDirty`), prompting a confirmation warning before closing on outside clicks, `Escape` key presses, or Cancel clicks.
 * **Real-Time Blur Validation**: Livewire properties bind with `wire:model.blur` and invoke `$this->validateOnly($propertyName)` within the `updated()` lifecycle hook, providing immediate inline validation with distinct red error borders without noisy top alert banners.
 * **Database Type Synchronization**: Optional strings submitted through form selects are normalized to `null` or explicit database defaults (e.g. `0.00` for numeric columns defined as `NOT NULL DEFAULT 0.00`) to prevent MySQL constraint violations.
+* **Modal Scroll Isolation & Background Locking**: All modal containers (`<x-modal>` and `<x-confirm-modal>`) monitor their active visibility via Alpine watchers (`$watch('show')`), dynamically applying `overflow-hidden` to `document.body` while active and removing it once all modals are dismissed. `overscroll-contain` is enforced on both backdrop overlays and modal bodies to prevent scroll chaining and mobile touch rubber-banding.
+* **In-Workspace Context-Aware Error Recovery**: HTTP exceptions (404, 403, 500, 419, 503) retain the full application workspace (`<x-app-layout>`) for logged-in users. A terminal `Route::fallback()` in `routes/web.php` ensures unmatched paths traverse the `web` session middleware, enabling context-aware recovery guidance and action buttons based on URL patterns. Unauthenticated visitors receive a branded `<x-guest-layout>` presentation.
+* **Vite Development & Production Parity**: Vite server configuration standardizes on `hmr: { host: 'localhost' }` and `cors: true` with signal traps on process exit to auto-purge `public/hot`, ensuring seamless asset loading and zero layout distortion between `npm run dev` and `npm run build`.
 
 ---
 
@@ -199,7 +202,8 @@ pjt-crm/
 │   ├── css/app.css                                 # Tailwind CSS setup
 │   ├── js/app.js                                   # Clean JS entry without manual Alpine imports
 │   └── views/
-│       ├── components/                             # Blade UI components (money, kpi-card, health-badge, modal)
+│       ├── components/                             # Blade UI components (money, kpi-card, health-badge, modal, confirm-modal)
+│       ├── errors/                                 # Context-aware error views (403, 404, 419, 500, 503) extending workspace shell
 │       ├── layouts/
 │       │   ├── app.blade.php                       # Master responsive application layout with slide-over drawer & notifier
 │       │   ├── guest.blade.php                     # Clean layout for login and password change
@@ -623,16 +627,18 @@ Administrative password resets are handled on-demand from the Settings (`/settin
 * **Sales Tier Restrictions**: Sales representatives are strictly scoped to self-attributed customer accounts (`sales_person_id == user->id`) and basic project overviews. Financial ledgers, payment schedules, and money collection columns are completely hidden.
 * **Mandatory Password Change**: The `EnsurePasswordIsChanged` middleware inspects `auth()->user()->must_change`. If flagged, navigation to all routes except `password.change` and `logout` is redirected to `/change-password`.
 * **Unsaved Changes Safeguard**: Modal components monitor user dirty states (`isDirty`) and intercept accidental dismissals.
+* **In-App Error Pipeline & Session Resilience**: Unmatched and unauthorized HTTP exceptions are handled via `Route::fallback()` within the `web` session middleware, ensuring user sessions are maintained and errors render inside `<x-app-layout>` without exposing raw stack traces or dropping the authenticated navigation shell.
 
 ---
 
 ## 7. Historical Defect Registry, Technical Resolutions & Legacy Cleanup Archive
 
-### 7.1 Master Historical Defect Registry (ISS-001 through ISS-053)
+### 7.1 Master Historical Defect Registry (ISS-001 through ISS-056)
 
-The following registry catalogues all 53 technical defects and architectural enhancements resolved across the system's evolutionary migration:
+The following registry catalogues all 56 technical defects and architectural enhancements resolved across the system's evolutionary migration:
 
 | Issue ID | Severity | Functional Domain | Defect Description & System Impact | Resolution Status |
+|:---|:---|:---|:---|:---|
 |:---|:---|:---|:---|:---|
 | **ISS-001** | Critical | Settings & Alerts | Zero-value alert day defaults (`0` days) broke upcoming queries in Dashboard and failed validation | **[VERIFIED FIXED]** |
 | **ISS-002** | Critical | Timezone & Notifications | Timezone mismatch caused past notifications to render as "5 hours from now" | **[VERIFIED FIXED]** |
@@ -687,6 +693,9 @@ The following registry catalogues all 53 technical defects and architectural enh
 | **ISS-051** | Medium | Migrations Architecture | Consolidate incremental/drop migrations into original table migrations and execute migrate:fresh | **[VERIFIED FIXED]** |
 | **ISS-052** | High | Form Validation & Seeders | Project coordinator and start date requiredness broke tests; customer state abbreviation vs name mismatch | **[VERIFIED FIXED]** |
 | **ISS-053** | High | Customer Identity & Fallback | Nullable company name required contact_name display fallback across all project views, tables, and selects | **[VERIFIED FIXED]** |
+| **ISS-054** | High | Error Handling & UX | Unhandled HTTP exceptions (404, 403, 500) broke out of workspace into unstyled deadlock | **[VERIFIED FIXED]** |
+| **ISS-055** | Medium | Modal UX & Scroll Behavior | Background page scroll not locked when modal is open and nested scrollable body caused scroll-chaining | **[VERIFIED FIXED]** |
+| **ISS-056** | High | Tooling & Asset Compilation | Vite dev server 0.0.0.0 host binding broke HMR and stale public/hot manifest caused layout distortion | **[VERIFIED FIXED]** |
 
 ---
 
@@ -732,6 +741,12 @@ The following registry catalogues all 53 technical defects and architectural enh
 * **ISS-049 (Schedule Auto-Split Without Milestones)**:
   * *Root Cause*: The Auto-Split 30/40/30 wizard crashed when a project had zero milestones defined.
   * *Technical Resolution*: Implemented date fallback logic: when milestones exist, terms inherit milestone delivery dates; when milestones are absent, terms stagger gracefully from the project start date (+0 days, +15 days, +30 days).
+* **ISS-054 (In-App Context-Aware Error Pages & Session Fallback Pipeline)**:
+  * *Root Cause*: Uncaught HTTP exceptions (404, 403, 500, 419, 503) bypassed custom UI wrappers, stripping out the workspace navigation layout and leaving authenticated users deadlocked on unstyled default screens. Unmatched URLs bypassed the `web` session middleware group, breaking session detection.
+  * *Technical Resolution*: Engineered responsive contextual error views (`404.blade.php`, `403.blade.php`, `500.blade.php`, `419.blade.php`, `503.blade.php`) extending `resources/views/errors/layout.blade.php`. For logged-in users, errors render within `<x-app-layout>` retaining the sidebar, search, and notification bell; guests receive a clean branded card inside `<x-guest-layout>`. Added `Route::fallback()` in `routes/web.php` and session decryption recovery in `bootstrap/app.php` to ensure unmatched URLs execute through the web middleware pipeline and dynamically resolve targeted messages ("Customer Not Found", "Project Not Found") and recovery buttons ("View All Customers", "View All Projects").
+* **ISS-055 (Modal Background Scroll Bleed-Through & Overscroll Containment)**:
+  * *Root Cause*: Modal overlays (`<x-modal>` and `<x-confirm-modal>`) lacked body scroll locking, allowing mousewheel and touch swipe actions to scroll the background page behind open forms. Reaching top/bottom limits within scrollable modal bodies triggered browser scroll-chaining.
+  * *Technical Resolution*: Added Alpine `$watch('show')` hooks to add `document.body.classList.add('overflow-hidden')` on open and remove it when all modals close. Applied `overscroll-contain` (CSS `overscroll-behavior: contain;`) across overlays and modal bodies, and enforced `body.overflow-hidden { overflow: hidden !important; }` in `crm-style.css`.
 
 #### 7.2.5 Responsive Design, CSS Specificity & Layout Adaptation
 * **ISS-017, ISS-018, ISS-019, ISS-020, ISS-021, ISS-022 & ISS-025 (Viewport Resilience)**:
@@ -754,6 +769,11 @@ The following registry catalogues all 53 technical defects and architectural enh
 * **ISS-036 & ISS-037 (Document Storage & Naming Preservation)**:
   * *Root Cause*: Files uploaded to disk were saved as arbitrary random hex strings (`d1_bin2hex`), losing the original file name and extension during client downloads.
   * *Technical Resolution*: Normalized storage filename generation to preserve a sanitized version of the original filename prefixed with a Unix timestamp. Added explicit `download="{{ $doc->file_name }}"` attributes to download anchors.
+
+#### 7.2.8 Developer Tooling, Asset Pipelines & Runtime Parity
+* **ISS-056 (Vite Dev Server Host Resolution & Lifecycle Hotfile Desynchronization)**:
+  * *Root Cause*: `npm run dev` bound to `0.0.0.0` caused browser asset injection to target `http://0.0.0.0:5173/@vite/client`, which browsers reject (`net::ERR_ADDRESS_INVALID`) when navigating via `localhost:8000`, resulting in completely unstyled, broken HTML layouts in dev mode. Furthermore, abrupt process kills left stale `public/hot` manifest files on disk that corrupted subsequent builds and preview requests.
+  * *Technical Resolution*: Updated `vite.config.js` to configure `server: { host: '0.0.0.0', hmr: { host: 'localhost' }, cors: true }` and registered process signal handlers (`SIGINT`, `SIGTERM`, `exit`, `close`) to automatically unlink `public/hot` upon dev server shutdown. Both `npm run dev` and `npm run build` produce 100% layout and styling parity across all components.
 
 ---
 

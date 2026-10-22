@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ asset('css/crm-style.css') }}">
 </head>
 <body class="font-sans antialiased">
-{{ $slot }}
+{{ $slot ?? '' }}
+@yield('content')
 </body>
 </html>

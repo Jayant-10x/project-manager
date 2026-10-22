@@ -52,12 +52,26 @@
             }, 100);
         }
     }"
+    x-init="
+        $watch('show', value => {
+            if (value) {
+                document.body.classList.add('overflow-hidden');
+            } else {
+                setTimeout(() => {
+                    const openModals = document.querySelectorAll('.overlay:not([style*=\'display: none\']), [data-confirm-modal]:not([style*=\'display: none\'])');
+                    if (openModals.length === 0) {
+                        document.body.classList.remove('overflow-hidden');
+                    }
+                }, 50);
+            }
+        });
+    "
     data-confirm-modal
     x-on:confirm-dialog.window="open($event.detail)"
     x-show="show"
     x-on:keydown.escape.window="if (show) { cancel(); $event.stopPropagation(); }"
     style="display: none; background-color: rgba(8, 20, 42, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);"
-    class="fixed inset-0 flex items-center justify-center p-4 sm:p-6 z-[9999] overflow-y-auto"
+    class="fixed inset-0 flex items-center justify-center p-4 sm:p-6 z-[9999] overflow-y-auto overscroll-contain"
     x-transition:enter="ease-out duration-150"
     x-transition:enter-start="opacity-0"
     x-transition:enter-end="opacity-100"

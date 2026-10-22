@@ -27,6 +27,20 @@
             this.isDirty = false;
         }
      }"
+     x-init="
+        $watch('show', value => {
+            if (value) {
+                document.body.classList.add('overflow-hidden');
+            } else {
+                setTimeout(() => {
+                    const openModals = document.querySelectorAll('.overlay:not([style*=\'display: none\']), [data-confirm-modal]:not([style*=\'display: none\'])');
+                    if (openModals.length === 0) {
+                        document.body.classList.remove('overflow-hidden');
+                    }
+                }, 50);
+            }
+        });
+     "
      x-show="show"
      x-on:open-modal.window="
         const d = $event.detail;
@@ -44,7 +58,7 @@
      x-on:close.stop="forceClose()"
      x-on:keydown.escape.window="if (show && !window._confirmModalActive) confirmClose()"
      style="display: none; background-color: rgba(8, 20, 42, 0.60); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);"
-     class="overlay fixed inset-0 flex items-start justify-center p-6 z-50 overflow-y-auto">
+     class="overlay fixed inset-0 flex items-start justify-center p-6 z-50 overflow-y-auto overscroll-contain">
 
     <div
         class="modal bg-white rounded-2xl w-full {{ $wide ? 'max-w-4xl' : 'max-w-2xl' }} shadow-2xl overflow-hidden my-auto"
@@ -68,7 +82,7 @@
         </div>
         @endif
 
-        <div class="modal-body p-6 max-h-[75vh] overflow-y-auto">
+        <div class="modal-body p-6 max-h-[75vh] overflow-y-auto overscroll-contain">
             {{ $slot }}
         </div>
     </div>

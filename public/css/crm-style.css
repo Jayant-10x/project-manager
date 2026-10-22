@@ -1569,6 +1569,10 @@ tr.clickable {
 }
 
 /* ---------- MODAL ---------- */
+body.overflow-hidden {
+    overflow: hidden !important;
+}
+
 .overlay {
     position: fixed;
     inset: 0;
@@ -1580,6 +1584,7 @@ tr.clickable {
     padding: 40px 18px;
     z-index: 120;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .modal {
@@ -1646,6 +1651,7 @@ tr.clickable {
     padding: 18px 22px;
     max-height: 66vh;
     overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .modal-foot {
@@ -2323,6 +2329,7 @@ textarea.i {
     .modal-body {
         padding: 14px;
         max-height: calc(85vh - 110px);
+        overscroll-behavior: contain;
     }
 
     .modal-foot,
