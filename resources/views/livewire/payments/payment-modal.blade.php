@@ -1,4 +1,4 @@
-<x-modal name="payment-modal" title="Record Payment Receipt" :sub="$projectSub ?: 'Log verified settlement to ledger'">
+<x-modal name="payment-modal" title="Record Payment Receipt" :sub="$projectSub ?: 'Log verified settlement to ledger'" :wide="true">
     <form wire:submit="save" novalidate>
         <div class="form-grid">
             <label class="f full">
@@ -106,10 +106,20 @@
                 @error('note') <span
                     class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
             </label>
+
+            <label class="f full">
+                <span>Receipt Slip / Bank Advice (Smart Document Attachment)</span>
+                <input type="file" wire:model="receipt_file"
+                       class="i text-xs @error('receipt_file') border-red-500! bg-red-50/20! @enderror"
+                       accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx">
+                @error('receipt_file') <span
+                    class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
+                <div class="hint text-xs text-[#8894ac] mt-1">Upload transfer proof, receipt slip, or bank advice (PDF, JPG, PNG, DOCX up to 10 MB). Automatically logged to Project Documents.</div>
+            </label>
         </div>
 
         <div class="mt-6 flex justify-end gap-3">
-            <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
+            <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
             <button type="submit" class="btn btn-green">
                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                     <path d="M20 6L9 17l-5-5"/>

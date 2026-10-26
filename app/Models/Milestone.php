@@ -14,6 +14,7 @@ class Milestone extends Model
         'done_on' => 'date',
         'done' => 'boolean',
         'sort_order' => 'integer',
+        'next_chase_date' => 'date',
     ];
 
     public function project(): BelongsTo

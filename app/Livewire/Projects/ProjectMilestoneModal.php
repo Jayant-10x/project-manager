@@ -14,6 +14,8 @@ class ProjectMilestoneModal extends Component
 
     public string $projectCode = '';
 
+    public bool $hasExistingMilestones = false;
+
     public array $items = [];
 
     #[On('open-milestone-modal')]
@@ -25,6 +27,7 @@ class ProjectMilestoneModal extends Component
         $this->projectCode = $project->code;
 
         $dbItems = $project->milestones()->orderBy('sort_order')->get();
+        $this->hasExistingMilestones = $dbItems->isNotEmpty();
         if ($dbItems->isEmpty()) {
             $deliveryDate = $project->delivery_date?->toDateString() ?? '';
             $this->items = [
@@ -41,6 +44,8 @@ class ProjectMilestoneModal extends Component
                 'dueDate' => $m->due_date?->toDateString() ?? '',
                 'status' => $m->status ?? 'Pending',
                 'done' => (bool) $m->done,
+                'chase_notes' => $m->chase_notes ?? '',
+                'next_chase_date' => $m->next_chase_date?->toDateString() ?? '',
             ])->toArray();
         }
 
@@ -135,6 +140,13 @@ class ProjectMilestoneModal extends Component
                 'sort_order' => $idx + 1,
             ];
 
+            if (array_key_exists('chase_notes', $m)) {
+                $payload['chase_notes'] = $m['chase_notes'];
+            }
+            if (array_key_exists('next_chase_date', $m)) {
+                $payload['next_chase_date'] = $m['next_chase_date'];
+            }
+
             if (! empty($m['id'])) {
                 $milestone = $existingMilestones->get($m['id']);
                 if ($milestone) {
@@ -175,14 +187,36 @@ class ProjectMilestoneModal extends Component
             ? "Updated milestones for {$project->name}: ".implode('; ', $diffs)
             : "Updated milestones for project {$project->name}";
 
+        $auditChanges = [];
+        foreach ($diffs as $diffItem) {
+            $auditChanges[] = ['change' => $diffItem];
+        }
+
         app(AuditNotificationService::class)->log(
             auth()->id(),
             'Updated Milestones',
             'Project',
             $project->id,
             $project->code,
-            $detailText
+            $detailText,
+            ! empty($auditChanges) ? $auditChanges : null
         );
+
+        // Notify coordinator and downline manager if any milestone marked Done
+        foreach ($this->items as $m) {
+            if (! empty($m['done']) || ($m['status'] ?? '') === 'Done') {
+                if ($project->coordinator_id && $project->coordinator_id !== auth()->id()) {
+                    app(AuditNotificationService::class)->notify(
+                        $project->coordinator_id,
+                        'Milestone Completed',
+                        "Milestone Done: {$m['name']}",
+                        "Milestone '{$m['name']}' on project {$project->name} was marked as completed.",
+                        'project',
+                        $project->id
+                    );
+                }
+            }
+        }
 
         $this->dispatch('close-modal', 'project-milestone-modal');
         $this->dispatch('project-saved');

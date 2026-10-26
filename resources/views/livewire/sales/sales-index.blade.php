@@ -5,7 +5,7 @@
             {{ $salesCount }} salesperson{{ $salesCount === 1 ? '' : 's' }} · {{ $totalOnboarded }} onboarded customer{{ $totalOnboarded === 1 ? '' : 's' }}
         </span>
         <span class="spacer"></span>
-        <button type="button" class="btn btn-ghost btn-sm" wire:click="exportCsv">
+        <button type="button" class="btn btn-outline-secondary btn-sm" wire:click="exportCsv">
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                 <path d="M7 10l5 5 5-5"/>
@@ -88,15 +88,16 @@
 
                 @if(auth()->user()->role === 'Admin')
                     <div class="row-actions mt-3 justify-start flex gap-2">
-                        <button type="button" class="mini-btn"
+                        <button type="button" class="btn btn-outline-secondary btn-xs inline-flex items-center gap-1"
                                 @click="Livewire.dispatch('open-user-modal', { id: {{ $sp->id }} })"
-                                title="Edit">
-                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                title="Edit Salesperson">
+                            <svg viewBox="0 0 24 24" class="w-3 h-3">
                                 <path d="M12 20h9"/>
                                 <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
                             </svg>
+                            <span>Edit</span>
                         </button>
-                        <button type="button" class="mini-btn danger"
+                        <button type="button" class="btn btn-outline-danger btn-xs inline-flex items-center gap-1"
                                 @click="$dispatch('confirm-dialog', {
                                     title: 'Remove Salesperson?',
                                     message: 'Remove {{ addslashes($sp->name) }}? Past attributed customers and projects will remain intact.',
@@ -107,11 +108,12 @@
                                     action: 'deleteSales',
                                     params: {{ $sp->id }}
                                 })"
-                                title="Remove">
-                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                title="Remove Salesperson">
+                            <svg viewBox="0 0 24 24" class="w-3 h-3">
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                             </svg>
+                            <span>Remove</span>
                         </button>
                     </div>
                 @endif

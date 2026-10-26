@@ -120,12 +120,16 @@ class ProjectIndex extends Component
             ->orderBy('company')
             ->get();
 
-        $coordinators = User::query()
-            ->whereIn('id', Project::forUser($user)->whereNotNull('coordinator_id')->distinct()->pluck('coordinator_id'))
-            ->orderBy('name')
-            ->get();
+        $coordinatorsQuery = User::query()
+            ->where('status', 'Active')
+            ->whereIn('id', Project::forUser($user)->whereNotNull('coordinator_id')->distinct()->pluck('coordinator_id'));
+        $coordinators = ($user->role === 'Coordinator') ? collect() : $coordinatorsQuery->orderBy('name')->get();
 
-        $salesPeople = User::where('role', 'Sales')->orderBy('name')->get();
+        $salesPeopleQuery = User::where('role', 'Sales')->where('status', 'Active');
+        if ($user->role === 'Manager') {
+            $salesPeopleQuery->whereIn('id', $user->getDownlineUserIds());
+        }
+        $salesPeople = ($user->role === 'Sales') ? collect() : $salesPeopleQuery->orderBy('name')->get();
 
         $projectTypes = Project::forUser($user)
             ->whereNotNull('project_type')

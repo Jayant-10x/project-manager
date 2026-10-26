@@ -1,4 +1,4 @@
-<x-guest-layout>
+<x-guest-layout title="Sign In">
     <div class="login-wrap">
         <div class="login-card">
             <!-- Brand Logo Plate -->

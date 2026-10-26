@@ -2,12 +2,15 @@
 
 namespace App\Livewire\Settings;
 
+use App\Mail\TemporaryPasswordMail;
+use App\Models\PasswordResetRequest;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\AuditNotificationService;
+use App\Services\PasswordGeneratorService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -20,6 +23,12 @@ class SettingIndex extends Component
     public ?int $highlight_user = null;
 
     // Alert & System Settings
+    /** @var array<int> */
+    public array $reminderDays = [7, 3, 1];
+
+    public ?int $newReminderDay = null;
+
+    // Retained for backwards-compatibility
     public ?int $paymentAlertDays = 7;
 
     public ?int $amcAlertDays = 7;
@@ -39,37 +48,87 @@ class SettingIndex extends Component
 
     public function mount(): void
     {
-        $this->paymentAlertDays = (int) Setting::getValue('payment_alert_days', 7);
+        if (auth()->user()->role !== 'Admin') {
+            abort(403, 'Unauthorized: Only administrators have access to system settings.');
+        }
+
+        $this->reminderDays = Setting::getPaymentReminderDays();
+        $this->paymentAlertDays = ! empty($this->reminderDays) ? $this->reminderDays[0] : 7;
         $this->amcAlertDays = (int) Setting::getValue('amc_alert_days', 7);
         $this->followupAlertDays = (int) Setting::getValue('followup_alert_days', 1);
         $this->companyName = (string) Setting::getValue('company_name', '10X Agency');
         $this->displayCurrency = (string) Setting::getValue('display_currency', 'INR');
     }
 
+    public function addReminderDay(): void
+    {
+        if ($this->newReminderDay === null || $this->newReminderDay === '') {
+            $this->addError('newReminderDay', 'Please enter a valid day count (0–180).');
+
+            return;
+        }
+
+        $day = (int) $this->newReminderDay;
+        if ($day < 0 || $day > 180) {
+            $this->addError('newReminderDay', 'Reminder days must be between 0 (on due date) and 180.');
+
+            return;
+        }
+
+        if (in_array($day, $this->reminderDays, true)) {
+            $this->addError('newReminderDay', "A reminder threshold for {$day} day(s) is already configured.");
+
+            return;
+        }
+
+        $this->reminderDays[] = $day;
+        rsort($this->reminderDays);
+        $this->reminderDays = array_values($this->reminderDays);
+        $this->newReminderDay = null;
+        $this->resetValidation(['newReminderDay', 'reminderDays']);
+    }
+
+    public function removeReminderDay(int $day): void
+    {
+        $this->reminderDays = array_values(array_filter($this->reminderDays, fn ($d) => $d !== $day));
+
+        if (empty($this->reminderDays)) {
+            $this->addError('reminderDays', 'At least one payment reminder threshold is required.');
+        } else {
+            $this->resetValidation('reminderDays');
+        }
+    }
+
+    public function applyPreset(string $preset): void
+    {
+        $this->reminderDays = match ($preset) {
+            'standard' => [7, 3, 1, 0],
+            'intensive' => [14, 7, 3, 1, 0],
+            'minimal' => [3, 0],
+            'single' => [7],
+            default => [7, 3, 1],
+        };
+
+        rsort($this->reminderDays);
+        $this->reminderDays = array_values($this->reminderDays);
+        $this->resetValidation(['newReminderDay', 'reminderDays']);
+    }
+
     #[On('user-saved')]
+    #[On('profile-updated')]
     public function refreshUsers(): void
     {
-        // Re-renders the user account table
+        // Re-renders the component when users or profile change
     }
 
     protected function rules(): array
     {
         return [
-            'paymentAlertDays' => 'required|integer|min:1|max:180',
-            'amcAlertDays' => 'required|integer|min:1|max:180',
-            'followupAlertDays' => 'required|integer|min:1|max:180',
+            'reminderDays' => 'required|array|min:1',
+            'reminderDays.*' => 'integer|min:0|max:180',
             'companyName' => 'required|string|max:120',
             'displayCurrency' => 'required|in:INR,USD',
         ];
-    }
-
-    public function updated(string $propertyName): void
-    {
-        if (in_array($propertyName, ['paymentAlertDays', 'amcAlertDays', 'followupAlertDays'])) {
-            $this->{$propertyName} = ($this->{$propertyName} === null || $this->{$propertyName} === '') ? null : (int) $this->{$propertyName};
-        }
-
-        $this->validateOnly($propertyName);
     }
 
     public function saveSettings(): void
@@ -80,17 +139,32 @@ class SettingIndex extends Component
             return;
         }
 
-        $this->paymentAlertDays = ($this->paymentAlertDays === null || $this->paymentAlertDays === '') ? 7 : (int) $this->paymentAlertDays;
-        $this->amcAlertDays = ($this->amcAlertDays === null || $this->amcAlertDays === '') ? 7 : (int) $this->amcAlertDays;
-        $this->followupAlertDays = ($this->followupAlertDays === null || $this->followupAlertDays === '') ? 1 : (int) $this->followupAlertDays;
+        if (empty($this->reminderDays)) {
+            $this->addError('reminderDays', 'At least one payment reminder threshold must be configured.');
+
+            return;
+        }
 
         $validated = $this->validate();
 
-        Setting::query()->updateOrCreate(['key' => 'payment_alert_days'], ['value' => $validated['paymentAlertDays']]);
-        Setting::query()->updateOrCreate(['key' => 'amc_alert_days'], ['value' => $validated['amcAlertDays']]);
-        Setting::query()->updateOrCreate(['key' => 'followup_alert_days'], ['value' => $validated['followupAlertDays']]);
-        Setting::query()->updateOrCreate(['key' => 'company_name'], ['value' => trim($validated['companyName'])]);
-        Setting::query()->updateOrCreate(['key' => 'display_currency'], ['value' => $validated['displayCurrency']]);
+        rsort($this->reminderDays);
+        $this->reminderDays = array_values(array_unique(array_map('intval', $this->reminderDays)));
+
+        // Store as JSON array string for multi-value persistence
+        Setting::query()->updateOrCreate(
+            ['key' => 'payment_alert_days'],
+            ['value' => json_encode($this->reminderDays)]
+        );
+
+        Setting::query()->updateOrCreate(
+            ['key' => 'company_name'],
+            ['value' => trim($validated['companyName'])]
+        );
+
+        Setting::query()->updateOrCreate(
+            ['key' => 'display_currency'],
+            ['value' => $validated['displayCurrency']]
+        );
 
         app(AuditNotificationService::class)->log(
             auth()->id(),
@@ -98,7 +172,7 @@ class SettingIndex extends Component
             'Setting',
             null,
             '',
-            'Updated system alert days and company settings'
+            'Updated payment reminder thresholds to: '.implode(', ', $this->reminderDays).' days'
         );
 
         $this->dispatch('toast', ['msg' => 'Settings saved successfully', 'type' => 'ok']);
@@ -159,7 +233,8 @@ class SettingIndex extends Component
 
     public function resetUserPassword(int $id): void
     {
-        if (auth()->user()->role !== 'Admin') {
+        $currentUser = auth()->user();
+        if ($currentUser->role !== 'Admin') {
             $this->dispatch('toast', ['msg' => 'Only administrators can reset user credentials.', 'type' => 'err']);
 
             return;
@@ -167,9 +242,14 @@ class SettingIndex extends Component
 
         $user = User::with('reportingTo')->findOrFail($id);
 
-        // Generate a secure alphanumeric temporary password
-        $randomPart = Str::random(6);
-        $temporaryPassword = 'Temp#'.ucfirst($randomPart).rand(10, 99);
+        if ($user->status !== 'Active') {
+            $this->dispatch('toast', ['msg' => 'Cannot reset credentials for an inactive user. Activate the account first.', 'type' => 'err']);
+
+            return;
+        }
+
+        // Generate a cryptographically secure random password without dictionary words
+        $temporaryPassword = PasswordGeneratorService::generate(16);
 
         $user->password = $temporaryPassword;
         $user->must_change = true;
@@ -177,26 +257,59 @@ class SettingIndex extends Component
         $user->locked_until = null;
         $user->save();
 
+        // Mark any pending reset requests for this user as resolved
+        PasswordResetRequest::where('user_id', $user->id)
+            ->where('status', 'Pending')
+            ->update([
+                'status' => 'Resolved',
+                'resolved_by' => $currentUser->id,
+                'resolved_at' => now(),
+            ]);
+
         app(AuditNotificationService::class)->log(
-            auth()->id(),
+            $currentUser->id,
             'Reset User Password',
             'User',
             $user->id,
             '',
-            'Admin '.auth()->user()->name." generated temporary password for {$user->name}"
+            "{$currentUser->role} {$currentUser->name} generated temporary password for {$user->name} ({$user->role})"
         );
 
         app(AuditNotificationService::class)->notify(
             $user->id,
-            'auth',
             'Password Reset by Administrator',
-            'Your password was reset by an administrator. Please log in with your temporary password and set a new personal password.',
+            'Password Reset by Administrator',
+            'Your password was reset by an administrator/manager. Please log in with your temporary credentials and set a new password.',
             'settings'
         );
 
+        // Role-differentiated Email Dispatch:
+        // Admin: email sent to Admin
+        // Manager: email sent to Admin and Manager
+        // Coordinator / Sales: No email sent (in-app only)
+        if ($user->role === 'Admin') {
+            try {
+                Mail::to($user->email)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Admin'));
+            } catch (\Throwable) {
+                // Safe failover if SMTP is unconfigured
+            }
+        } elseif ($user->role === 'Manager') {
+            try {
+                Mail::to($user->email)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Manager'));
+                $adminEmails = User::where('role', 'Admin')->where('status', 'Active')->pluck('email');
+                foreach ($adminEmails as $admEmail) {
+                    if ($admEmail !== $user->email) {
+                        Mail::to($admEmail)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Admin'));
+                    }
+                }
+            } catch (\Throwable) {
+                // Safe failover
+            }
+        }
+
         $loginUrl = url('/login');
         $phone = preg_replace('/[^0-9]/', '', $user->phone ?? '');
-        $whatsappText = "10X Agency CRM Login Credentials:\nURL: {$loginUrl}\nEmail: {$user->email}\nTemporary Password: {$temporaryPassword}\nNote: You will be prompted to set your personal password upon sign-in.";
+        $whatsappText = "Project Manager 10X Agency Login Credentials:\nURL: {$loginUrl}\nEmail: {$user->email}\nTemporary Password: {$temporaryPassword}\nNote: You will be prompted to set your personal password upon sign-in.";
 
         $this->tempCredentials = [
             'id' => $user->id,
@@ -210,7 +323,7 @@ class SettingIndex extends Component
             'loginUrl' => $loginUrl,
             'fullText' => $whatsappText,
             'whatsappUrl' => $phone ? "https://wa.me/{$phone}?text=".rawurlencode($whatsappText) : null,
-            'mailtoUrl' => "mailto:{$user->email}?subject=".rawurlencode('10X Agency CRM — Your Temporary Password').'&body='.rawurlencode($whatsappText),
+            'mailtoUrl' => "mailto:{$user->email}?subject=".rawurlencode('Project Manager 10X Agency — Your Temporary Password').'&body='.rawurlencode($whatsappText),
         ];
 
         $this->dispatch('open-modal', 'temp-credentials-modal');
@@ -300,8 +413,21 @@ class SettingIndex extends Component
             $users = collect();
         }
 
+        // Pending password reset requests for user's scope
+        $pendingResetRequestsQuery = PasswordResetRequest::with('user')
+            ->where('status', 'Pending');
+
+        if ($currentUser->role === 'Manager') {
+            $pendingResetRequestsQuery->whereIn('user_id', $currentUser->getDownlineUserIds());
+        } elseif ($currentUser->role !== 'Admin') {
+            $pendingResetRequestsQuery->where('user_id', $currentUser->id);
+        }
+
+        $pendingResetRequests = $pendingResetRequestsQuery->orderByDesc('id')->get();
+
         return view('livewire.settings.setting-index', [
             'users' => $users,
+            'pendingResetRequests' => $pendingResetRequests,
             'me' => $currentUser,
         ])->layoutData([
             'header' => 'Settings',

@@ -2,6 +2,9 @@
 
 **System Architecture, Database Specification, Livewire 4 Component Matrix & Technical Reference**
 
+> [!NOTE]
+> **User Manual & Operational Guide Available**: For non-technical team onboarding, module-by-module workflow guides, and step-by-step usage instructions, please refer to [**`project-guide.md`**](project-guide.md).
+
 ---
 
 ## 1. System Executive Summary & Architecture
@@ -36,10 +39,14 @@ graph TD
     subgraph ClientLayer ["Client Layer (Browser SPA)"]
         UI["Livewire 4 Reactive Views & Blade Components"]
         ModalGuard["Alpine.js Modal Component & Unsaved Changes Guard (isDirty)"]
+        ModalManager["Global ModalManager (Body Scroll Locking & Modals Sync)"]
+        ErrorScroller["Form Error Scroller (window.scrollToFirstError, Pulse & Tab Activation)"]
         AlpineStore["Alpine.js Stores ($store.currency, $store.notifications, Sidebar State)"]
         DesktopNotif["Native Desktop Browser Notifier (Alpine browserNotifier, 30s Polling)"]
         LocalStorage["LocalStorage (pjt_cur, pjt_sidebar_collapsed, crm_last_seen_notif)"]
         UI <--> ModalGuard
+        UI <--> ModalManager
+        UI <--> ErrorScroller
         UI <--> AlpineStore
         AlpineStore <--> LocalStorage
         DesktopNotif <--> LocalStorage
@@ -49,19 +56,22 @@ graph TD
         WebRoute["routes/web.php<br/>(Livewire Full-Page Component Routing with wire:navigate)"]
         AuthMiddleware["Middleware: auth, verified, EnsurePasswordIsChanged"]
         PollRoute["GET /api/notifications/poll<br/>(NotificationPollController)"]
-        RoleScope["Eloquent Query Scope: scopeForUser()"]
+        RoleScope["Eloquent Query Scope: scopeForUser() & hasPermission()"]
+        FallbackRoute["Route::fallback()<br/>(In-Workspace Error Views)"]
         WebRoute --> AuthMiddleware --> RoleScope
+        WebRoute --> FallbackRoute
         DesktopNotif -.->|Fetch 30s Poll| PollRoute
     end
 
     subgraph ComponentLayer ["Livewire Component Layer"]
-        NavComponents["Navigation & System Components<br/>(GlobalSearch, NotificationBell, NotificationDrawer)"]
+        NavComponents["Navigation & System Components<br/>(GlobalSearch, NotificationBell, NotificationDrawer, DynamicCounter)"]
         OverviewModules["Overview Modules<br/>(DashboardIndex, TodayWorkIndex)"]
         CustomerModules["Customer Modules<br/>(CustomerIndex, CustomerDetail, CustomerModal, CustomerImportModal)"]
-        ProjectModules["Project Modules<br/>(ProjectIndex, ProjectDetail, ProjectModal, ScheduleModal, RecurringModal, MilestoneModal)"]
+        ProjectModules["Project Modules<br/>(ProjectIndex, ProjectDetail, ProjectModal, ScheduleModal, RecurringModal, MilestoneModal, MilestoneChaseModal)"]
         MoneyModules["Money Modules<br/>(PaymentIndex, PaymentModal, ScheduleIndex, ReportIndex)"]
+        TeamModules["Team & Hierarchy Modules<br/>(UserIndex, TeamIndex, ProfileDrawer, UserModal)"]
         RecordModules["Record Modules<br/>(DocumentIndex, DocumentUploadModal, DocumentPreviewModal, FollowupIndex, SalesIndex)"]
-        SystemModules["System Modules<br/>(NotificationIndex, NotificationDetail, AuditIndex, SettingIndex, UserModal, ProfileController)"]
+        SystemModules["System Modules<br/>(NotificationIndex, NotificationDetail, AuditIndex, SettingIndex)"]
         AuthModules["Security & Auth<br/>(ForcePasswordChange at /change-password)"]
     end
 
@@ -69,24 +79,30 @@ graph TD
         MoneyService["MoneyCalculationService<br/>(Financial Aggregations & Status Automations)"]
         CodeService["CodeGeneratorService<br/>(Atomic Row-Locking Sequence Engine)"]
         CurrencyService["CurrencyRateService<br/>(USD / INR Conversion Rates)"]
+        PasswordService["PasswordGeneratorService<br/>(High-Entropy Temporary Credential Provisioning)"]
+        AuditService["AuditNotificationService<br/>(Event Logging, Field-Level Diffs & Multi-Recipient Alerts)"]
+        PermMatrix["Permissions Matrix<br/>(App\\Constants\\Permissions & Role Action Checks)"]
     end
 
     subgraph PersistenceLayer ["Persistence Layer"]
-        Eloquent["Eloquent ORM Models (Relationships, Casts & Scopes)"]
-        MySQL[("MySQL 8.0+ Database (17 Migrated Tables)")]
-        DiskStorage[("Local Public Disk Storage (storage/app/public)")]
+        Eloquent["Eloquent ORM Models (Relationships, Casts, Diff Tracking & Scopes)"]
+        MySQL[("MySQL 8.0+ Database (18 Migrated Tables)")]
+        DiskStorage[("Local Public Disk Storage (storage/app/public & uploads)")]
     end
 
     UI -->|Livewire Requests & wire:navigate| WebRoute
-    RoleScope --> NavComponents & OverviewModules & CustomerModules & ProjectModules & MoneyModules & RecordModules & SystemModules
+    RoleScope --> NavComponents & OverviewModules & CustomerModules & ProjectModules & MoneyModules & TeamModules & RecordModules & SystemModules
     AuthMiddleware --> AuthModules
 
     CustomerModules & ProjectModules & MoneyModules & OverviewModules --> MoneyService
     CustomerModules & ProjectModules & MoneyModules --> CodeService
+    TeamModules & SystemModules --> PasswordService
+    CustomerModules & ProjectModules & MoneyModules & TeamModules --> AuditService
+    NavComponents & TeamModules & RoleScope --> PermMatrix
     NavComponents --> CurrencyService
 
-    MoneyService & CodeService --> Eloquent
-    RecordModules --> DiskStorage
+    MoneyService & CodeService & PasswordService & AuditService --> Eloquent
+    RecordModules & MoneyModules & TeamModules --> DiskStorage
     Eloquent --> MySQL
 ```
 
@@ -98,11 +114,13 @@ graph TD
 * **Global Metas & Store Bootstrapping**: A global `<meta name="csrf-token" content="{{ csrf_token() }}">` is present in the layout header. Alpine stores (`$store.currency`, `$store.notifications`) initialize on `alpine:init` to ensure stores exist before component mounting.
 * **Real-Time Client Navigation**: Livewire 4 `wire:navigate` and `Livewire.navigate('...')` replace legacy `window.location` redirects, preserving in-memory Alpine currency states and layout shell states across page transitions.
 * **Decoupled Cross-Component Communication**: Components invoke `Livewire.dispatch('event-name', payload)` for cross-DOM triggers instead of Alpine `$dispatch`, ensuring layout-level modals respond reliably regardless of DOM tree nesting.
-* **Event-Driven UI Refreshing**: Data tables and index components listen for mutation events (`#[On('customer-saved')]`, `#[On('project-saved')]`, `#[On('payment-saved')]`, `#[On('document-saved')]`, `#[On('sales-saved')]`, `#[On('user-saved')]`, `#[On('notification-updated')]`) to reload views and KPIs without full page reloads.
-* **Unsaved Changes Safeguard**: The modal container (`<x-modal>`) monitors user modification states (`isDirty`), prompting a confirmation warning before closing on outside clicks, `Escape` key presses, or Cancel clicks.
+* **Event-Driven UI Refreshing**: Data tables and index components listen for mutation events (`#[On('customer-saved')]`, `#[On('project-saved')]`, `#[On('payment-saved')]`, `#[On('document-saved')]`, `#[On('sales-saved')]`, `#[On('user-saved')]`, `#[On('notification-updated')]`, `#[On('counter-refresh')]`) to reload views, counters, and KPIs without full page reloads.
+* **Global Modal Manager (`window.ModalManager`)**: A dedicated modal coordinator in `layouts.app` tracks active modal identifiers, synchronizes modal visibility stacks, and manages body scroll locking (`document.body.classList.add('overflow-hidden')`). It automatically resets state upon client navigation (`livewire:navigated`) to guarantee zero stuck overlays or locked page bodies.
+* **Form Error Auto-Scroll, Tab Activation & Focus Engine (`window.scrollToFirstError`)**: Integrated with Livewire commit and morph hooks (`livewire:init`, `commit`, `morph.updated`). When validation fails, the UI automatically switches inactive tabs if the invalid field is concealed inside a tab pane, smooth-scrolls to the first error input, transfers focus, and triggers a visual highlight animation (`.error-focused` keyframe pulse).
+* **Unsaved Changes Safeguard**: The modal container (`<x-modal>`) monitors user modification states (`isDirty`), prompting a styled confirmation warning (`<x-confirm-modal>`) before closing on outside clicks, `Escape` key presses, or Cancel clicks.
 * **Real-Time Blur Validation**: Livewire properties bind with `wire:model.blur` and invoke `$this->validateOnly($propertyName)` within the `updated()` lifecycle hook, providing immediate inline validation with distinct red error borders without noisy top alert banners.
 * **Database Type Synchronization**: Optional strings submitted through form selects are normalized to `null` or explicit database defaults (e.g. `0.00` for numeric columns defined as `NOT NULL DEFAULT 0.00`) to prevent MySQL constraint violations.
-* **Modal Scroll Isolation & Background Locking**: All modal containers (`<x-modal>` and `<x-confirm-modal>`) monitor their active visibility via Alpine watchers (`$watch('show')`), dynamically applying `overflow-hidden` to `document.body` while active and removing it once all modals are dismissed. `overscroll-contain` is enforced on both backdrop overlays and modal bodies to prevent scroll chaining and mobile touch rubber-banding.
+* **Modal Scroll Isolation & Background Locking**: All modal containers (`<x-modal>` and `<x-confirm-modal>`) feature `overscroll-contain` on both backdrop overlays and modal bodies to prevent scroll chaining and mobile touch rubber-banding.
 * **In-Workspace Context-Aware Error Recovery**: HTTP exceptions (404, 403, 500, 419, 503) retain the full application workspace (`<x-app-layout>`) for logged-in users. A terminal `Route::fallback()` in `routes/web.php` ensures unmatched paths traverse the `web` session middleware, enabling context-aware recovery guidance and action buttons based on URL patterns. Unauthenticated visitors receive a branded `<x-guest-layout>` presentation.
 * **Vite Development & Production Parity**: Vite server configuration standardizes on `hmr: { host: 'localhost' }` and `cors: true` with signal traps on process exit to auto-purge `public/hot`, ensuring seamless asset loading and zero layout distortion between `npm run dev` and `npm run build`.
 
@@ -116,20 +134,24 @@ pjt-crm/
 │   ├── mcp_config.json                     # Laravel Boost MCP server configuration
 │   └── skills/                             # Domain skills (codewise, laravel-best-practices, livewire, etc.)
 ├── app/
+│   ├── Constants/
+│   │   └── Permissions.php                 # Granular multi-level role & action permission matrix
 │   ├── Http/
 │   │   ├── Controllers/
 │   │   │   ├── Api/
 │   │   │   │   └── NotificationPollController.php  # Lightweight 30s polling endpoint for desktop notifications
-│   │   │   ├── Auth/                               # Laravel Breeze authentication controllers
+│   │   │   ├── Auth/                               # Laravel Breeze authentication & password reset request controllers
+│   │   │   ├── DocumentDownloadController.php      # Controller for secure document attachment streaming
 │   │   │   └── ProfileController.php               # User profile editing and password updates
 │   │   └── Middleware/
 │   │       └── EnsurePasswordIsChanged.php         # Intercepts authenticated logins when must_change is active
 │   ├── Livewire/
 │   │   ├── Audit/
-│   │   │   └── AuditIndex.php                      # Activity audit log timeline viewer
+│   │   │   └── AuditIndex.php                      # Activity audit log timeline viewer with field diff inspection
 │   │   ├── Auth/
 │   │   │   └── ForcePasswordChange.php             # Mandatory password update component at /change-password
 │   │   ├── Components/
+│   │   │   ├── DynamicCounter.php                  # Real-time event-driven badge counter component
 │   │   │   ├── GlobalSearch.php                    # Universal debounced search dropdown
 │   │   │   ├── NotificationBell.php                # Topbar unread count polling badge
 │   │   │   └── NotificationDrawer.php              # Slide-over flyout panel for notification alerts
@@ -137,7 +159,7 @@ pjt-crm/
 │   │   │   ├── CustomerDetail.php                  # Tabbed customer profile (Overview, Projects, Payments, Docs, Followups)
 │   │   │   ├── CustomerImportModal.php             # Bulk CSV upload and spreadsheet paste modal
 │   │   │   ├── CustomerIndex.php                   # Customer directory, filtering, pagination, and CSV export
-│   │   │   └── CustomerModal.php                   # Unified create and edit modal for customers
+│   │   │   └── CustomerModal.php                   # Unified create and edit modal with auto salesperson attribution
 │   │   ├── Dashboard/
 │   │   │   └── DashboardIndex.php                  # Executive KPI cards, health breakdown, triage, and trend analytics
 │   │   ├── Documents/
@@ -151,12 +173,15 @@ pjt-crm/
 │   │   │   └── NotificationIndex.php               # Notification inbox with deep linking and mark-as-read actions
 │   │   ├── Payments/
 │   │   │   ├── PaymentIndex.php                    # Receipt ledger, mode filtering, balance tracking, and CSV export
-│   │   │   └── PaymentModal.php                    # Receipt recorder with auto-balance calculation and term binding
+│   │   │   └── PaymentModal.php                    # Receipt recorder with Smart Receipt upload and multi-role alerts
+│   │   ├── Profile/
+│   │   │   └── ProfileDrawer.php                   # Slide-over user profile, avatar upload, and self password change
 │   │   ├── Projects/
+│   │   │   ├── MilestoneChaseModal.php             # Milestone chase notes logger and next chase scheduler
 │   │   │   ├── ProjectDetail.php                   # Project delivery matrix, timeline, schedule, and document tabs
 │   │   │   ├── ProjectIndex.php                    # Work orders directory, health filtering, and overdue rollups
 │   │   │   ├── ProjectMilestoneModal.php           # Dynamic milestone ordering and checklist manager
-│   │   │   ├── ProjectModal.php                    # Project contract creator/editor with AMC and handover fields
+│   │   │   ├── ProjectModal.php                    # Contract creator/editor with sales rep auto-assignment & alert triggers
 │   │   │   ├── ProjectRecurringModal.php           # Monthly retainer recurring installment generator
 │   │   │   └── ProjectScheduleModal.php            # Installment scheduler (fixed, milestone-linked, recurring)
 │   │   ├── Reports/
@@ -167,52 +192,65 @@ pjt-crm/
 │   │   │   └── ScheduleIndex.php                   # Master chronological installment timeline and CSV export
 │   │   ├── Settings/
 │   │   │   ├── SettingIndex.php                    # Operational threshold configuration, password manager, and user list
-│   │   │   └── UserModal.php                       # Staff and sales account creator/editor with quota and credential provisioning
+│   │   │   └── UserModal.php                       # Staff account creator with granular permission matrix & avatar upload
 │   │   ├── Tasks/
 │   │   │   └── TaskIndex.php                       # Coordinator checklist manager with priority flags and late indicators
-│   │   └── Today/
-│   │       └── TodayWorkIndex.php              # Daily operational triage for overdue payments, calls, and risks
+│   │   ├── Team/
+│   │   │   └── TeamIndex.php                       # Downline supervisory oversight, member details, and credential resets
+│   │   ├── Today/
+│   │   │   └── TodayWorkIndex.php                  # Daily operational triage for overdue payments, calls, and risks
+│   │   └── Users/
+│   │       └── UserIndex.php                       # Global user directory, role/status filters, and admin credential resets
+│   ├── Mail/
+│   │   └── TemporaryPasswordMail.php               # Mailable for delivering newly provisioned temporary credentials
 │   ├── Models/
-│   │   ├── ActivityLog.php                         # System activity log model (mapped to activity_logs)
+│   │   ├── ActivityLog.php                         # System activity log model with field diffs (mapped to activity_logs)
 │   │   ├── Counter.php                             # Atomic sequence counters for entity codes
 │   │   ├── Customer.php                            # Customer model with project, document, and sales relationships
 │   │   ├── Document.php                            # Document metadata records linked to storage
 │   │   ├── Followup.php                            # Client communication history and follow-up dates
 │   │   ├── Milestone.php                           # Project milestones and completion stamps
 │   │   ├── Notification.php                        # System notifications indexed by user ID
-│   │   ├── Payment.php                             # Payment receipts linked to projects and terms
+│   │   ├── PasswordResetRequest.php                # Queued employee password reset requests
+│   │   ├── Payment.php                             # Payment receipts linked to projects, terms, and smart documents
 │   │   ├── PaymentTerm.php                         # Payment installment schedules and status tracking
 │   │   ├── Project.php                             # Project entity with monetary accessors and role scopes
 │   │   ├── Setting.php                             # Key-value global configuration store
 │   │   ├── Task.php                                # Actionable checklist items
-│   │   └── User.php                                # Authenticatable staff accounts with role helpers & downlines
+│   │   └── User.php                                # Staff accounts with role helpers, permissions array & downline trees
 │   └── Services/
+│       ├── AuditNotificationService.php            # System event logger, field diff computer & multi-recipient notifier
 │       ├── CodeGeneratorService.php                # Concurrency-safe atomic counter sequence generator
 │       ├── CurrencyRateService.php                 # Exchange rate configuration and conversion service
-│       └── MoneyCalculationService.php             # Central financial calculation engine
+│       ├── MoneyCalculationService.php             # Central financial calculation engine
+│       └── PasswordGeneratorService.php            # Secure 16-character temporary credential generator
+├── config/
+│   └── crm.php                                     # Centralized CRM configuration (TTLs, thresholds, upload rules)
 ├── database/
-│   ├── migrations/                                 # 17 structured table migrations
+│   ├── migrations/                                 # 18 structured table migrations
 │   └── seeders/
 │       ├── DatabaseSeeder.php
 │       └── UsersSeeder.php                         # Seeds default Administrator, Coordinator, and Manager accounts
 ├── public/
 │   ├── assets/logo.png                             # Static brand identity asset
-│   └── css/crm-style.css                           # Complete CSS layout & design palette
+│   └── css/crm-style.css                           # Complete CSS design palette with standardized 36px filter bar
 ├── resources/
 │   ├── css/app.css                                 # Tailwind CSS setup
 │   ├── js/app.js                                   # Clean JS entry without manual Alpine imports
 │   └── views/
 │       ├── components/                             # Blade UI components (money, kpi-card, health-badge, modal, confirm-modal)
+│       ├── emails/
+│       │   └── temporary-password.blade.php        # Branded HTML email template for temporary credentials
 │       ├── errors/                                 # Context-aware error views (403, 404, 419, 500, 503) extending workspace shell
 │       ├── layouts/
-│       │   ├── app.blade.php                       # Master responsive application layout with slide-over drawer & notifier
+│       │   ├── app.blade.php                       # Master application layout with ModalManager & ErrorScroller
 │       │   ├── guest.blade.php                     # Clean layout for login and password change
-│       │   └── partials/sidebar.blade.php          # 14-module navigation sidebar with live counters
+│       │   └── partials/sidebar.blade.php          # 5-section navigation sidebar with dynamic counters & profile trigger
 │       └── livewire/                               # Paired Blade templates for all Livewire components
-├── boost.json                              # Laravel Boost agent and skill registry
+├── boost.json                                      # Laravel Boost agent and skill registry
 └── routes/
-    ├── auth.php                            # Breeze authentication routes
-    └── web.php                             # Authenticated routes mapping all Livewire modules & polling API
+    ├── auth.php                                    # Breeze authentication routes
+    └── web.php                                     # Authenticated routes mapping Livewire modules & polling API
 ```
 
 ---
@@ -230,6 +268,7 @@ erDiagram
     USERS ||--o{ NOTIFICATIONS : "receives"
     USERS ||--o{ ACTIVITY_LOGS : "performs"
     USERS ||--o{ USERS : "supervises"
+    USERS ||--o{ PASSWORD_RESET_REQUESTS : "requests"
 
     CUSTOMERS ||--o{ PROJECTS : "owns"
     CUSTOMERS ||--o{ PAYMENTS : "remits"
@@ -246,6 +285,7 @@ erDiagram
 
     PAYMENT_TERMS ||--o{ PAYMENTS : "allocates"
     MILESTONES ||--o{ PAYMENT_TERMS : "triggers"
+    PAYMENTS ||--o| DOCUMENTS : "attaches_receipt"
 
     USERS {
         bigint id PK
@@ -256,7 +296,9 @@ erDiagram
         enum status "Active,Inactive"
         string designation
         string city
+        string avatar "Storage path or URL"
         decimal target "Sales quota"
+        json permissions "Custom overrides or null"
         boolean is_online
         timestamp last_seen
         string password
@@ -266,6 +308,16 @@ erDiagram
         timestamp locked_until
         bigint reporting_to FK
         bigint created_by FK
+        timestamps created_at_updated_at
+    }
+
+    PASSWORD_RESET_REQUESTS {
+        bigint id PK
+        bigint user_id FK
+        enum status "Pending,Resolved,Rejected"
+        string ip_address
+        bigint resolved_by FK
+        timestamp resolved_at
         timestamps created_at_updated_at
     }
 
@@ -370,6 +422,8 @@ erDiagram
         enum mode "Cash,UPI,NEFT,RTGS,Cheque,Card,Other"
         string reference
         string bank
+        string attachment "Stored receipt filename"
+        bigint document_id FK "nullable"
         text note
         bigint created_by FK
         timestamps created_at_updated_at
@@ -436,6 +490,7 @@ erDiagram
         bigint entity_id
         string entity_code
         text detail
+        json changes "Field diffs: old vs new"
         timestamp at_time
     }
 
@@ -453,6 +508,7 @@ erDiagram
 * **`Components\GlobalSearch`**: Debounced 300ms universal lookup across customer names `(customers.company and customers.contact_name)`, customer codes `(customers.customer_code)`, and project titles `(projects.name, projects.project_code)`.
 * **`Components\NotificationBell`**: Topbar icon with dynamic unread badge count `(count of notifications where is_read = false for auth user)` synchronized with Alpine store `$store.notifications`.
 * **`Components\NotificationDrawer`**: Slide-over panel featuring unread filtering `(where is_read = false)`, individual mark-as-read, and bulk clear `(updates all user notifications to is_read = true)`.
+* **`Components\DynamicCounter`**: Real-time reactive badge counter component mounted across navigation items (`today`, `customers`, `projects`, `notifications`, `tasks`) with event-driven refreshes `(#[On('customer-saved')], #[On('project-saved')], #[On('payment-saved')], #[On('counter-refresh')])` and warn styling.
 
 ### 4.2 Overview Modules
 * **`Dashboard\DashboardIndex`**: Executive KPIs including:
@@ -479,20 +535,21 @@ erDiagram
   * Customer Display Name `(company ?: (contact_name ? "$contact_name (Client)" : customer_code))`
   * Customer Financial Rollups `(total_contract_value = sum(project_value), total_received = sum(payments), outstanding = total_value - total_received)`
 * **`Customers\CustomerDetail`**: Tabbed profile showing associated projects, payment history, stored documents, and logged touchpoints.
-* **`Customers\CustomerModal`**: Create/edit modal generating atomic codes `(CUS-XXXX via CodeGeneratorService)` and supporting GSTIN/PAN regex validation.
+* **`Customers\CustomerModal`**: Create/edit modal generating atomic codes `(CUS-XXXX via CodeGeneratorService)`, auto salesperson attribution for sales staff, and field-level structured diff tracking.
 * **`Customers\CustomerImportModal`**: Multi-row CSV file upload and raw spreadsheet paste importer with automated deduplication.
 
 ### 4.4 Project Delivery
 * **`Projects\ProjectIndex`**: Work order directory with health state filtering `(On Track, At Risk, Delayed, Completed)`, salesperson filtering `(projects.sales_person_id)`, coordinator filtering `(projects.coordinator_id)`, and financial aggregates.
 * **`Projects\ProjectDetail`**: Project hub with delivery timeline, milestone checklist `(completion_% = (milestones_done / total_milestones) * 100)`, payment terms, and attachments.
-* **`Projects\ProjectModal`**: Contract authoring modal with zero-default numeric normalization for AMC and handover fields.
+* **`Projects\ProjectModal`**: Contract authoring modal with zero-default numeric normalization, auto-assignment of sales rep and supervisor coordinator, delay reason clearing when health improves, and health degradation alerts.
 * **`Projects\ProjectMilestoneModal`**: Sortable milestone checklist with payment trigger linking.
+* **`Projects\MilestoneChaseModal`**: Interactive milestone chase note logging and next chase date scheduling, synchronized with customer follow-ups and touchpoints.
 * **`Projects\ProjectScheduleModal`**: Multi-tier installment scheduler supporting the Auto-Split 30/40/30 wizard `(Advance: round(value * 0.30, 2), Mid: round(value * 0.40, 2), Delivery: value - term1 - term2; staggered +0, +15, +30 days)`.
 * **`Projects\ProjectRecurringModal`**: Single-click monthly retainer generator `(generates N monthly recurring installments starting from anchor date)`.
 
 ### 4.5 Financial Receivables
 * **`Payments\PaymentIndex`**: Detailed receipt ledger with mode filtering `(Cash, UPI, NEFT, RTGS, Cheque, Card, Other)`, TDS accounting `(credited alongside received cash against term balance)`, and CSV export.
-* **`Payments\PaymentModal`**: Receipt logger with auto-balance calculation `(balance_due = term_amount - received - tds)`, term status updating, and atomic receipt codes `(RCP-XXXX)`.
+* **`Payments\PaymentModal`**: Receipt logger with auto-balance calculation `(balance_due = term_amount - received - tds)`, term status updating, atomic receipt codes `(RCP-XXXX)`, Smart Receipt upload (`WithFileUploads`) with auto-link to `Document`, and multi-recipient notifications (Coordinator, Salesperson, Admins).
 * **`Schedule\ScheduleIndex`**: Master installment schedule tracking fixed dates, milestone-linked triggers, and recurring terms:
   * Total Scheduled `(sum(terms) where status != 'Cancelled')`
   * Total Collected `(sum(payments))`
@@ -504,13 +561,19 @@ erDiagram
   * Delivery Variance `(milestone_% - collection_%)`
   * Aging Buckets `(overdue terms bucketed by days late: 0–30, 31–60, 61–90, 90+)`.
 
-### 4.6 Records & System
+### 4.6 Team & User Governance
+* **`Users\UserIndex`**: Global staff directory, search, role and status filters, reset temporary password action with email notification, and user quick view.
+* **`Team\TeamIndex`**: Downline team hierarchy oversight for managers and supervisors, team member detail view, and downline credential resets.
+* **`Profile\ProfileDrawer`**: Slide-over user profile flyout triggered by sidebar footer, avatar file upload and removal, profile details update, supervisor details, and self password updates.
+* **`Settings\UserModal`**: Staff and sales account creator/editor with quota, supervisor attribution, avatar upload, and granular permission matrix editor with role reset defaults.
+
+### 4.7 Records & System
 * **`Documents\DocumentIndex` & `DocumentUploadModal`**: Secure storage (up to 10 MB) with public disk root isolation and lightbox preview (`DocumentPreviewModal`).
 * **`Followups\FollowupIndex`**: Multi-channel touchpoint logger `(Call, Email, Meeting, WhatsApp, Note)`.
 * **`Sales\SalesIndex`**: Salesperson quota tracking and performance attribution `(booked = sum(project_value), collected = sum(payments), target = users.target, achievement_% = (collected / target) * 100)`.
 * **`Notifications\NotificationIndex` & `NotificationDetail`**: System alerts inbox and detail inspector.
-* **`Audit\AuditIndex`**: Immutable system audit trail (`ActivityLog`).
-* **`Settings\SettingIndex` & `UserModal`**: System threshold configurations and staff user management with admin-mediated temporary password generator `(Temp{Year}@{PIN})`.
+* **`Audit\AuditIndex`**: Immutable system audit trail (`ActivityLog`) with field-level structured diffs.
+* **`Settings\SettingIndex`**: System threshold configurations and operational alert window settings.
 * **`Auth\ForcePasswordChange`**: Mandatory password change screen for initial logins and administrative resets triggered by `EnsurePasswordIsChanged` middleware.
 
 ---
@@ -606,18 +669,74 @@ Individual clients and sole proprietors frequently lack a registered corporate b
 
 ### 5.5 Admin-Mediated Credential Provisioning & Temporary Password Generation
 
-Administrative password resets are handled on-demand from the Settings (`/settings`) user directory without third-party email service dependencies:
+Administrative and supervisory password resets are handled from the Users (`/users`), Team (`/team`), or Settings directories with dual support for copyable dialogs and automated email notifications:
 
-* **Credential Generation Formula**:
-  * **Formula**: `Temporary Password = "Temp" . Current Year . "@" . 4-Digit Secure Random PIN` (e.g. `"Temp2026@4892"`)
-  * **Security Working**:
-    1. Generates the temporary password satisfying all complexity requirements (uppercase, lowercase, number, special character, 8+ characters).
-    2. Hashes and updates `users.password = Hash::make($temporaryPassword)`.
-    3. Flags `users.must_change = true` to force an immediate password reset on the user's next sign-in.
-    4. Resets `users.fail_count = 0` and `users.locked_until = null` to instantly clear any active account lockouts.
-    5. Records an immutable audit log entry in `activity_logs`.
-    6. Dispatches a high-priority in-app notification to the affected user.
-    7. Displays the generated credentials to the administrator in a copyable dialog.
+* **Credential Generation**:
+  * Generated via `App\Services\PasswordGeneratorService::generate(16)`, producing cryptographically random, high-entropy 16-character temporary passwords satisfying all strict complexity rules (uppercase, lowercase, digits, and special characters).
+  * Hashes and updates `users.password = Hash::make($temporaryPassword)`.
+  * Flags `users.must_change = true` to force an immediate password reset on the user's next sign-in.
+  * Resets `users.fail_count = 0` and `users.locked_until = null` to instantly clear active account lockouts.
+  * Updates pending requests in `password_reset_requests` table to `Resolved` with `resolved_by = auth()->id()` and timestamp.
+  * Delivers a branded HTML notification via `App\Mail\TemporaryPasswordMail` to the user's registered email address.
+  * Records an immutable audit log entry in `activity_logs` and displays the credentials in a secure copyable modal.
+
+---
+
+### 5.6 Multi-Level Role & Action Permissions Matrix (`Permissions` & `User`)
+
+User authorization combines hardcoded baseline matrices with per-user custom overrides stored in `users.permissions`:
+
+* **Role Permissions Matrix (`App\Constants\Permissions::ROLE_PERMISSIONS`)**:
+  * Maps 4 roles (`Admin`, `Manager`, `Coordinator`, `Sales`) across 9 functional modules (`users`, `team`, `customers`, `projects`, `schedules`, `payments`, `today`, `reports`, `settings`) and 5 discrete actions (`view`, `add`, `edit`, `delete`, `export`).
+  * `Admin`: Full permissions across all modules and actions.
+  * `Manager`: View/add/edit permissions on clients, projects, schedules, payments, reports, and team hierarchy; no delete or administrative settings access.
+  * `Coordinator`: Operational access to assigned clients, projects, schedules, payments, today's queue, and team members; financial export restricted.
+  * `Sales`: Client onboarding and project creation; sensitive financial ledgers, payment schedules, and money columns completely hidden.
+* **Granular Permission Check (`User::hasPermission()`)**:
+  * Evaluates custom JSON permission overrides in `users.permissions` if present.
+  * Falls back to `Permissions::can($role, $module, $action)`.
+  * Supports combined checks: `hasPermission('customers', 'add/edit')`.
+
+---
+
+### 5.7 Form Error Auto-Scroll, Tab Activation & Focus Engine
+
+Form usability is handled by an automated client-side engine in `layouts.app`:
+
+* **Event Hooks**:
+  * Listens to Livewire `commit` (detecting calls matching `save`, `submit`, `store`, `update`, `create`, `import`) and `morph.updated` hooks.
+  * Intercepts native DOM form submit and button clicks.
+* **Auto-Tab Activation**:
+  * If the first invalid input is concealed inside an inactive tab pane (`[data-tab-content]`, `[data-tab-pane]`, `[id^="tab-"]`), the engine automatically simulates a click on the corresponding tab trigger (`[data-tab-target]`), unhiding the container before scrolling.
+* **Focus & Animation Pulse**:
+  * Performs a smooth scroll (`scrollIntoView({ behavior: 'smooth', block: 'center' })`).
+  * Transfers browser focus (`element.focus({ preventScroll: true })`).
+  * Applies the `.error-focused` CSS class triggering a 600ms red halo pulse animation.
+
+---
+
+### 5.8 Global Modal Manager & Window State Sync (`window.ModalManager`)
+
+A centralized modal manager in `layouts.app` orchestrates dialog states:
+
+* **State Synchronization**:
+  * Maintains an in-memory `Set` of active modal identifiers (`openModals`).
+  * Adds `overflow-hidden` to `document.body` when `openModals.size > 0` and removes it when all modals close.
+  * Automatically flushes and clears the modal stack on Livewire client transitions (`livewire:navigated`).
+  * Supports custom modal sizes (`sm`, `md`, `lg`, `xl`, `2xl`, `wide`, `full`) mapped via Blade component props.
+
+---
+
+### 5.9 Field-Level Structured Change Tracking (`AuditNotificationService::computeChanges`)
+
+Audit logging tracks precise attribute mutations for entity updates:
+
+* **Diff Computation**:
+  * Compares `$model->getDirty()` against `$model->getOriginal()`, filtering out timestamp and sensitive authentication tokens (`password`, `remember_token`, `fail_count`, `locked_until`).
+  * Outputs a structured dictionary: `['field_name' => ['old' => '...', 'new' => '...']]`.
+* **Persistence & Presentation**:
+  * Serialized directly into `activity_logs.changes` as a JSON column.
+  * Formatted into human-readable diff text in audit log lists and detail views (e.g. `(status: Onboarding -> In Progress, coordinator: John -> Sarah)`).
 
 ---
 
@@ -625,17 +744,22 @@ Administrative password resets are handled on-demand from the Settings (`/settin
 
 * **Role Isolation (`scopeForUser`)**: Non-admin users are strictly scoped to their assigned accounts. Managers access coordinator projects down their reporting tree via `reporting_to` hierarchy resolution (`getDownlineUserIds()`).
 * **Sales Tier Restrictions**: Sales representatives are strictly scoped to self-attributed customer accounts (`sales_person_id == user->id`) and basic project overviews. Financial ledgers, payment schedules, and money collection columns are completely hidden.
+* **Granular Action Authorization**: Livewire components enforce `auth()->user()->hasPermission('module', 'action')`, providing fine-grained access control beyond static role checks.
+* **Queued Password Reset Workflow**: The forgot-password controller logs in-app requests into `password_reset_requests` and dispatches high-priority notifications to Admins and direct Managers, eliminating broken unconfigured SMTP dependencies while supporting optional automated email delivery (`TemporaryPasswordMail`).
 * **Mandatory Password Change**: The `EnsurePasswordIsChanged` middleware inspects `auth()->user()->must_change`. If flagged, navigation to all routes except `password.change` and `logout` is redirected to `/change-password`.
-* **Unsaved Changes Safeguard**: Modal components monitor user dirty states (`isDirty`) and intercept accidental dismissals.
+* **Account Lockout & Presence Tracking**: Tracks consecutive authentication failures (`fail_count`) with progressive time-based lockouts (`locked_until`), plus real-time online presence monitoring (`is_online`, `last_seen`).
 * **In-App Error Pipeline & Session Resilience**: Unmatched and unauthorized HTTP exceptions are handled via `Route::fallback()` within the `web` session middleware, ensuring user sessions are maintained and errors render inside `<x-app-layout>` without exposing raw stack traces or dropping the authenticated navigation shell.
+* **Comprehensive Test Suite & Quality Verification**: The application is verified by 212 automated feature and unit tests with 1,075 assertions (`php artisan test`), covering authentication, authorization, permissions matrix, downline data isolation, error recovery, reactive financial calculations, and form UX. All PHP source files conform to Laravel Pint coding standards.
+* **User Guide & Operational Documentation**: A comprehensive, non-technical manual is available in [`project-guide.md`](project-guide.md), explaining every module, action, workflow, and FAQ in plain, approachable language.
+* **Simplified Terminology & Consistent Top KPI Cards**: Replaced technical jargon with intuitive business terminology across all dashboard, report, schedule, and detail views. Key financial metric cards now consistently display standard headings: `Total Receivable`, `Received`, `Due`, and `Overdue`.
 
 ---
 
 ## 7. Historical Defect Registry, Technical Resolutions & Legacy Cleanup Archive
 
-### 7.1 Master Historical Defect Registry (ISS-001 through ISS-056)
+### 7.1 Master Historical Defect Registry (ISS-001 through ISS-075)
 
-The following registry catalogues all 56 technical defects and architectural enhancements resolved across the system's evolutionary migration:
+The following registry catalogues all 75 technical defects, architectural enhancements, and usability refinements resolved across the system's evolutionary migration:
 
 | Issue ID | Severity | Functional Domain | Defect Description & System Impact | Resolution Status |
 |:---|:---|:---|:---|:---|
@@ -696,6 +820,25 @@ The following registry catalogues all 56 technical defects and architectural enh
 | **ISS-054** | High | Error Handling & UX | Unhandled HTTP exceptions (404, 403, 500) broke out of workspace into unstyled deadlock | **[VERIFIED FIXED]** |
 | **ISS-055** | Medium | Modal UX & Scroll Behavior | Background page scroll not locked when modal is open and nested scrollable body caused scroll-chaining | **[VERIFIED FIXED]** |
 | **ISS-056** | High | Tooling & Asset Compilation | Vite dev server 0.0.0.0 host binding broke HMR and stale public/hot manifest caused layout distortion | **[VERIFIED FIXED]** |
+| **ISS-057** | Critical | Migrations Architecture | Merged incremental schema alters directly into baseline create migrations | **[VERIFIED FIXED]** |
+| **ISS-058** | High | Password Governance | In-app forgot password request queue with role-scoped notification routing | **[VERIFIED FIXED]** |
+| **ISS-059** | High | Security & Cryptography | Cryptographically secure 16-character temporary password generation service | **[VERIFIED FIXED]** |
+| **ISS-060** | Medium | Authentication & Notifications | Differentiated reset notifications: email for Admins/Managers, dialog for subordinates | **[VERIFIED FIXED]** |
+| **ISS-061** | High | Audit Governance | Deep granular field-level audit logging with structured JSON visual before/after diffs | **[VERIFIED FIXED]** |
+| **ISS-062** | High | RBAC & Permissions | Per-user dynamic JSON permission matrix overriding default role capabilities | **[VERIFIED FIXED]** |
+| **ISS-063** | Medium | Modal UI Architecture | Upgraded modal window framework with `max-w-5xl`, scroll containment, and sticky headers | **[VERIFIED FIXED]** |
+| **ISS-064** | High | Reporting & Analytics | Role-tailored analytics engine with hierarchical downline metric scoping | **[VERIFIED FIXED]** |
+| **ISS-065** | Medium | Event Notifications | Automated in-app alerts on project status shifts, milestone delivery, and receipts | **[VERIFIED FIXED]** |
+| **ISS-066** | Medium | Navigation Architecture | Integrated topbar notification drawer and live unread polling counter | **[VERIFIED FIXED]** |
+| **ISS-067** | High | Modal Event Architecture | Click event propagation and outside-click collision deadlock between confirm and base modals | **[VERIFIED FIXED]** |
+| **ISS-068** | Critical | Database Integrity | MySQL 1062 duplicate key error when saving customers with empty company string | **[VERIFIED FIXED]** |
+| **ISS-069** | Low | Form UX & Validation | Visual required asterisk mismatch between optional company and mandatory contact name | **[VERIFIED FIXED]** |
+| **ISS-070** | Low | Customer Directory UX | Repeated contact name rendering in customer table subheader when company is empty | **[VERIFIED FIXED]** |
+| **ISS-071** | High | Customer CSV Importer | CSV import rejected records lacking company name even with valid contact and phone | **[VERIFIED FIXED]** |
+| **ISS-072** | Medium | Form State Concurrency | Rapid double-clicking Save Project button submitted duplicate records | **[VERIFIED FIXED]** |
+| **ISS-073** | High | Settings & RBAC | Settings user management card exposed to unauthorized Sales role | **[VERIFIED FIXED]** |
+| **ISS-074** | Medium | Migration Schema Alignment | Customer table schema had nullable contact_name conflicting with required validation | **[VERIFIED FIXED]** |
+| **ISS-075** | High | Livewire & Alpine Integration | Livewire DOM morph conflict with nested Alpine x-data in UserModal triggered ReferenceError | **[VERIFIED FIXED]** |
 
 ---
 
@@ -774,6 +917,32 @@ The following registry catalogues all 56 technical defects and architectural enh
 * **ISS-056 (Vite Dev Server Host Resolution & Lifecycle Hotfile Desynchronization)**:
   * *Root Cause*: `npm run dev` bound to `0.0.0.0` caused browser asset injection to target `http://0.0.0.0:5173/@vite/client`, which browsers reject (`net::ERR_ADDRESS_INVALID`) when navigating via `localhost:8000`, resulting in completely unstyled, broken HTML layouts in dev mode. Furthermore, abrupt process kills left stale `public/hot` manifest files on disk that corrupted subsequent builds and preview requests.
   * *Technical Resolution*: Updated `vite.config.js` to configure `server: { host: '0.0.0.0', hmr: { host: 'localhost' }, cors: true }` and registered process signal handlers (`SIGINT`, `SIGTERM`, `exit`, `close`) to automatically unlink `public/hot` upon dev server shutdown. Both `npm run dev` and `npm run build` produce 100% layout and styling parity across all components.
+
+#### 7.2.9 Defect Resolution & System Hardening (ISS-067 through ISS-074)
+* **ISS-067 (Confirmation Modal Event Deadlock)**:
+  * *Technical Resolution*: Prevented click propagation on confirm/cancel buttons with `@click.stop`, isolated overlay backdrop with `@click.self.stop`, and added re-trigger guards in `modal.blade.php::confirmClose()` to eliminate outside-click event races.
+* **ISS-068 (MySQL Constraint Violation on Empty Company Strings)**:
+  * *Technical Resolution*: Typed `public ?string $company = null;` in `CustomerModal`, normalized whitespace-only inputs to `null` before validation, and created Eloquent mutator in `Customer` ensuring empty strings are persisted as `NULL`, avoiding duplicate key 1062 collisions on unique indices.
+* **ISS-069 (Form Field Required Visual Alignment)**:
+  * *Technical Resolution*: Harmonized Blade required asterisks with backend rules: optional Company Name has no asterisk, while mandatory Contact Person displays the required indicator.
+* **ISS-070 (Customer Sub-Header Contact Duplication)**:
+  * *Technical Resolution*: Conditioned contact person display in customer table subheaders on `@if($customer->company && $customer->contact_name)`, preventing repeated contact names when company is null.
+* **ISS-071 (CSV Importer Company-Free Customer Onboarding)**:
+  * *Technical Resolution*: Upgraded `CustomerImportModal` to accept records lacking company names when contact person and phone are provided, importing them with `company = null`.
+* **ISS-072 (Project Creation Modal Double-Submission Guard)**:
+  * *Technical Resolution*: Equipped project modal submission button with `wire:loading.attr="disabled"` and animated spinner, backed by an atomic `$isSaving` debounce guard in `ProjectModal::save()`.
+* **ISS-073 (Settings User Management Card Access Restriction)**:
+  * *Technical Resolution*: Wrapped User & Team Access card in `setting-index.blade.php` with `@if(auth()->user()->role !== 'Sales' && auth()->user()->hasPermission('users', 'view'))`, keeping administrative actions strictly concealed from Sales users.
+* **ISS-074 (Customer Migration Contact Name Non-Nullable Schema Alignment)**:
+  * *Technical Resolution*: Consolidated `2026_10_10_063012_create_customers_table.php` schema to define non-nullable `$table->string('contact_name', 80)->default('');`, guaranteeing database constraint parity with application validation rules.
+
+#### 7.2.10 Livewire Morph Engine & Alpine Scope Resilience (ISS-075)
+* **ISS-075 (Nested Alpine x-data in Livewire Modal Triggering ReferenceError on Morph)**:
+  * *Root Cause*: `UserModal` (rendered inside `layouts/app.blade.php` globally) was wrapped within `<x-modal name="user-modal">` which defines an outer Alpine component scope (`x-data="{ show: false, ... }"`). Inside the modal body, nested Alpine scopes (`x-data="{ showPass: false }"` and `x-data="{ openPerms: false }"`) along with an uninstalled `x-collapse` directive were present. When Livewire diffs/morphs DOM trees (during input typing or role selection), Alpine evaluates detached DOM nodes prior to re-attaching nested child scopes. This caused `ReferenceError: showPass is not defined` and `openPerms is not defined`, corrupting Alpine's scope stack and cascading into `ReferenceError: show is not defined` in the parent modal wrapper.
+  * *Technical Resolution*:
+    1. Migrated UI toggles (`showPass`, `openPerms`) from nested Alpine `x-data` blocks to explicit component properties in `UserModal.php` (`public bool $showPass = false;`, `public bool $openPerms = false;`) with server-side actions (`togglePasswordVisibility()`, `togglePermissionsDropdown()`).
+    2. Replaced client-side `:type` bindings and `x-show`/`x-collapse` accordion trees with deterministic server-rendered Blade directives (`type="{{ $showPass ? 'text' : 'password' }}"` and `@if($openPerms) ... @endif`), completely removing nested Alpine data islands.
+    3. Added `wire:ignore.self` to modal outer containers (`modal.blade.php`, `confirm-modal.blade.php`) and hardened `x-show`, `open-modal`, `close-modal`, and window listeners with `typeof show !== 'undefined'` safety guards so detached morph evaluations never trigger ReferenceError.
 
 ---
 

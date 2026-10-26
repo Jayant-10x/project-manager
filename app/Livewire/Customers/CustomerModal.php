@@ -15,7 +15,7 @@ class CustomerModal extends Component
     public ?int $customerId = null;
 
     #[Validate]
-    public string $company = '';
+    public ?string $company = null;
 
     #[Validate]
     public string $contact_name = '';
@@ -69,7 +69,20 @@ class CustomerModal extends Component
     // Optional but recommended for dynamic rules: guarantees validateOnly on change
     public function updated($propertyName): void
     {
+        if ($propertyName === 'company' && is_string($this->company) && trim($this->company) === '') {
+            $this->company = null;
+        }
+
         $this->validateOnly($propertyName);
+    }
+
+    public function openModal(int|array|null $id = null): void
+    {
+        if (is_array($id)) {
+            $id = isset($id['id']) ? (int) $id['id'] : null;
+        }
+
+        $this->loadCustomer($id);
     }
 
     #[On('open-customer-modal')]
@@ -98,6 +111,10 @@ class CustomerModal extends Component
             $this->sales_person_id = $customer->sales_person_id ?? null;
             $this->status = $customer->status ?? 'Active';
             $this->internal_notes = $customer->internal_notes ?? '';
+        } else {
+            if (auth()->check() && auth()->user()->role === 'Sales') {
+                $this->sales_person_id = auth()->id();
+            }
         }
 
         $this->dispatch('open-modal', 'customer-modal');
@@ -128,7 +145,7 @@ class CustomerModal extends Component
             'billing_address' => 'nullable|string|min:2|max:1000',
             'source' => 'nullable|string|min:2|max:60',
             'industry' => 'nullable|string|min:2|max:60',
-            'sales_person_id' => 'required|integer|exists:users,id',
+            'sales_person_id' => (auth()->check() && auth()->user()->role === 'Sales') ? 'nullable|integer' : 'required|integer|exists:users,id',
             'status' => 'required|in:Active,On Hold,Completed,Churned',
             'internal_notes' => 'nullable|string|min:2|max:4000',
         ];
@@ -141,17 +158,30 @@ class CustomerModal extends Component
             'contact_name' => 'Contact Person',
             'email' => 'Email',
             'alt_phone' => 'Alternate Phone',
+            'sales_person_id' => 'Salesperson',
         ];
     }
 
     public function save(): void
     {
+        if (auth()->check() && auth()->user()->role === 'Sales') {
+            $this->sales_person_id = auth()->id();
+        }
+
         // Normalize empty select values
         if (empty($this->sales_person_id)) {
             $this->sales_person_id = null;
         }
 
+        if (is_string($this->company) && trim($this->company) === '') {
+            $this->company = null;
+        }
+
         $validated = $this->validate();
+
+        if (auth()->check() && auth()->user()->role === 'Sales') {
+            $validated['sales_person_id'] = auth()->id();
+        }
 
         foreach (['company', 'email', 'alt_phone', 'gst_number', 'pan_number', 'billing_name', 'billing_address', 'source', 'industry', 'internal_notes', 'address', 'city'] as $field) {
             if (array_key_exists($field, $validated) && ($validated[$field] === '' || $validated[$field] === null)) {
@@ -166,9 +196,26 @@ class CustomerModal extends Component
 
         if ($this->customerId) {
             $customer = Customer::findOrFail($this->customerId);
-            $customer->update($validated);
+            $customer->fill($validated);
+            $structuredChanges = $auditService->computeChanges($customer);
+            $customer->save();
+
             $label = $customer->company ?: ($customer->contact_name ?: $customer->customer_code);
-            $auditService->log(auth()->id(), 'Updated Customer', 'Customer', $customer->id, $customer->customer_code, "Updated customer {$label}");
+            $diffSummaries = [];
+            foreach ($structuredChanges as $field => $diff) {
+                $diffSummaries[] = "{$field}: {$diff['old']} -> {$diff['new']}";
+            }
+            $diffText = ! empty($diffSummaries) ? ' ('.implode(', ', $diffSummaries).')' : '';
+
+            $auditService->log(
+                auth()->id(),
+                'Updated Customer',
+                'Customer',
+                $customer->id,
+                $customer->customer_code,
+                "Updated customer {$label}{$diffText}",
+                $structuredChanges
+            );
         } else {
             $validated['customer_code'] = $codeService->generate('customer', 'CUS-');
             $validated['created_by'] = auth()->id();

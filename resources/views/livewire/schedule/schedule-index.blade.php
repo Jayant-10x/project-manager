@@ -25,11 +25,15 @@
                     :ismoney="true" color="#d94b4b" bg="#fdeaea"
                     wire:click="setStatus('Overdue')"
                     :class="$status === 'Overdue' ? 'ring-2 ring-[#d94b4b] bg-red-50/50' : ''"/>
-        <x-kpi-card label="Collected" :value="$collectedSum" :sub="$paidCount . ' fully paid'" icon="check"
+        <x-kpi-card label="Received" :value="$collectedSum"
+                    :sub="$tdsCollected > 0
+                        ? (view('components.money', ['value' => $cashCollected])->render() . ' Cash + ' . view('components.money', ['value' => $tdsCollected])->render() . ' TDS (' . $paidCount . ' paid)')
+                        : ('Collected · ' . $paidCount . ' fully paid')"
+                    icon="check"
                     :ismoney="true" color="#5aa236" bg="#eef7e8"
                     wire:click="setStatus('Paid')"
                     :class="$status === 'Paid' ? 'ring-2 ring-[#5aa236] bg-green-50/50' : ''"/>
-        <x-kpi-card label="Total scheduled" :value="$totalScheduledSum" sub="All active terms" icon="cash"
+        <x-kpi-card label="Total Receivable" :value="$totalScheduledSum" sub="Total Scheduled · All active terms" icon="cash"
                     color="#7a5af8"
                     :ismoney="true" bg="#f0ecff"
                     wire:click="setStatus('')"
@@ -73,7 +77,7 @@
                 </select>
 
                 @if($search !== '' || $status !== '' || $customer_id !== '' || $trigger_type !== '')
-                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                    <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
                         </svg>
@@ -113,7 +117,7 @@
                         $balance = max(0, (float)$term->amount - (float)$term->received - (float)$term->tds);
                         $isLate = $term->status === 'Overdue';
                         $dueDate = $term->due_date ? \Carbon\Carbon::parse($term->due_date) : null;
-                        $daysLate = ($isLate && $dueDate) ? abs(\Carbon\Carbon::parse($today)->diffInDays($dueDate, false)) : 0;
+                        $daysLate = ($isLate && $dueDate) ? (int) round(abs(\Carbon\Carbon::parse($today)->startOfDay()->diffInDays($dueDate->startOfDay(), false))) : 0;
                         $triggerLabel = match ($term->trigger_type) {
                             'milestone' => 'Milestone linked',
                             'recurring' => 'Recurring monthly',
@@ -154,13 +158,21 @@
                         <td>
                             @if($balance > 0)
                                 <button type="button"
-                                        class="mini-btn"
+                                        class="btn btn-outline-green btn-xs whitespace-nowrap"
                                         @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $term->project_id }}, termId: {{ $term->id }} })"
-                                        title="Record payment">
-                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                        title="Record payment for this installment">
+                                    <svg viewBox="0 0 24 24" class="w-3 h-3 mr-1 inline">
                                         <path d="M12 5v14M5 12h14"/>
                                     </svg>
+                                    Record Payment
                                 </button>
+                            @else
+                                <span class="inline-flex items-center gap-1 text-xs text-[#5aa236] font-semibold">
+                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 stroke-current fill-none stroke-2">
+                                        <path d="M20 6L9 17l-5-5"/>
+                                    </svg>
+                                    Settled
+                                </span>
                             @endif
                         </td>
                     </tr>

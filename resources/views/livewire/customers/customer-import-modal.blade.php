@@ -30,7 +30,7 @@
         </div>
 
         <div class="flex justify-end gap-3 mt-4">
-            <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
+            <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
             <button type="submit" class="btn btn-primary">Import Customers</button>
         </div>
     </form>

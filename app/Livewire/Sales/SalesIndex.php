@@ -22,7 +22,8 @@ class SalesIndex extends Component
     {
         $user = auth()->user();
         $salesPeople = User::where('role', 'Sales')
-            ->whereIn('id', $user->role === 'Admin' ? User::where('role', 'Sales')->pluck('id') : $user->getDownlineUserIds())
+            ->where('status', 'Active')
+            ->whereIn('id', $user->role === 'Admin' ? User::where('role', 'Sales')->where('status', 'Active')->pluck('id') : $user->getDownlineUserIds())
             ->with([
                 'salesProjects' => fn ($projectQuery) => $projectQuery->forUser($user)->with(['terms', 'payments', 'customer']),
             ])->orderBy('name')->get();
@@ -87,7 +88,8 @@ class SalesIndex extends Component
         $user = auth()->user();
 
         $salesPeople = User::where('role', 'Sales')
-            ->whereIn('id', $user->role === 'Admin' ? User::where('role', 'Sales')->pluck('id') : $user->getDownlineUserIds())
+            ->where('status', 'Active')
+            ->whereIn('id', $user->role === 'Admin' ? User::where('role', 'Sales')->where('status', 'Active')->pluck('id') : $user->getDownlineUserIds())
             ->with([
                 'salesProjects' => fn ($projectQuery) => $projectQuery->forUser($user)->with(['terms', 'payments', 'customer']),
             ])->orderBy('name')->get();

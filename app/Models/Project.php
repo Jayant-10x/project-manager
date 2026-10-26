@@ -104,15 +104,19 @@ class Project extends Model
     public function getMoneyAttribute(): array
     {
         $scheduled = (float) $this->terms->where('status', '!=', 'Cancelled')->sum('amount');
-        $received = (float) $this->payments->sum('amount');
+        $cash = (float) $this->payments->sum('amount');
         $tds = (float) $this->payments->sum('tds');
+        $settled = round($cash + $tds, 2);
+        $due = round(max(0, $scheduled - $cash - $tds), 2);
         $overdue = (float) $this->terms->where('status', 'Overdue')->sum(fn ($term) => max(0, $term->amount - $term->received - $term->tds));
 
         return [
             'scheduled' => $scheduled,
-            'received' => $received,
+            'received' => $settled, // Option B: Gross Realized Revenue (Cash Received + TDS Deducted)
+            'settled' => $settled,
+            'cash' => $cash,
             'tds' => $tds,
-            'due' => round(max(0, $scheduled - $received - $tds), 2),
+            'due' => $due,
             'overdue' => $overdue,
         ];
     }

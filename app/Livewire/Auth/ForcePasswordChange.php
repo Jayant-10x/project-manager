@@ -81,6 +81,9 @@ class ForcePasswordChange extends Component
 
     public function render()
     {
-        return view('livewire.auth.force-password-change');
+        return view('livewire.auth.force-password-change')->layoutData([
+            'title' => 'Change Password',
+            'header' => 'Change Password',
+        ]);
     }
 }

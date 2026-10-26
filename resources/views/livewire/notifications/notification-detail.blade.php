@@ -98,18 +98,27 @@
                             Target {{ ucfirst($notification->link_type) }} #{{ $notification->link_id }}
                         </div>
                     </div>
-                    <button type="button" wire:click="navigateToTarget" class="btn btn-primary btn-sm">
-                        View {{ ucfirst($notification->link_type) }}
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M9 18l6-6-6-6"/>
-                        </svg>
-                    </button>
+                    @if($notification->canAccessTarget(auth()->user()))
+                        <button type="button" wire:click="navigateToTarget" class="btn btn-primary btn-sm">
+                            View {{ ucfirst($notification->link_type) }}
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </button>
+                    @else
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200" title="This record is restricted for your role or outside your assignment scope.">
+                            <svg class="w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                            </svg>
+                            Restricted Record
+                        </span>
+                    @endif
                 </div>
             @endif
 
             <!-- Action Controls -->
             <div class="flex items-center justify-between pt-4 border-t border-[#eef2f9]">
-                <button type="button" wire:click="toggleRead" class="btn btn-ghost btn-sm">
+                <button type="button" wire:click="toggleRead" class="btn btn-outline-secondary btn-sm">
                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                         <path d="M20 6L9 17l-5-5"/>
                     </svg>
@@ -117,7 +126,7 @@
                 </button>
 
                 <button type="button"
-                        class="btn btn-danger btn-sm"
+                        class="btn btn-outline-danger btn-sm"
                         @click="$dispatch('confirm-dialog', {
                             title: 'Delete Notification?',
                             message: 'Are you sure you want to permanently delete this notification?',

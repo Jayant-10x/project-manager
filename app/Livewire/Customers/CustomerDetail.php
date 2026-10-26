@@ -20,6 +20,20 @@ class CustomerDetail extends Component
     #[Url(as: 'tab')]
     public string $activeTab = 'overview';
 
+    #[Url(as: 'doc_search')]
+    public string $docSearch = '';
+
+    #[Url(as: 'doc_cat')]
+    public string $docCategory = '';
+
+    #[Url(as: 'doc_pjt')]
+    public string $docProject = '';
+
+    public function clearDocFilters(): void
+    {
+        $this->reset(['docSearch', 'docCategory', 'docProject']);
+    }
+
     #[On('payment-saved')]
     #[On('followup-saved')]
     #[On('customer-saved')]
@@ -33,6 +47,9 @@ class CustomerDetail extends Component
     public function updatedActiveTab(string $value): void
     {
         if (auth()->user()?->role === 'Sales' && $value === 'payments') {
+            $this->activeTab = 'overview';
+        }
+        if ($value === 'followups') {
             $this->activeTab = 'overview';
         }
     }
@@ -52,6 +69,10 @@ class CustomerDetail extends Component
         }
 
         if ($user->role === 'Sales' && $this->activeTab === 'payments') {
+            $this->activeTab = 'overview';
+        }
+
+        if ($this->activeTab === 'followups') {
             $this->activeTab = 'overview';
         }
 
@@ -177,10 +198,11 @@ class CustomerDetail extends Component
 
         $contractVal = (float) $projects->sum('value');
         $sched = (float) $projects->sum(fn ($project) => $project->money['scheduled']);
-        $rec = (float) $projects->sum(fn ($project) => $project->money['received']);
+        $cash = (float) $projects->sum(fn ($project) => $project->money['cash']);
         $tds = (float) $projects->sum(fn ($project) => $project->money['tds']);
+        $rec = round($cash + $tds, 2); // Option B: Gross Realized Revenue (Cash + TDS)
         $overdue = (float) $projects->sum(fn ($project) => $project->money['overdue']);
-        $due = round(max(0, $sched - $rec - $tds), 2);
+        $due = round(max(0, $sched - $cash - $tds), 2);
         $collRate = $sched > 0 ? min(100, round(($rec / $sched) * 100)) : 0;
 
         $terms = PaymentTerm::whereIn('project_id', $projectIds)
@@ -193,16 +215,51 @@ class CustomerDetail extends Component
             ->orderByDesc('paid_on')
             ->get();
 
+        $documentsQuery = $this->customer->documents()
+            ->with(['project', 'uploadedBy'])
+            ->when($this->docSearch !== '', function ($builder) {
+                $term = '%'.trim($this->docSearch).'%';
+                $builder->where(function ($q) use ($term) {
+                    $q->where('title', 'like', $term)
+                        ->orWhere('file_name', 'like', $term);
+                });
+            })
+            ->when($this->docCategory !== '', fn ($builder) => $builder->where('category', $this->docCategory))
+            ->when($this->docProject !== '', function ($builder) {
+                if ($this->docProject === 'general') {
+                    $builder->whereNull('project_id');
+                } else {
+                    $builder->where('project_id', $this->docProject);
+                }
+            })
+            ->orderByDesc('id');
+
+        $availableDocCategories = $this->customer->documents()
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->distinct()
+            ->pluck('category')
+            ->sort()
+            ->values();
+
+        if ($availableDocCategories->isEmpty()) {
+            $availableDocCategories = collect(['Contract', 'KYC/GST', 'Invoice', 'Proposal', 'Quotation', 'Delivery Proof', 'Other']);
+        }
+
         return view('livewire.customers.customer-detail', [
             'projects' => $projects,
             'terms' => $terms,
             'payments' => $payments,
-            'documents' => $this->customer->documents()->orderByDesc('id')->get(),
+            'documents' => $documentsQuery->get(),
+            'docCategories' => $availableDocCategories,
+            'customerProjects' => $projects,
             'followups' => $this->customer->followups()->orderByDesc('happened_on')->get(),
             'money' => [
                 'contract' => $contractVal,
                 'scheduled' => $sched,
                 'received' => $rec,
+                'cash' => $cash,
+                'tds' => $tds,
                 'due' => $due,
                 'overdue' => $overdue,
                 'rate' => $collRate,

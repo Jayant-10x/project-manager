@@ -1,4 +1,4 @@
-<x-modal name="project-milestone-modal" :title="'Milestones — ' . $projectCode"
+<x-modal name="project-milestone-modal" :title="($hasExistingMilestones ? 'Edit Milestones' : 'Add Milestones') . ' — ' . $projectCode"
          sub="Build a timeline so the project stays on schedule" :wide="true">
     <form wire:submit="save">
         <div class="space-y-3">
@@ -30,19 +30,20 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
-                        <button type="button" class="mini-btn danger" wire:click="removeRow({{ $i }})"
+                        <button type="button" class="btn btn-outline-danger btn-xs" wire:click="removeRow({{ $i }})"
                                 title="Remove milestone" aria-label="Remove milestone">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                             </svg>
+                            <span>Remove</span>
                         </button>
                     </div>
                 </div>
             @endforeach
         </div>
 
-        <button type="button" class="btn btn-ghost btn-sm mt-3" wire:click="addRow">
+        <button type="button" class="btn btn-outline-primary btn-sm mt-3" wire:click="addRow">
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                 <path d="M12 5v14M5 12h14"/>
             </svg>
@@ -50,8 +51,8 @@
         </button>
 
         <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
-            <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
-            <button type="submit" class="btn btn-primary">Save milestones</button>
+            <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
+            <button type="submit" class="btn btn-primary">{{ $hasExistingMilestones ? 'Save milestones' : 'Add milestones' }}</button>
         </div>
     </form>
 </x-modal>

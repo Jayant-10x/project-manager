@@ -51,24 +51,32 @@ class CustomerImportModal extends Component
         $created = 0;
         foreach ($lines as $line) {
             $row = str_getcsv($line);
-            $company = trim($row[$headerMap['company'] ?? 0] ?? '');
-            if (empty($company)) {
+            $company = trim($row[$headerMap['company'] ?? -1] ?? '');
+            $contactName = trim($row[$headerMap['contact'] ?? $headerMap['contactname'] ?? -1] ?? '');
+            $phone = trim($row[$headerMap['phone'] ?? $headerMap['mobile'] ?? -1] ?? '');
+
+            // At least company or contact name must be present
+            if (empty($company) && empty($contactName)) {
                 continue;
             }
 
             // Prevent duplicate insertion
-            if (Customer::whereRaw('LOWER(company) = ?', [strtolower($company)])->exists()) {
+            if (! empty($company) && Customer::whereRaw('LOWER(company) = ?', [strtolower($company)])->exists()) {
+                continue;
+            }
+
+            if (! empty($phone) && Customer::where('phone', $phone)->exists()) {
                 continue;
             }
 
             Customer::create([
                 'customer_code' => $codeService->generate('customer', 'CUS-'),
-                'company' => $company,
-                'contact_name' => trim($row[$headerMap['contact'] ?? $headerMap['contactname'] ?? -1] ?? ''),
-                'phone' => trim($row[$headerMap['phone'] ?? $headerMap['mobile'] ?? -1] ?? ''),
-                'email' => trim($row[$headerMap['email'] ?? -1] ?? ''),
-                'city' => trim($row[$headerMap['city'] ?? -1] ?? ''),
-                'state' => trim($row[$headerMap['state'] ?? -1] ?? ''),
+                'company' => ! empty($company) ? $company : null,
+                'contact_name' => $contactName ?: null,
+                'phone' => $phone ?: null,
+                'email' => trim($row[$headerMap['email'] ?? -1] ?? '') ?: null,
+                'city' => trim($row[$headerMap['city'] ?? -1] ?? '') ?: null,
+                'state' => trim($row[$headerMap['state'] ?? -1] ?? '') ?: null,
                 'gst_number' => strtoupper(trim($row[$headerMap['gstnumber'] ?? $headerMap['gst'] ?? -1] ?? '')) ?: null,
                 'pan_number' => strtoupper(trim($row[$headerMap['pannumber'] ?? $headerMap['pan'] ?? -1] ?? '')) ?: null,
                 'address' => trim($row[$headerMap['address'] ?? -1] ?? '') ?: null,

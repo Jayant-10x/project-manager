@@ -7,6 +7,7 @@ use App\Models\PaymentTerm;
 use App\Models\Project;
 use App\Models\Setting;
 use App\Models\Task;
+use App\Services\MoneyCalculationService;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -15,19 +16,30 @@ use Livewire\Component;
 #[Layout('layouts.app')]
 class TodayWorkIndex extends Component
 {
+    public function mount(): void
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->hasPermission('today', 'view')) {
+            abort(403, 'Unauthorized access to operational work queue.');
+        }
+    }
+
     #[On('payment-saved')]
     #[On('payment-deleted')]
     #[On('project-saved')]
     #[On('task-saved')]
     #[On('followup-saved')]
+    #[On('counter-refresh')]
     public function refreshWorkQueue(): void
     {
         // Re-renders the operational triage queue
     }
 
-    public function render()
+    public function render(MoneyCalculationService $moneyService)
     {
         $user = auth()->user();
+        $moneyService->refreshOverdueStatus();
+
         $today = Carbon::today()->toDateString();
         $alertDays = (int) Setting::getValue('payment_alert_days', 7);
         $soonDate = Carbon::today()->addDays($alertDays)->toDateString();
@@ -41,7 +53,7 @@ class TodayWorkIndex extends Component
         $overdue = PaymentTerm::query()
             ->whereIn('project_id', $projectIds)
             ->where('status', 'Overdue')
-            ->with(['project.customer'])
+            ->with(['project.customer', 'milestone'])
             ->orderBy('due_date')
             ->get();
 
@@ -51,7 +63,7 @@ class TodayWorkIndex extends Component
             ->whereIn('status', ['Pending', 'Partial'])
             ->whereNotNull('due_date')
             ->whereBetween('due_date', [$today, $soonDate])
-            ->with(['project.customer'])
+            ->with(['project.customer', 'milestone'])
             ->orderBy('due_date')
             ->get();
 
@@ -62,7 +74,7 @@ class TodayWorkIndex extends Component
             ->where(function ($q) use ($projectIds) {
                 $q->whereIn('project_id', $projectIds)->orWhereNull('project_id');
             })
-            ->with('customer')
+            ->with(['customer', 'project'])
             ->orderBy('next_date')
             ->get();
 

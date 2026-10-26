@@ -34,11 +34,11 @@
         </div>
     </x-app-layout>
 @else
-    <x-guest-layout>
+    <x-guest-layout :title="$title">
         <div class="min-h-screen flex flex-col justify-center items-center p-6 bg-[#f5f7fb]">
             <div class="w-full max-w-md card p-8 sm:p-10 shadow-md rounded-2xl border border-[#e2e8f3] bg-white text-center">
                 <div class="mb-6 flex justify-center">
-                    <img src="{{ asset('assets/logo.png') }}" alt="{{ config('app.name', '10X Agency CRM') }}" class="h-9 w-auto">
+                    <img src="{{ asset('assets/logo.png') }}" alt="{{ config('app.name', 'Project Manager 10X Agency') }}" class="h-9 w-auto">
                 </div>
 
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider {{ $badgeClass }} mb-5">

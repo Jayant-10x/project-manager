@@ -1,4 +1,4 @@
-<x-guest-layout>
+<x-guest-layout title="Forgot Password">
     <div class="login-wrap">
         <div class="login-card">
             <div class="login-logo-plate">

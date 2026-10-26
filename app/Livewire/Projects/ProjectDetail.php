@@ -87,6 +87,25 @@ class ProjectDetail extends Component
         );
 
         $this->project->load('milestones');
+
+        if ($milestone->done && auth()->user()?->role !== 'Sales') {
+            $pendingTerm = PaymentTerm::where('project_id', $this->project->id)
+                ->where('status', '!=', 'Paid')
+                ->orderBy('seq')
+                ->first();
+
+            if ($pendingTerm) {
+                $balance = max(0, (float) $pendingTerm->amount - (float) $pendingTerm->received - (float) $pendingTerm->tds);
+                $this->dispatch('prompt-milestone-payment', [
+                    'milestoneName' => $milestone->name,
+                    'termLabel' => $pendingTerm->label,
+                    'termSeq' => $pendingTerm->seq,
+                    'balance' => $balance,
+                    'projectId' => $this->project->id,
+                    'termId' => $pendingTerm->id,
+                ]);
+            }
+        }
     }
 
     public function deleteTerm(int $termId): void
@@ -212,12 +231,12 @@ class ProjectDetail extends Component
         $rec = (float) $money['received'];
         $collectionRate = $sched > 0 ? min(100, round(($rec / $sched) * 100)) : 0;
 
-        $today = Carbon::today()->toDateString();
+        $today = Carbon::today()->startOfDay();
         $daysLate = 0;
         if ($this->project->delivery_date && $this->project->status !== 'Delivered') {
-            $diff = Carbon::parse($today)->diffInDays(Carbon::parse($this->project->delivery_date), false);
+            $diff = $today->diffInDays(Carbon::parse($this->project->delivery_date)->startOfDay(), false);
             if ($diff < 0) {
-                $daysLate = abs($diff);
+                $daysLate = (int) round(abs($diff));
             }
         }
 

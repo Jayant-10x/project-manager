@@ -26,7 +26,7 @@
             <div class="text-xs">
                 <b>{{ $dueList->count() }} follow-ups are pending.</b><br>
                 @foreach($dueList->take(4) as $d)
-                    <div>{{ $d->customer?->display_name }} — {{ $d->next_note ?: $d->summary }}
+                    <div>{{ $d->customer?->display_name }} — {{ $d->detail ?: ($d->next_note ?: $d->summary) }}
                         ({{ $d->next_date?->format('d M') }})
                     </div>
                 @endforeach
@@ -62,15 +62,15 @@
                     <option value="Note">Note</option>
                 </select>
 
-                <div class="flex items-center gap-1.5 text-xs text-[#8894ac]">
-                    <span>From</span>
-                    <input type="date" wire:model.live="date_from" class="i" style="width:auto; padding: 4px 8px; font-size: 12px;">
-                    <span>To</span>
-                    <input type="date" wire:model.live="date_to" class="i" style="width:auto; padding: 4px 8px; font-size: 12px;">
+                <div class="filter-date-group">
+                    <span class="filter-date-label">From</span>
+                    <input type="date" wire:model.live="date_from" class="filter-date-input">
+                    <span class="filter-date-label">To</span>
+                    <input type="date" wire:model.live="date_to" class="filter-date-input">
                 </div>
 
                 @if($search !== '' || $type !== '' || $customer_id !== '' || $date_from !== '' || $date_to !== '')
-                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                    <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
                         </svg>

@@ -15,6 +15,8 @@ class ProjectModal extends Component
 {
     public ?int $projectId = null;
 
+    public bool $isSaving = false;
+
     public ?int $customer_id = null;
 
     public string $name = '';
@@ -64,6 +66,22 @@ class ProjectModal extends Component
     public function mount(): void
     {
         $this->start_date = now()->toDateString();
+        if (auth()->check() && auth()->user()->role === 'Sales') {
+            $this->sales_person_id = auth()->id();
+            $this->coordinator_id = auth()->user()->reporting_to;
+        } elseif (auth()->check() && auth()->user()->role === 'Coordinator') {
+            $this->coordinator_id = auth()->id();
+        }
+    }
+
+    public function openModal(int|array|null $id = null, ?int $customerId = null): void
+    {
+        if (is_array($id)) {
+            $customerId = $id['customerId'] ?? $customerId;
+            $id = isset($id['id']) ? (int) $id['id'] : null;
+        }
+
+        $this->loadProject($id, $customerId);
     }
 
     #[On('open-project-modal')]
@@ -105,8 +123,10 @@ class ProjectModal extends Component
             $this->cost = 0.0;
             $this->amc_amount = 0.0;
             $this->renew_alert_days = 7;
-            $this->sales_person_id = auth()->user()->role === 'Sales' ? auth()->id() : null;
-            if (auth()->check() && auth()->user()->role === 'Coordinator') {
+            if (auth()->check() && auth()->user()->role === 'Sales') {
+                $this->sales_person_id = auth()->id();
+                $this->coordinator_id = auth()->user()->reporting_to;
+            } elseif (auth()->check() && auth()->user()->role === 'Coordinator') {
                 $this->coordinator_id = auth()->id();
             }
         }
@@ -122,7 +142,7 @@ class ProjectModal extends Component
             'project_type' => 'nullable|string|max:60',
             'value' => 'required|numeric|min:0',
             'cost' => 'required|numeric|min:0',
-            'coordinator_id' => 'required|integer|exists:users,id',
+            'coordinator_id' => (auth()->check() && in_array(auth()->user()->role, ['Coordinator', 'Sales'])) ? 'nullable|integer' : 'required|integer|exists:users,id',
             'start_date' => 'required|date',
             'delivery_date' => 'nullable|date|after_or_equal:start_date',
             'status' => 'required|in:Onboarding,In Progress,On Hold,Delivered,Cancelled',
@@ -137,7 +157,7 @@ class ProjectModal extends Component
             'handover_done' => 'boolean',
             'handover_notes' => 'nullable|string',
             'notes' => 'nullable|string',
-            'sales_person_id' => 'required|integer|exists:users,id',
+            'sales_person_id' => (auth()->check() && auth()->user()->role === 'Sales') ? 'nullable|integer' : 'required|integer|exists:users,id',
         ];
     }
 
@@ -153,76 +173,195 @@ class ProjectModal extends Component
 
     public function updated(string $propertyName): void
     {
+        if ($propertyName === 'health' || $propertyName === 'status') {
+            if ($this->health !== 'Delayed' && $this->status !== 'Delayed') {
+                $this->delay_reason = '';
+            }
+        }
+
         $this->validateOnly($propertyName);
     }
 
     public function save(): void
     {
-        $this->customer_id = $this->customer_id ? (int) $this->customer_id : null;
-        $this->coordinator_id = $this->coordinator_id ? (int) $this->coordinator_id : null;
-        $this->cost = ($this->cost === null || $this->cost === '') ? 0.0 : (float) $this->cost;
-        $this->start_date = ! empty($this->start_date) ? $this->start_date : null;
-        $this->delivery_date = ! empty($this->delivery_date) ? $this->delivery_date : null;
-
-        if (! $this->amc_required) {
-            $this->amc_start = null;
-            $this->amc_end = null;
-            $this->amc_amount = 0.0;
-        } else {
-            $this->amc_start = ! empty($this->amc_start) ? $this->amc_start : null;
-            $this->amc_end = ! empty($this->amc_end) ? $this->amc_end : null;
-            $this->amc_amount = ($this->amc_amount === null || $this->amc_amount === '') ? 0.0 : (float) $this->amc_amount;
+        if ($this->isSaving) {
+            return;
         }
+        $this->isSaving = true;
 
-        $this->renew_alert_days = (int) ($this->renew_alert_days ?: 7);
-
-        $validated = $this->validate();
-        $codeService = app(CodeGeneratorService::class);
-        $isEdit = (bool) $this->projectId;
-
-        $auditService = app(AuditNotificationService::class);
-
-        if ($this->projectId) {
-            $project = Project::findOrFail($this->projectId);
-            $changes = [];
-            if ($project->status !== $validated['status']) {
-                $changes[] = "status: {$project->status} -> {$validated['status']}";
+        try {
+            if ($this->health !== 'Delayed' && $this->status !== 'Delayed') {
+                $this->delay_reason = '';
             }
-            if ($project->health !== $validated['health']) {
-                $changes[] = "health: {$project->health} -> {$validated['health']}";
-            }
-            if ((float) $project->value !== (float) $validated['value']) {
-                $changes[] = 'value: ₹'.number_format($project->value).' -> ₹'.number_format($validated['value']);
-            }
-            $diffText = ! empty($changes) ? ' ('.implode(', ', $changes).')' : '';
-            $project->update($validated);
-            $auditService->log(auth()->id(), 'Updated Project', 'Project', $project->id, $project->code, "Updated project {$project->name}{$diffText}");
-        } else {
-            $validated['project_code'] = $codeService->generate('project', 'PJT-');
-            $validated['created_by'] = auth()->id();
-            if (auth()->check() && auth()->user()->role !== 'Admin' && empty($validated['coordinator_id'])) {
-                $validated['coordinator_id'] = auth()->id();
-            }
-            $project = Project::create($validated);
-            $auditService->log(auth()->id(), 'Created Project', 'Project', $project->id, $project->code, "Created project {$project->name} with value ₹".number_format($project->value, 2));
-        }
 
-        $this->reset();
-        $this->dispatch('project-saved');
-        $this->dispatch('close-modal', 'project-modal');
-        $this->dispatch('toast', ['msg' => 'Project saved successfully', 'type' => 'ok']);
+            if (auth()->check() && auth()->user()->role === 'Coordinator') {
+                $this->coordinator_id = $this->coordinator_id ?: auth()->id();
+            }
 
-        if (! $isEdit) {
-            $this->redirect(route('projects.show', $project->id), navigate: true);
+            if (auth()->check() && auth()->user()->role === 'Sales') {
+                $this->sales_person_id = auth()->id();
+                if (! $this->projectId) {
+                    $this->coordinator_id = auth()->user()->reporting_to ?: $this->coordinator_id;
+                }
+            }
+
+            $this->customer_id = $this->customer_id ? (int) $this->customer_id : null;
+            $this->coordinator_id = $this->coordinator_id ? (int) $this->coordinator_id : null;
+            $this->cost = ($this->cost === null || $this->cost === '') ? 0.0 : (float) $this->cost;
+            $this->start_date = ! empty($this->start_date) ? $this->start_date : null;
+            $this->delivery_date = ! empty($this->delivery_date) ? $this->delivery_date : null;
+
+            if (! $this->amc_required) {
+                $this->amc_start = null;
+                $this->amc_end = null;
+                $this->amc_amount = 0.0;
+            } else {
+                $this->amc_start = ! empty($this->amc_start) ? $this->amc_start : null;
+                $this->amc_end = ! empty($this->amc_end) ? $this->amc_end : null;
+                $this->amc_amount = ($this->amc_amount === null || $this->amc_amount === '') ? 0.0 : (float) $this->amc_amount;
+            }
+
+            $this->renew_alert_days = (int) ($this->renew_alert_days ?: 7);
+
+            $validated = $this->validate();
+
+            if ($this->health !== 'Delayed' && $this->status !== 'Delayed') {
+                $validated['delay_reason'] = null;
+            }
+
+            if (auth()->check() && auth()->user()->role === 'Coordinator') {
+                $validated['coordinator_id'] = $this->coordinator_id ?: auth()->id();
+            }
+
+            if (auth()->check() && auth()->user()->role === 'Sales') {
+                $validated['sales_person_id'] = auth()->id();
+                if (! $this->projectId) {
+                    $validated['coordinator_id'] = auth()->user()->reporting_to ?: ($this->coordinator_id ?: null);
+                }
+            }
+            $codeService = app(CodeGeneratorService::class);
+            $isEdit = (bool) $this->projectId;
+
+            $auditService = app(AuditNotificationService::class);
+
+            if ($this->projectId) {
+                $project = Project::findOrFail($this->projectId);
+                $project->fill($validated);
+                $structuredChanges = $auditService->computeChanges($project);
+                $project->save();
+
+                $diffSummaries = [];
+                foreach ($structuredChanges as $field => $diff) {
+                    $diffSummaries[] = "{$field}: {$diff['old']} -> {$diff['new']}";
+                }
+                $diffText = ! empty($diffSummaries) ? ' ('.implode(', ', $diffSummaries).')' : '';
+
+                $auditService->log(
+                    auth()->id(),
+                    'Updated Project',
+                    'Project',
+                    $project->id,
+                    $project->code,
+                    "Updated project {$project->name}{$diffText}",
+                    $structuredChanges
+                );
+
+                // Notify if health worsened
+                if (isset($structuredChanges['health']) && in_array($project->health, ['At Risk', 'Delayed'], true)) {
+                    if ($project->coordinator_id && $project->coordinator_id !== auth()->id()) {
+                        $auditService->notify(
+                            $project->coordinator_id,
+                            'Project Health Alert',
+                            "Project {$project->name} is {$project->health}",
+                            "Status changed to {$project->health}. Reason: ".($project->delay_reason ?: 'No reason specified'),
+                            'project',
+                            $project->id
+                        );
+                    }
+
+                    $adminIds = User::where('role', 'Admin')->where('status', 'Active')->where('id', '!=', auth()->id())->pluck('id');
+                    foreach ($adminIds as $adminId) {
+                        $auditService->notify(
+                            $adminId,
+                            'Project Health Alert',
+                            "Project {$project->name} is {$project->health}",
+                            "Alert: {$project->name} marked {$project->health}.",
+                            'project',
+                            $project->id
+                        );
+                    }
+                }
+
+                // Notify if coordinator reassigned
+                if (isset($structuredChanges['coordinator_id']) && $project->coordinator_id && $project->coordinator_id !== auth()->id()) {
+                    $auditService->notify(
+                        $project->coordinator_id,
+                        'Project Assignment',
+                        "Assigned to {$project->name}",
+                        "You have been assigned as coordinator for project {$project->name} ({$project->code})",
+                        'project',
+                        $project->id
+                    );
+                }
+            } else {
+                $validated['project_code'] = $codeService->generate('project', 'PJT-');
+                $validated['created_by'] = auth()->id();
+                if (auth()->check() && auth()->user()->role !== 'Admin' && empty($validated['coordinator_id'])) {
+                    $validated['coordinator_id'] = (auth()->user()->role === 'Sales' && auth()->user()->reporting_to)
+                        ? auth()->user()->reporting_to
+                        : auth()->id();
+                }
+                $project = Project::create($validated);
+                $auditService->log(auth()->id(), 'Created Project', 'Project', $project->id, $project->code, "Created project {$project->name} with value ₹".number_format($project->value, 2));
+
+                // Notify assigned coordinator
+                if ($project->coordinator_id && $project->coordinator_id !== auth()->id()) {
+                    $auditService->notify(
+                        $project->coordinator_id,
+                        'Project Assignment',
+                        "New Project: {$project->name}",
+                        "You have been assigned to project {$project->name} ({$project->code})",
+                        'project',
+                        $project->id
+                    );
+                }
+            }
+
+            $this->reset();
+            $this->dispatch('project-saved');
+            $this->dispatch('close-modal', 'project-modal');
+            $this->dispatch('toast', ['msg' => 'Project saved successfully', 'type' => 'ok']);
+
+            if (! $isEdit) {
+                $this->redirect(route('projects.show', $project->id), navigate: true);
+            }
+        } finally {
+            $this->isSaving = false;
         }
     }
 
     public function render()
     {
+        $assignedCoordinator = null;
+        if ($this->coordinator_id) {
+            $assignedCoordinator = User::find($this->coordinator_id);
+        } elseif (auth()->check() && auth()->user()->role === 'Sales') {
+            $assignedCoordinator = auth()->user()->reportingTo;
+        }
+
         return view('livewire.projects.project-modal', [
-            'customers' => Customer::orderByRaw('COALESCE(NULLIF(company, ""), contact_name) ASC')->get(),
+            'customers' => Customer::query()
+                ->where(function ($q) {
+                    $q->where('status', 'Active');
+                    if ($this->customer_id) {
+                        $q->orWhere('id', $this->customer_id);
+                    }
+                })
+                ->orderByRaw('COALESCE(NULLIF(company, ""), contact_name) ASC')
+                ->get(),
             'salesUsers' => User::where('role', 'Sales')->where('status', 'Active')->orderBy('name')->get(),
             'coordinators' => User::where('role', 'Coordinator')->where('status', 'Active')->orderBy('name')->get(),
+            'assignedCoordinator' => $assignedCoordinator,
         ]);
     }
 }

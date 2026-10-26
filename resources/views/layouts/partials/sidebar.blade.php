@@ -25,52 +25,116 @@
                         d="M3 13h8V3H3v10zm10 8h8V11h-8v10zM3 21h8v-6H3v6zm10-12h8V3h-8v6z"/></svg></span>
             <span class="lbl">Dashboard</span>
         </a>
-        <a href="{{ route('today.index') }}" wire:navigate
-           class="nav-item {{ request()->routeIs('today.*') ? 'active' : '' }}" title="Today's Work">
-            <span class="nav-ico"><svg viewBox="0 0 24 24"><path
-                        d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg></span>
-            <span class="lbl">Today's Work</span>
-            <livewire:components.dynamic-counter type="today" :warn="true" :hideZero="true" />
-        </a>
+        @if(auth()->user()->hasPermission('today', 'view'))
+            <a href="{{ route('today.index') }}" wire:navigate
+               class="nav-item {{ request()->routeIs('today.*') ? 'active' : '' }}" title="Today's Work">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><path
+                            d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg></span>
+                <span class="lbl">Today's Work</span>
+                <livewire:components.dynamic-counter type="today" :warn="true" :hideZero="true" />
+            </a>
+        @endif
 
-        <!-- 2. Customers -->
-        <div class="nav-label">Customers</div>
-        <a href="{{ route('customers.index') }}" wire:navigate
-           class="nav-item {{ request()->routeIs('customers.*') ? 'active' : '' }}" title="Customers">
-            <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle
-                        cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/></svg></span>
-            <span class="lbl">Customers</span>
-            <livewire:components.dynamic-counter type="customers" />
+        <!-- 2. Clients & Projects -->
+        @if(auth()->user()->hasPermission('customers', 'view') || auth()->user()->hasPermission('projects', 'view'))
+            <div class="nav-label">Clients & Projects</div>
+            @if(auth()->user()->hasPermission('customers', 'view'))
+                <a href="{{ route('customers.index') }}" wire:navigate
+                   class="nav-item {{ request()->routeIs('customers.*') ? 'active' : '' }}" title="Customers">
+                    <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle
+                                cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/></svg></span>
+                    <span class="lbl">Customers</span>
+                    <livewire:components.dynamic-counter type="customers" />
+                </a>
+            @endif
+            @if(auth()->user()->hasPermission('projects', 'view'))
+                <a href="{{ route('projects.index') }}" wire:navigate
+                   class="nav-item {{ request()->routeIs('projects.*') ? 'active' : '' }}" title="Projects">
+                    <span class="nav-ico"><svg viewBox="0 0 24 24"><path
+                                d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg></span>
+                    <span class="lbl">Projects</span>
+                    <livewire:components.dynamic-counter type="projects" />
+                </a>
+            @endif
+        @endif
+
+        <!-- Team & Hierarchy -->
+        @if(auth()->user()->hasPermission('users', 'view'))
+            <div class="nav-label">Team & Access</div>
+            <a href="{{ route('users.index') }}" wire:navigate
+               class="nav-item {{ request()->routeIs('users.*') ? 'active' : '' }}" title="Users">
+                <span class="nav-ico">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                </span>
+                <span class="lbl">Users</span>
+            </a>
+        @elseif(auth()->user()->hasPermission('team', 'view'))
+            <div class="nav-label">Team & Access</div>
+            <a href="{{ route('team.index') }}" wire:navigate
+               class="nav-item {{ request()->routeIs('team.*') ? 'active' : '' }}" title="Team Members">
+                <span class="nav-ico">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                </span>
+                <span class="lbl">Team Members</span>
+            </a>
+        @endif
+
+        <!-- Money (Module 3: Payment Schedule & Module 4: Payments) -->
+        @if(auth()->user()->hasPermission('payments', 'view') || auth()->user()->hasPermission('schedules', 'view') || auth()->user()->hasPermission('reports', 'view'))
+            <div class="nav-label">Money</div>
+            @if(auth()->user()->hasPermission('payments', 'view'))
+                <a href="{{ route('payments.index') }}" wire:navigate
+                   class="nav-item {{ request()->routeIs('payments.*') ? 'active' : '' }}" title="Payments">
+                    <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle
+                                cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg></span>
+                    <span class="lbl">Payments</span>
+                </a>
+            @endif
+            @if(auth()->user()->hasPermission('schedules', 'view'))
+                <a href="{{ route('schedule.index') }}" wire:navigate
+                   class="nav-item {{ request()->routeIs('schedule.*') ? 'active' : '' }}" title="Payment Schedule">
+                    <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path
+                                d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+                    <span class="lbl">Payment Schedule</span>
+                </a>
+            @endif
+            @if(auth()->user()->hasPermission('reports', 'view'))
+                <a href="{{ route('reports.index') }}" wire:navigate
+                   class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}" title="Reports & Analytics">
+                    <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg></span>
+                    <span class="lbl">Reports</span>
+                </a>
+            @endif
+        @endif
+
+        <!-- System & Governance -->
+        <div class="nav-label">System</div>
+        <a href="{{ route('notifications.index') }}" wire:navigate
+           class="nav-item {{ request()->routeIs('notifications.*') ? 'active' : '' }}" title="Notifications">
+            <span class="nav-ico">
+                <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+            </span>
+            <span class="lbl">Notifications</span>
+            <livewire:components.dynamic-counter type="notifications" :warn="true" :hideZero="true" />
         </a>
-        <a href="{{ route('projects.index') }}" wire:navigate
-           class="nav-item {{ request()->routeIs('projects.*') ? 'active' : '' }}" title="Projects">
-            <span class="nav-ico"><svg viewBox="0 0 24 24"><path
-                        d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg></span>
-            <span class="lbl">Projects</span>
-            <livewire:components.dynamic-counter type="projects" />
+        <a href="{{ route('audit.index') }}" wire:navigate
+           class="nav-item {{ request()->routeIs('audit.*') ? 'active' : '' }}" title="Activity Log">
+            <span class="nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+            <span class="lbl">Activity Log</span>
         </a>
-        <a href="{{ route('tasks.index') }}" wire:navigate
-           class="nav-item {{ request()->routeIs('tasks.*') ? 'active' : '' }}" title="My Tasks">
-            <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
-            <span class="lbl">My Tasks</span>
-            <livewire:components.dynamic-counter type="tasks" :hideZero="true" />
-        </a>
+        @if(auth()->user()->hasPermission('settings', 'view') || auth()->user()->role === 'Admin')
+            <a href="{{ route('settings.index') }}" wire:navigate
+               class="nav-item {{ request()->routeIs('settings.*') ? 'active' : '' }}" title="Settings">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
+                <span class="lbl">Settings</span>
+            </a>
+        @endif
+
 
         <!-- 3. Money -->
         @if(in_array($user->role, ['Admin', 'Manager', 'Coordinator']))
             <div class="nav-label">Money</div>
-            <a href="{{ route('payments.index') }}" wire:navigate
-               class="nav-item {{ request()->routeIs('payments.*') ? 'active' : '' }}" title="Payments">
-                <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle
-                            cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg></span>
-                <span class="lbl">Payments</span>
-            </a>
-            <a href="{{ route('schedule.index') }}" wire:navigate
-               class="nav-item {{ request()->routeIs('schedule.*') ? 'active' : '' }}" title="Payment Schedule">
-                <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path
-                            d="M16 2v4M8 2v4M3 10h18"/></svg></span>
-                <span class="lbl">Payment Schedule</span>
-            </a>
             @if(in_array($user->role, ['Admin', 'Manager']))
                 <a href="{{ route('reports.index') }}" wire:navigate
                    class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}" title="Reports">
@@ -127,19 +191,29 @@
                         d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
             <span class="lbl">Settings</span>
         </a>
+        --}}
     </nav>
 
     <div class="sb-foot">
-        <div class="me">
-            <div class="avatar" style="background:#0b3d91">{{ strtoupper(substr($user->name, 0, 2)) }}</div>
-            <div class="me-txt">
-                <strong>{{ $user->name }}</strong>
-                <span>{{ $user->designation ?? $user->role }}</span>
-            </div>
-            <form method="POST" action="{{ route('logout') }}" id="sidebar-logout-form" class="inline">
+        <div class="me group">
+            <button type="button"
+                    @click="$dispatch('open-profile-drawer')"
+                    class="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer focus:outline-hidden"
+                    title="Click to view & edit your profile">
+                @if($user->avatar_url)
+                    <img src="{{ $user->avatar_url }}" alt="{{ $user->name }}" class="avatar object-cover shrink-0 ring-1 ring-white/20">
+                @else
+                    <div class="avatar shrink-0 font-bold" style="background:#0b3d91">{{ strtoupper(substr($user->name, 0, 2)) }}</div>
+                @endif
+                <div class="me-txt min-w-0">
+                    <strong class="group-hover:text-blue-200 transition-colors">{{ $user->name }}</strong>
+                    <span>{{ $user->designation ?? $user->role }}</span>
+                </div>
+            </button>
+            <form method="POST" action="{{ route('logout') }}" id="sidebar-logout-form" class="inline shrink-0">
                 @csrf
                 <button type="button" class="sb-btn" title="Sign out"
-                        @click="$dispatch('confirm-dialog', {
+                        @click.stop="$dispatch('confirm-dialog', {
                             title: 'Sign Out?',
                             message: 'Are you sure you want to sign out of your workspace session?',
                             confirmText: 'Sign Out',

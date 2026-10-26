@@ -52,13 +52,11 @@
                     <option value="overdue">Overdue</option>
                     <option value="milestone">Milestone</option>
                     <option value="project">Project</option>
-                    <option value="amc">AMC</option>
-                    <option value="followup">Follow-up</option>
                     <option value="notification">General</option>
                 </select>
 
                 @if($search !== '' || $status !== '' || $type !== '')
-                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                    <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
                         </svg>

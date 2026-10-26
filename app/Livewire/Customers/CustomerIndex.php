@@ -23,7 +23,7 @@ class CustomerIndex extends Component
     public string $sales = '';
 
     #[Url]
-    public string $city = '';
+    public string $state = '';
 
     #[Url]
     public string $pay = '';
@@ -41,7 +41,7 @@ class CustomerIndex extends Component
         $this->resetPage();
     }
 
-    public function updatingCity(): void
+    public function updatingState(): void
     {
         $this->resetPage();
     }
@@ -58,7 +58,7 @@ class CustomerIndex extends Component
 
     public function clearFilters(): void
     {
-        $this->reset(['search', 'sales', 'city', 'pay', 'status']);
+        $this->reset(['search', 'sales', 'state', 'pay', 'status']);
         $this->resetPage();
     }
 
@@ -68,6 +68,7 @@ class CustomerIndex extends Component
         $this->resetPage();
     }
 
+    /* [Temporarily hidden - Export CSV feature]
     public function exportCsv()
     {
         $user = auth()->user();
@@ -83,11 +84,12 @@ class CustomerIndex extends Component
                         ->orWhere('phone', 'like', $searchTerm)
                         ->orWhere('email', 'like', $searchTerm)
                         ->orWhere('city', 'like', $searchTerm)
+                        ->orWhere('state', 'like', $searchTerm)
                         ->orWhere('gst_number', 'like', $searchTerm);
                 });
             })
             ->when($this->sales, fn ($builder) => $builder->where('sales_person_id', $this->sales))
-            ->when($this->city, fn ($builder) => $builder->where('city', $this->city))
+            ->when($this->state, fn ($builder) => $builder->where('state', $this->state))
             ->when($this->status, fn ($builder) => $builder->where('status', $this->status))
             ->orderBy('company');
 
@@ -127,7 +129,7 @@ class CustomerIndex extends Component
         return response()->streamDownload(function () use ($customers) {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
-            fputcsv($handle, ['Code', 'Company', 'Contact', 'Phone', 'Email', 'City', 'GSTIN', 'Source', 'Onboarded By', 'Status', 'Projects', 'Total Value', 'Received', 'Due']);
+            fputcsv($handle, ['Code', 'Company', 'Contact', 'Phone', 'Email', 'City', 'State', 'GSTIN', 'Source', 'Onboarded By', 'Status', 'Projects', 'Total Value', 'Received', 'Due']);
 
             foreach ($customers as $customer) {
                 $scheduledAmount = (float) $customer->projects->sum(fn ($project) => $project->money['scheduled']);
@@ -141,6 +143,7 @@ class CustomerIndex extends Component
                     $customer->phone,
                     $customer->email,
                     $customer->city,
+                    $customer->state,
                     $customer->gst_number,
                     $customer->source,
                     $customer->salesPerson?->name ?? '',
@@ -154,6 +157,7 @@ class CustomerIndex extends Component
             fclose($handle);
         }, $filename, ['Content-Type' => 'text/csv; charset=utf-8']);
     }
+    */
 
     public function render()
     {
@@ -174,11 +178,12 @@ class CustomerIndex extends Component
                         ->orWhere('phone', 'like', $searchTerm)
                         ->orWhere('email', 'like', $searchTerm)
                         ->orWhere('city', 'like', $searchTerm)
+                        ->orWhere('state', 'like', $searchTerm)
                         ->orWhere('gst_number', 'like', $searchTerm);
                 });
             })
             ->when($this->sales, fn ($builder) => $builder->where('sales_person_id', $this->sales))
-            ->when($this->city, fn ($builder) => $builder->where('city', $this->city))
+            ->when($this->state, fn ($builder) => $builder->where('state', $this->state))
             ->when($this->status, fn ($builder) => $builder->where('status', $this->status))
             ->orderBy('company');
 
@@ -210,12 +215,34 @@ class CustomerIndex extends Component
             $totalDue = $allMatching->sum(fn ($customer) => $customer->projects->sum(fn ($project) => $project->money['due']));
         }
 
-        $cities = Customer::distinct()->whereNotNull('city')->where('city', '!=', '')->pluck('city')->sort();
+        $presentStateCodes = Customer::query()
+            ->forUser($user)
+            ->whereNotNull('state')
+            ->where('state', '!=', '')
+            ->distinct()
+            ->pluck('state')
+            ->filter()
+            ->values();
+
+        $allStates = config('constants.states', []);
+        $states = [];
+        foreach ($presentStateCodes as $code) {
+            $states[$code] = $allStates[$code] ?? $code;
+        }
+        asort($states);
+
+        $salesPeopleQuery = User::where('role', 'Sales')->where('status', 'Active');
+        if ($user->role === 'Manager') {
+            $salesPeopleQuery->whereIn('id', $user->getDownlineUserIds());
+        } elseif ($user->role === 'Sales') {
+            $salesPeopleQuery->where('id', $user->id);
+        }
+        $salesPeople = ($user->role === 'Sales') ? collect() : $salesPeopleQuery->orderBy('name')->get();
 
         return view('livewire.customers.customer-index', [
             'customers' => $query->paginate(15),
-            'salesPeople' => User::where('role', 'Sales')->where('status', 'Active')->orderBy('name')->get(),
-            'cities' => $cities,
+            'salesPeople' => $salesPeople,
+            'states' => $states,
             'totalDue' => $totalDue,
         ])->layoutData([
             'header' => 'Customers',

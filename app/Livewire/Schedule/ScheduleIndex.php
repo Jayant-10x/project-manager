@@ -30,7 +30,7 @@ class ScheduleIndex extends Component
     public function mount(): void
     {
         $user = auth()->user();
-        if (! $user || $user->role === 'Sales') {
+        if (! $user || ! $user->hasPermission('schedules', 'view')) {
             abort(403, 'Unauthorized access to payment schedule.');
         }
     }
@@ -132,7 +132,9 @@ class ScheduleIndex extends Component
         $overdueSum = (float) $overdueTerms->sum(fn ($term) => max(0, (float) $term->amount - (float) $term->received - (float) $term->tds));
 
         $paidTerms = $allTerms->where('status', 'Paid');
-        $collectedSum = (float) $allTerms->sum('received');
+        $cashCollected = (float) $allTerms->sum('received');
+        $tdsCollected = (float) $allTerms->sum('tds');
+        $collectedSum = round($cashCollected + $tdsCollected, 2); // Option B: Gross Settled Revenue
 
         $totalScheduledSum = (float) $allTerms->where('status', '!=', 'Cancelled')->sum('amount');
 
@@ -176,6 +178,8 @@ class ScheduleIndex extends Component
             'overdueSum' => $overdueSum,
             'overdueCount' => $overdueTerms->count(),
             'collectedSum' => $collectedSum,
+            'cashCollected' => $cashCollected,
+            'tdsCollected' => $tdsCollected,
             'paidCount' => $paidTerms->count(),
             'totalScheduledSum' => $totalScheduledSum,
             'today' => $today,

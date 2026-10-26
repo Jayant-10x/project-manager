@@ -37,8 +37,7 @@ class DocumentUploadTest extends TestCase
             'value' => 50000,
         ]);
 
-        $csvContent = "name,email\nAlice,alice@example.com\nBob,bob@example.com";
-        $csvFile = UploadedFile::fake()->createWithContent('client_data.csv', $csvContent);
+        $csvFile = UploadedFile::fake()->create('client_data.csv', 10, 'text/csv');
 
         Livewire::actingAs($user)
             ->test(DocumentUploadModal::class)

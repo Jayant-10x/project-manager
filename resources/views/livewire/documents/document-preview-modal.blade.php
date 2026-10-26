@@ -28,14 +28,14 @@
                 </svg>
                 Open in new tab
             </a>
-            <a class="btn btn-ghost btn-sm" href="{{ $downloadUrl ?: $url }}" download="{{ $name }}">
+            <a class="btn btn-outline-primary btn-sm" href="{{ $downloadUrl ?: $url }}" download="{{ $name }}">
                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                 </svg>
                 Download
             </a>
         @endif
-        <button type="button" @click="$dispatch('close-modal', 'document-preview-modal')" class="btn btn-ghost btn-sm">
+        <button type="button" @click="$dispatch('close-modal', 'document-preview-modal')" class="btn btn-outline-secondary btn-sm">
             Close
         </button>
     </div>

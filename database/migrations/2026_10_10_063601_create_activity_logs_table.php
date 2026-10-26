@@ -16,6 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('entity_id')->nullable()->default(null);
             $table->string('entity_code', 20)->nullable()->default(null);
             $table->text('detail')->nullable()->default(null);
+            $table->json('changes')->nullable()->default(null);
             $table->timestamp('at_time')->useCurrent();
         });
     }

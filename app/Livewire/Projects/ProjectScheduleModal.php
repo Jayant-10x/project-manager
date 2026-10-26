@@ -91,7 +91,7 @@ class ProjectScheduleModal extends Component
 
         $advanceCarbon = Carbon::parse($advanceDate);
         $deliveryCarbon = Carbon::parse($deliveryDate);
-        $daysDiff = $advanceCarbon->diffInDays($deliveryCarbon, false);
+        $daysDiff = (int) round($advanceCarbon->startOfDay()->diffInDays($deliveryCarbon->startOfDay(), false));
         $midDate = ($daysDiff > 14)
             ? $advanceCarbon->copy()->addDays((int) floor($daysDiff / 2))->toDateString()
             : now()->addDays(30)->toDateString();

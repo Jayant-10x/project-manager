@@ -78,18 +78,22 @@ class NotificationDrawer extends Component
             $this->dispatch('notification-updated', unreadCount: $unreadCount);
         }
 
-        if ($notif->link_type === 'project' && $notif->link_id) {
-            return $this->redirect(route('projects.show', $notif->link_id), navigate: true);
-        }
+        // If the user has permission to the related target entity, redirect directly.
+        // Otherwise, open the default notification preview to avoid 403 Forbidden redirects.
+        if ($notif->canAccessTarget(auth()->user())) {
+            if ($notif->link_type === 'project' && $notif->link_id) {
+                return $this->redirect(route('projects.show', $notif->link_id), navigate: true);
+            }
 
-        if ($notif->link_type === 'customer' && $notif->link_id) {
-            return $this->redirect(route('customers.show', $notif->link_id), navigate: true);
-        }
+            if ($notif->link_type === 'customer' && $notif->link_id) {
+                return $this->redirect(route('customers.show', $notif->link_id), navigate: true);
+            }
 
-        if ($notif->link_type === 'settings') {
-            $params = $notif->link_id ? ['highlight_user' => $notif->link_id] : [];
+            if ($notif->link_type === 'settings') {
+                $params = $notif->link_id ? ['highlight_user' => $notif->link_id] : [];
 
-            return $this->redirect(route('settings.index', $params), navigate: true);
+                return $this->redirect(route('settings.index', $params), navigate: true);
+            }
         }
 
         return $this->redirect(route('notifications.show', $notif->id), navigate: true);

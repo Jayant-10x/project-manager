@@ -1,4 +1,5 @@
-<div x-data="{
+<div wire:ignore.self
+    x-data="{
         show: false,
         title: 'Confirm Action',
         message: 'Are you sure you want to proceed?',
@@ -19,7 +20,8 @@
             this.callback = typeof options.onConfirm === 'function' ? options.onConfirm : null;
             this.targetLivewire = options.wire || null;
             this.targetAction = options.action || null;
-            this.targetParams = Array.isArray(options.params) ? options.params : (options.params !== undefined ? [options.params] : []);
+            const rawParams = options.params !== undefined ? options.params : options.args;
+            this.targetParams = Array.isArray(rawParams) ? rawParams : (rawParams !== undefined ? [rawParams] : []);
             this.show = true;
         },
         confirm() {
@@ -34,6 +36,7 @@
             this.targetLivewire = null;
             this.targetAction = null;
             this.targetParams = [];
+            window.ModalManager?.close('confirm-modal');
 
             if (cb) {
                 cb();
@@ -47,31 +50,28 @@
             this.targetLivewire = null;
             this.targetAction = null;
             this.targetParams = [];
+            window.ModalManager?.close('confirm-modal');
             setTimeout(() => {
                 window._confirmModalActive = false;
-            }, 100);
+            }, 300);
         }
     }"
     x-init="
         $watch('show', value => {
             if (value) {
-                document.body.classList.add('overflow-hidden');
+                window.ModalManager?.open('confirm-modal');
             } else {
-                setTimeout(() => {
-                    const openModals = document.querySelectorAll('.overlay:not([style*=\'display: none\']), [data-confirm-modal]:not([style*=\'display: none\'])');
-                    if (openModals.length === 0) {
-                        document.body.classList.remove('overflow-hidden');
-                    }
-                }, 50);
+                window.ModalManager?.close('confirm-modal');
             }
         });
     "
     data-confirm-modal
     x-on:confirm-dialog.window="open($event.detail)"
-    x-show="show"
-    x-on:keydown.escape.window="if (show) { cancel(); $event.stopPropagation(); }"
+    x-show="typeof show !== 'undefined' && show"
+    x-on:keydown.escape.window="if (typeof show !== 'undefined' && show) { cancel(); $event.stopPropagation(); }"
     style="display: none; background-color: rgba(8, 20, 42, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);"
     class="fixed inset-0 flex items-center justify-center p-4 sm:p-6 z-[9999] overflow-y-auto overscroll-contain"
+    @click.self.stop="cancel()"
     x-transition:enter="ease-out duration-150"
     x-transition:enter-start="opacity-0"
     x-transition:enter-end="opacity-100"
@@ -139,12 +139,12 @@
         <!-- Modal Footer Actions with Clean Spacing -->
         <div class="px-6 py-4 bg-[#f8fafc] border-t border-[#eef2f9] flex items-center justify-end gap-3">
             <button type="button"
-                    @click="cancel()"
-                    class="btn btn-ghost btn-sm px-4 py-2 text-xs font-semibold"
+                    @click.stop="cancel()"
+                    class="btn btn-outline-secondary btn-sm px-4 py-2 text-xs font-semibold"
                     x-text="cancelText">
             </button>
             <button type="button"
-                    @click="confirm()"
+                    @click.stop="confirm()"
                     class="btn btn-sm px-4 py-2 text-xs font-semibold shadow-sm transition"
                     :class="{
                         'btn-danger !bg-red-600 !text-white hover:!bg-red-700': type === 'danger',

@@ -22,4 +22,71 @@ class Notification extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Determines if the given user has permission and downline access to navigate
+     * directly to the linked entity (Project, Customer, Settings, etc.).
+     */
+    public function canAccessTarget(?User $user = null): bool
+    {
+        $user = $user ?? auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        if (empty($this->link_type) || ! $this->link_id) {
+            return false;
+        }
+
+        if ($this->link_type === 'project') {
+            if (! $user->hasPermission('projects', 'view')) {
+                return false;
+            }
+
+            $project = Project::find($this->link_id);
+            if (! $project) {
+                return false;
+            }
+
+            if ($user->role === 'Admin') {
+                return true;
+            }
+
+            if ($user->role === 'Manager') {
+                $downlineIds = $user->getDownlineUserIds();
+
+                return ($project->coordinator_id && in_array($project->coordinator_id, $downlineIds, true))
+                    || ($project->sales_person_id && in_array($project->sales_person_id, $downlineIds, true));
+            }
+
+            if ($user->role === 'Sales') {
+                return (int) $project->sales_person_id === (int) $user->id;
+            }
+
+            return (int) $project->coordinator_id === (int) $user->id;
+        }
+
+        if ($this->link_type === 'customer') {
+            if (! $user->hasPermission('customers', 'view')) {
+                return false;
+            }
+
+            $customer = Customer::find($this->link_id);
+            if (! $customer) {
+                return false;
+            }
+
+            if ($user->role === 'Admin') {
+                return true;
+            }
+
+            return Customer::query()->forUser($user)->where('id', $customer->id)->exists();
+        }
+
+        if ($this->link_type === 'settings') {
+            return $user->hasPermission('settings', 'view') || $user->role === 'Admin';
+        }
+
+        return false;
+    }
 }

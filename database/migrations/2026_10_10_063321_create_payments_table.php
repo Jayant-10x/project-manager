@@ -21,6 +21,8 @@ return new class extends Migration
             $table->string('reference', 80)->nullable()->default(null);
             $table->string('bank', 80)->nullable()->default(null);
             $table->text('note')->nullable()->default(null);
+            $table->string('attachment', 255)->nullable()->default(null);
+            $table->foreignId('document_id')->nullable()->default(null)->constrained('documents')->nullOnDelete();
             $table->foreignId('created_by')->nullable()->default(null)->constrained('users')->nullOnDelete();
             $table->timestamps();
         });

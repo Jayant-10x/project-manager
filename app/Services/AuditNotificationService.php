@@ -10,7 +10,7 @@ use Throwable;
 
 class AuditNotificationService
 {
-    public function log(string|int|null $who, string $action, string $entity, ?int $entityId = null, string $code = '', string $detail = ''): void
+    public function log(string|int|null $who, string $action, string $entity, ?int $entityId = null, string $code = '', string $detail = '', ?array $changes = null): void
     {
         try {
             $userId = null;
@@ -29,11 +29,35 @@ class AuditNotificationService
                 'entity_id' => $entityId,
                 'entity_code' => mb_substr($code, 0, 20),
                 'detail' => mb_substr($detail, 0, 400),
+                'changes' => ! empty($changes) ? $changes : null,
                 'at_time' => Carbon::now(),
             ]);
         } catch (Throwable) {
             // Audit failures must never interrupt primary execution flows
         }
+    }
+
+    /**
+     * Compute field-level diffs between original and modified model attributes.
+     */
+    public function computeChanges($model, array $attributesToIgnore = ['updated_at', 'created_at', 'password', 'remember_token']): array
+    {
+        $changes = [];
+        $dirty = $model->getDirty();
+        foreach ($dirty as $key => $newVal) {
+            if (in_array($key, $attributesToIgnore, true)) {
+                continue;
+            }
+            $original = $model->getOriginal($key);
+            if ($original != $newVal) {
+                $changes[$key] = [
+                    'old' => is_bool($original) ? ($original ? 'Yes' : 'No') : (string) ($original ?? '—'),
+                    'new' => is_bool($newVal) ? ($newVal ? 'Yes' : 'No') : (string) ($newVal ?? '—'),
+                ];
+            }
+        }
+
+        return $changes;
     }
 
     public function notify(string|int|null $recipient, string $kind, string $title, string $body, string $linkType = '', ?int $linkId = null): void

@@ -143,19 +143,19 @@
         </div>
 
         <div class="flex gap-2 mt-4">
-            <button type="button" class="btn btn-ghost btn-sm" wire:click="addRow">
+            <button type="button" class="btn btn-outline-primary btn-sm" wire:click="addRow">
                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                     <path d="M12 5v14M5 12h14"/>
                 </svg>
                 Add installment
             </button>
-            <button type="button" class="btn btn-ghost btn-sm" wire:click="autoSplit">
+            <button type="button" class="btn btn-outline-secondary btn-sm" wire:click="autoSplit">
                 Auto-split (30/40/30)
             </button>
         </div>
 
         <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
-            <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
+            <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
             <button type="submit" class="btn btn-primary">Save schedule</button>
         </div>
     </form>

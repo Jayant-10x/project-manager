@@ -1,10 +1,15 @@
 <div>
     <div class="page-head">
         <span class="info">
-            {{ $customers->total() }} customer{{ $customers->total() === 1 ? '' : 's' }} · total due <b><x-money
-                    :value="$totalDue"/></b>
+            @if(auth()->user()->role === 'Sales')
+                {{ $customers->total() }} customer {{ \Illuminate\Support\Str::plural('account', $customers->total()) }} acquired
+            @else
+                {{ $customers->total() }} customer{{ $customers->total() === 1 ? '' : 's' }} · total due <b><x-money
+                        :value="$totalDue"/></b>
+            @endif
         </span>
         <span class="spacer"></span>
+        {{-- [Temporarily hidden - Export & Import buttons]
         <button type="button" class="btn btn-ghost btn-sm" wire:click="exportCsv">
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
@@ -21,6 +26,7 @@
             </svg>
             Bulk Import
         </button>
+        --}}
         <button type="button" class="btn btn-primary btn-sm"
                 @click="Livewire.dispatch('open-customer-modal', { id: null })">
             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
@@ -49,10 +55,10 @@
                     @endforeach
                 </select>
 
-                <select wire:model.live="city" class="i" style="width:auto">
-                    <option value="">All cities</option>
-                    @foreach($cities as $ct)
-                        <option value="{{ $ct }}">{{ $ct }}</option>
+                <select wire:model.live="state" class="i" style="width:auto">
+                    <option value="">All states</option>
+                    @foreach($states as $code => $name)
+                        <option value="{{ $code }}">{{ $name }}</option>
                     @endforeach
                 </select>
 
@@ -71,8 +77,8 @@
                     <option value="Churned">Churned</option>
                 </select>
 
-                @if($search !== '' || $sales !== '' || $city !== '' || $pay !== '' || $status !== '')
-                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                @if($search !== '' || $sales !== '' || $state !== '' || $pay !== '' || $status !== '')
+                    <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
                         </svg>
@@ -117,7 +123,7 @@
                                 class="strong">{{ $customer->display_name }}</div>
                             <div class="muted" style="font-size:10.9px">
                                 {{ $customer->code }}
-                                @if($customer->contact_name)
+                                @if($customer->company && $customer->contact_name)
                                     · {{ $customer->contact_name }}
                                 @endif
                                 @if($customer->city)
@@ -160,22 +166,24 @@
                             </span>
                         </td>
                         <td>
-                            <div class="row-actions">
+                            <div class="row-actions flex items-center justify-end gap-1.5">
                                 <a href="{{ route('customers.show', $customer) }}" wire:navigate
-                                   class="mini-btn inline-grid"
-                                   title="View">
-                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                   class="btn btn-outline-primary btn-xs"
+                                   title="View Customer Profile">
+                                    <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
                                         <circle cx="12" cy="12" r="3"/>
                                     </svg>
+                                    <span>View</span>
                                 </a>
-                                <button type="button" class="mini-btn" title="Edit"
+                                <button type="button" class="btn btn-outline-secondary btn-xs" title="Edit Customer"
                                         onclick="event.stopPropagation();"
                                         @click="Livewire.dispatch('open-customer-modal', { id: {{ $customer->id }} })">
-                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                    <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path d="M12 20h9"/>
                                         <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
                                     </svg>
+                                    <span>Edit</span>
                                 </button>
                             </div>
                         </td>
@@ -202,6 +210,7 @@
         <div class="p-4 border-t border-[#e2e8f3]">{{ $customers->links() }}</div>
     </div>
 
-    <!-- Livewire Bulk Import Modal Component -->
+    {{-- [Temporarily hidden - Bulk Import Modal]
     <livewire:customers.customer-import-modal/>
+    --}}
 </div>

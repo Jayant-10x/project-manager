@@ -9,6 +9,7 @@ use App\Livewire\Followups\FollowupIndex;
 use App\Livewire\Projects\ProjectIndex;
 use App\Livewire\Settings\SettingIndex;
 use App\Livewire\Tasks\TaskIndex;
+use App\Livewire\Users\UserIndex;
 use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\Document;
@@ -146,19 +147,16 @@ class RbacDataIsolationTest extends TestCase
 
         // Schedule index
         $this->actingAs($salesUser)->get(route('schedule.index'))->assertForbidden();
-
-        // Reports index
-        $this->actingAs($salesUser)->get(route('reports.index'))->assertForbidden();
     }
 
-    public function test_coordinator_cannot_access_executive_reports_route(): void
+    public function test_coordinator_and_sales_access_reports_with_scoped_visibility(): void
     {
         $coordinator = User::factory()->create(['role' => 'Coordinator']);
 
-        // Reports index is Admin/Manager only
-        $this->actingAs($coordinator)->get(route('reports.index'))->assertForbidden();
+        // Reports index is accessible with role scoping
+        $this->actingAs($coordinator)->get(route('reports.index'))->assertOk();
 
-        // But coordinator can access Payments and Schedule
+        // Coordinator can access Payments and Schedule
         $this->actingAs($coordinator)->get(route('payments.index'))->assertOk();
         $this->actingAs($coordinator)->get(route('schedule.index'))->assertOk();
     }
@@ -351,25 +349,24 @@ class RbacDataIsolationTest extends TestCase
         $unrelatedCoordinator = User::factory()->create(['name' => 'Other Coordinator Chris', 'role' => 'Coordinator', 'status' => 'Active']);
         $salesUser = User::factory()->create(['name' => 'Sales Sam', 'role' => 'Sales', 'status' => 'Active']);
 
-        // 1. Sales user cannot see Users card at all
+        // 1. Sales and Manager cannot access system settings (Admin only)
         Livewire::actingAs($salesUser)
             ->test(SettingIndex::class)
-            ->assertDontSee('Team Member Dan')
-            ->assertDontSee('Other Coordinator Chris')
-            ->assertDontSee('Admin Alex')
-            ->assertDontSee('accounts');
+            ->assertForbidden();
 
-        // 2. Manager Mary sees self and Team Member Dan, but NOT Other Coordinator Chris or Admin Alex in Users card
         Livewire::actingAs($manager)
             ->test(SettingIndex::class)
-            ->assertSee('Manager Mary')
-            ->assertSee('Team Member Dan')
-            ->assertDontSee('Other Coordinator Chris')
-            ->assertDontSee('Admin Alex');
+            ->assertForbidden();
 
-        // 3. Admin Alex sees all users
+        // 2. Admin Alex sees user directory link and system accounts
         Livewire::actingAs($admin)
             ->test(SettingIndex::class)
+            ->assertSee('Open Users Directory')
+            ->assertSee('Total System Accounts');
+
+        // 3. User directory displays all users for Admin
+        Livewire::actingAs($admin)
+            ->test(UserIndex::class)
             ->assertSee('Manager Mary')
             ->assertSee('Team Member Dan')
             ->assertSee('Other Coordinator Chris')

@@ -1,171 +1,645 @@
 <div>
-    <!-- 1. Top KPI Row (5 Blocks) -->
-    <div class="kpis">
-        <x-kpi-card label="Total Receivable" :value="$m['scheduled']" sub="Across all projects" icon="cash"
-                    :ismoney="true" color="#0b3d91" bg="#e8eefc" :href="route('schedule.index')"/>
-        <x-kpi-card label="Received" :value="$m['received']" :sub="$m['collectionRate'] . '% collected'" icon="check"
-                    :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('payments.index')"/>
-        <x-kpi-card label="Due" :value="$m['due']" sub="Still to be collected" icon="clock" color="#e0a13a"
-                    :ismoney="true" bg="#fdf3e2" :href="route('schedule.index')"/>
-        <x-kpi-card label="Overdue" :value="$m['overdue']" :sub="$overdueCount . ' installments late'" icon="alert"
-                    :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
-        <x-kpi-card label="This Month" :value="$m['thisMonth']" sub="Collection this month" icon="cal" color="#2e75b6"
-                    :ismoney="true" bg="#e8f1fa" :href="route('payments.index')"/>
-    </div>
-
-    <!-- 2. Main Split Grid: Today's Work Mini-Triage & Project Health / Trend -->
-    <div class="grid-2">
-        <!-- Today's Work Quick List -->
-        <div class="card">
-            <div class="card-head">
-                <div>
-                    <h3 class="font-bold text-sm text-[#0d1b34]">Today's Work</h3>
-                    <div class="text-xs text-[#8894ac]">Check these first</div>
-                </div>
-                <div class="right">
-                    <a href="{{ route('today.index') }}" wire:navigate class="btn btn-ghost btn-sm">
-                        Full list
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M9 18l6-6-6-6"/>
-                        </svg>
-                    </a>
-                </div>
+    <!-- Top Welcome Header & Scope Bar -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-[#0d1b34] tracking-tight">
+                    Welcome back, {{ $user->name }} 👋
+                </h1>
+                <p class="text-sm text-[#8894ac] mt-1 flex items-center gap-2 flex-wrap">
+                    <span
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-[#0b3d91] border border-blue-200">
+                        {{ $role }}
+                    </span>
+                    <span>&middot;</span>
+                    <span>{{ now()->format('l, d F Y') }}</span>
+                    <span>&middot;</span>
+                    <span class="text-slate-500">
+                        @switch($role)
+                            @case('Admin') Company-wide Executive Governance @break
+                            @case('Manager') Operations & Team Delivery Overview @break
+                            @case('Coordinator') My Active Projects & Delivery Schedule @break
+                            @case('Sales') My Deals Pipeline & Client Accounts @break
+                        @endswitch
+                    </span>
+                </p>
             </div>
-            <div class="card-body">
-                @if($topOverdue->isEmpty() && $topFollowups->isEmpty() && $topLateProjects->isEmpty())
-                    <div class="empty py-8 text-center text-gray-400">
-                        <span class="flex items-center justify-center mb-2">
-                            <svg viewBox="0 0 24 24" class="w-8 h-8 stroke-current fill-none">
-                                <path d="M20 6L9 17l-5-5"/>
-                            </svg>
-                        </span>
-                        <p class="font-medium text-gray-600">Everything is on track</p>
-                        <div class="text-xs">Nothing pending for today</div>
-                    </div>
-                @else
-                    <!-- Top Overdue Payments -->
-                    @foreach($topOverdue as $t)
-                        @php
-                            $bal = max(0, (float)$t->amount - (float)$t->received - (float)$t->tds);
-                            $dueDate = $t->due_date ? \Carbon\Carbon::parse($t->due_date) : null;
-                            $daysLate = $dueDate ? abs(\Carbon\Carbon::parse($today)->diffInDays($dueDate, false)) : 0;
-                        @endphp
-                        <div class="mini-item clickable"
-                             @click="Livewire.navigate('{{ route('projects.show', $t->project_id) }}')">
-                            <span
-                                style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#fdeaea;color:#d94b4b;flex:0 0 30px">
-                                <svg viewBox="0 0 24 24" class="w-4 h-4"><circle cx="12" cy="12" r="9"/><path
-                                        d="M12 8v5M12 16.5v.5"/></svg>
-                            </span>
-                            <div class="flex-1 min-w-0">
-                                <div class="t">{{ $t->project?->customer?->display_name }} —
-                                    <x-money :value="$bal"/>
-                                </div>
-                                <div class="s">{{ $t->label }} · due {{ $dueDate ? $dueDate->format('d M') : '—' }}
-                                    · {{ $daysLate }} days late
-                                </div>
-                            </div>
-                            <div class="r"><span class="badge b-red">Overdue</span></div>
-                        </div>
-                    @endforeach
-
-                    <!-- Top Follow-ups -->
-                    @foreach($topFollowups as $f)
-                        @php $fupDate = $f->next_date ? \Carbon\Carbon::parse($f->next_date) : null; @endphp
-                        <div class="mini-item clickable"
-                             @click="Livewire.navigate('{{ route('customers.show', $f->customer_id) }}')">
-                            <span
-                                style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#e8eefc;color:#0b3d91;flex:0 0 30px">
-                                <svg viewBox="0 0 24 24" class="w-4 h-4"><path
-                                        d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                            </span>
-                            <div class="flex-1 min-w-0">
-                                <div class="t">{{ $f->customer?->display_name }}</div>
-                                <div class="s">{{ $f->next_note ?: $f->type }}
-                                    · {{ $fupDate ? $fupDate->format('d M') : '—' }}</div>
-                            </div>
-                            <div class="r"><span class="badge b-navy">{{ $f->type }}</span></div>
-                        </div>
-                    @endforeach
-
-                    <!-- Top Delayed / At Risk Projects -->
-                    @foreach($topLateProjects as $p)
-                        <div class="mini-item clickable"
-                             @click="Livewire.navigate('{{ route('projects.show', $p->id) }}')">
-                            <span
-                                style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#fdf3e2;color:#e0a13a;flex:0 0 30px">
-                                <svg viewBox="0 0 24 24" class="w-4 h-4"><circle cx="12" cy="12" r="9"/><path
-                                        d="M12 7v5l3 2"/></svg>
-                            </span>
-                            <div class="flex-1 min-w-0">
-                                <div class="t">{{ $p->name }}</div>
-                                <div class="s">{{ $p->customer?->display_name }} · {{ $p->delay_reason ?: $p->health }}</div>
-                            </div>
-                            <div class="r">
-                                <x-health-badge :health="$p->health"/>
-                            </div>
-                        </div>
-                    @endforeach
+            <div class="flex items-center gap-2">
+                @if($user->hasPermission('today', 'view'))
+                    <a href="{{ route('today.index') }}" wire:navigate
+                       class="btn btn-outline-primary btn-sm flex items-center gap-1.5 shadow-xs"
+                       title="Open Today's Work Queue">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4">
+                            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                            <path d="M4 22v-7"/>
+                        </svg>
+                        <span>Today's Work</span>
+                        <livewire:components.dynamic-counter type="today" :warn="true" :hideZero="true"/>
+                    </a>
+                @endif
+                @if($role === 'Sales')
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm flex items-center gap-1.5 shadow-xs"
+                            @click="$dispatch('open-customer-modal', { id: null })"
+                            title="Add Customer">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        <span>Add Customer</span>
+                    </button>
+                    <button type="button"
+                            class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-xs"
+                            @click="$dispatch('open-project-modal', { id: null })"
+                            title="New Project">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        <span>New Project</span>
+                    </button>
                 @endif
             </div>
         </div>
+    </div>
 
-        <!-- Project Health & Collection Trend -->
-        <div>
-            <!-- Project Health Breakdown -->
-            <div class="card" style="margin-bottom:15px">
-                <div class="card-head">
+    <!-- 1. Role-Tailored KPI Row -->
+    @switch($role)
+        @case('Admin')
+            <!-- Admin Financial Summary KPIs (5 Blocks) -->
+            <div class="kpis mb-6">
+                <x-kpi-card label="Total Receivable" :value="$m['scheduled']" sub="All portfolio projects" icon="cash"
+                            :ismoney="true" color="#0b3d91" bg="#e8eefc"
+                            :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : null"/>
+                <x-kpi-card label="Received" :value="$m['received']"
+                            :sub="$m['tds'] > 0
+                            ? ('Realized Revenue · ' . view('components.money', ['value' => $m['cash']])->render() . ' Cash + ' . view('components.money', ['value' => $m['tds']])->render() . ' TDS Credit (' . $m['collectionRate'] . '% settled)')
+                            : ('Realized Revenue · ' . $m['collectionRate'] . '% settled to date')"
+                            icon="check" :ismoney="true" color="#5aa236" bg="#eef7e8"
+                            :href="$user->hasPermission('payments', 'view') ? route('payments.index') : null"/>
+                <x-kpi-card label="Due" :value="$m['due']" sub="Balance Due · Net pending collection" icon="clock"
+                            color="#e0a13a"
+                            :ismoney="true" bg="#fdf3e2"
+                            :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : null"/>
+                <x-kpi-card label="Overdue" :value="$m['overdue']"
+                            :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount) . ' late'"
+                            icon="alert"
+                            :ismoney="true" color="#d94b4b" bg="#fdeaea"
+                            :href="$user->hasPermission('today', 'view') ? route('today.index') : null"/>
+                <x-kpi-card label="This Month" :value="$m['thisMonth']" sub="Realized this calendar month" icon="cal"
+                            color="#2e75b6"
+                            :ismoney="true" bg="#e8f1fa"
+                            :href="$user->hasPermission('payments', 'view') ? route('payments.index') : null"/>
+            </div>
+            <!-- ADMIN VIEW: Macro Portfolio Health & Cash Realization -->
+            <div class="grid-2 mb-6">
+                <!-- Project Health Breakdown -->
+                <div class="card">
+                    <div class="card-head flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-blue-50 text-[#0b3d91] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Project Health</h3>
+                            <div class="text-xs text-[#8894ac]">{{ $totalProjectsCount }} total projects across company
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="display:flex;gap:14px;flex-wrap:wrap">
+                            @php
+                                $colors = ['On Track' => '#5aa236', 'At Risk' => '#e0a13a', 'Delayed' => '#d94b4b', 'Completed' => '#2e75b6'];
+                            @endphp
+                            @foreach($healthCounts as $label => $cnt)
+                                @php
+                                    $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
+                                    $colorCode = $colors[$label];
+                                @endphp
+                                <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
+                                   class="block p-3 rounded-xl transition hover:bg-gray-50 border border-gray-100 hover:border-gray-200 cursor-pointer"
+                                   style="flex:1;min-width:110px;text-decoration:none;color:inherit"
+                                   title="Filter {{ $label }} projects">
+                                    <div
+                                        style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;margin-bottom:6px">
+                                        <i style="width:8px;height:8px;border-radius:50%;background:{{ $colorCode }};display:inline-block"></i>
+                                        <span>{{ $label }}</span>
+                                    </div>
+                                    <div style="display:flex;align-items:baseline;justify-content:space-between">
+                                        <span
+                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
+                                        <span
+                                            style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
+                                    </div>
+                                    <div class="bar" style="height:5px;margin-top:8px">
+                                        <i style="width:{{ $percentage }}%;background:{{ $colorCode }}"></i>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6-Month Realized Revenue Trend -->
+                <div class="card">
+                    <div class="card-head flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-emerald-50 text-[#5aa236] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                                <polyline points="17 6 23 6 23 12"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Collection Trend</h3>
+                            <div class="text-xs text-[#8894ac]">Monthly revenue realized (Last 6 months)</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @php $maxVal = max(array_merge([1], array_column($trend, 'value'))); @endphp
+                        <div class="spark-chart" style="display:flex;gap:8px;align-items:flex-end">
+                            @foreach($trend as $point)
+                                @php $barHeight = max(4, round(($point['value'] / $maxVal) * 100)); @endphp
+                                <div class="spark-col">
+                                    <div class="spark-val"
+                                         x-text="$store.currency.format({{ (float)$point['value'] }}, true)"></div>
+                                    <div class="spark-bar-wrap">
+                                        <i style="height:{{ $barHeight }}%"
+                                           :title="'{{ $point['label'] }}: ' + $store.currency.format({{ (float)$point['value'] }}, false)"></i>
+                                    </div>
+                                    <div class="spark-label">{{ $point['label'] }}</div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales Attribution Performance Table -->
+            @if(!empty($salesRows))
+                <div class="card mb-6">
+                    <div class="card-head flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-amber-50 text-[#e0a13a] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="8" r="7"/>
+                                <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Sales-wise Performance</h3>
+                            <div class="text-xs text-[#8894ac]">Contract booking value and collection rate by
+                                salesperson
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Salesperson</th>
+                                <th>Customers</th>
+                                <th>Projects</th>
+                                <th class="num">Contract Value</th>
+                                <th class="num">Received</th>
+                                <th>Collection Rate</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach($salesRows as $salesRow)
+                                <tr>
+                                    <td class="strong">{{ $salesRow['name'] }}</td>
+                                    <td>{{ $salesRow['customers'] }}</td>
+                                    <td>{{ $salesRow['projects'] }}</td>
+                                    <td class="num font-semibold">
+                                        <x-money :value="$salesRow['value']"/>
+                                    </td>
+                                    <td class="num font-semibold text-emerald-700">
+                                        <x-money :value="$salesRow['received']"/>
+                                    </td>
+                                    <td style="min-width:130px">
+                                        <div
+                                            class="bar {{ $salesRow['rate'] >= 80 ? 'green' : ($salesRow['rate'] >= 40 ? 'amber' : '') }}">
+                                            <i style="width:{{ $salesRow['rate'] }}%"></i>
+                                        </div>
+                                        <span class="muted" style="font-size:10.8px">{{ $salesRow['rate'] }}%</span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Payment Ageing Breakdown -->
+            <div class="card">
+                <div class="card-head flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-rose-50 text-[#d94b4b] flex items-center justify-center shrink-0">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 14 14"/>
+                        </svg>
+                    </div>
                     <div>
-                        <h3 class="font-bold text-sm text-[#0d1b34]">Project Health</h3>
-                        <div class="text-xs text-[#8894ac]">{{ $totalProjectsCount }} projects</div>
+                        <h3 class="font-bold text-sm text-[#0d1b34]">Overdue Payment Timeline</h3>
+                        <div class="text-xs text-[#8894ac]">Breakdown of overdue payments by days late</div>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div style="display:flex;gap:14px;flex-wrap:wrap">
-                        @php
-                            $colors = ['On Track' => '#5aa236', 'At Risk' => '#e0a13a', 'Delayed' => '#d94b4b', 'Completed' => '#2e75b6'];
-                        @endphp
-                        @foreach($healthCounts as $label => $cnt)
+                    @php
+                        $ageing = $ageing ?? ['0-30' => 0.0, '31-60' => 0.0, '61-90' => 0.0, '90+' => 0.0];
+                        $maxAgeVal = max(array_merge([1], array_values($ageing)));
+                        $ageColors = ['0-30' => '#5aa236', '31-60' => '#2e75b6', '61-90' => '#e0a13a', '90+' => '#d94b4b'];
+                    @endphp
+                    <div style="display:flex;flex-direction:column;gap:14px">
+                        @foreach($ageing as $bracket => $amt)
                             @php
-                                $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
-                                $colorCode = $colors[$label];
+                                $barPct = round(($amt / $maxAgeVal) * 100, 1);
+                                $col = $ageColors[$bracket];
                             @endphp
-                            <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
-                               class="block p-2 rounded-xl transition hover:bg-gray-50 cursor-pointer"
-                               style="flex:1;min-width:110px;text-decoration:none;color:inherit"
-                               title="Filter {{ $label }} projects">
+                            <div>
                                 <div
-                                    style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;margin-bottom:5px">
-                                    <i style="width:8px;height:8px;border-radius:50%;background:{{ $colorCode }};display:inline-block"></i>{{ $label }}
+                                    style="display:flex;justify-content:space-between;font-size:12.3px;margin-bottom:5px">
+                                    <span style="font-weight:600">{{ $bracket }} days late</span>
+                                    <span class="muted" style="font-weight:650"><x-money :value="$amt"/></span>
                                 </div>
-                                <div style="display:flex;align-items:baseline;justify-content:space-between">
-                                    <span style="font-size:20px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
-                                    <span style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
+                                <div class="bar" style="height:8px">
+                                    <i style="width:{{ $barPct }}%;background:{{ $col }}"></i>
                                 </div>
-                                <div class="bar" style="height:5px;margin-top:6px">
-                                    <i style="width:{{ $percentage }}%;background:{{ $colorCode }}"></i>
-                                </div>
-                            </a>
+                            </div>
                         @endforeach
                     </div>
                 </div>
             </div>
+            @break
+        @case('Manager')
+            <!-- Manager Operational Delivery & Revenue KPIs (5 Blocks) -->
+            <div class="kpis mb-6">
+                <x-kpi-card label="Total Receivable" :value="$m['scheduled']" sub="Team Bookings · Total contract value"
+                            icon="cash"
+                            :ismoney="true" color="#0b3d91" bg="#e8eefc"
+                            :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : null"/>
+                <x-kpi-card label="Received" :value="$m['received']"
+                            :sub="$m['tds'] > 0
+                            ? ('Team Collections · ' . view('components.money', ['value' => $m['cash']])->render() . ' Cash + ' . view('components.money', ['value' => $m['tds']])->render() . ' TDS Credit (' . $m['collectionRate'] . '% settled)')
+                            : ('Team Collections · ' . $m['collectionRate'] . '% team realization')"
+                            icon="check" :ismoney="true" color="#5aa236" bg="#eef7e8"
+                            :href="$user->hasPermission('payments', 'view') ? route('payments.index') : null"/>
+                <x-kpi-card label="Due" :value="$m['due']" sub="Balance Due · Net pending collection" icon="clock"
+                            color="#e0a13a"
+                            :ismoney="true" bg="#fdf3e2"
+                            :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : null"/>
+                <x-kpi-card label="Overdue" :value="$m['overdue']"
+                            :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount) . ' late'"
+                            icon="alert"
+                            :ismoney="true" color="#d94b4b" bg="#fdeaea"
+                            :href="$user->hasPermission('today', 'view') ? route('today.index') : null"/>
+                <x-kpi-card label="Active Projects" :value="$totalProjectsCount" sub="Projects currently managed"
+                            icon="proj" color="#2e75b6"
+                            :ismoney="false" bg="#e8f1fa" :href="route('projects.index')"/>
+            </div>
+            <!-- MANAGER VIEW: Team Delivery & Coordinator Workload -->
+            <div class="grid-2 mb-6">
+                <!-- Team Project Health -->
+                <div class="card">
+                    <div class="card-head flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-blue-50 text-[#0b3d91] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Team Project Health</h3>
+                            <div class="text-xs text-[#8894ac]">{{ $totalProjectsCount }} projects managed by your team
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="display:flex;gap:14px;flex-wrap:wrap">
+                            @php
+                                $colors = ['On Track' => '#5aa236', 'At Risk' => '#e0a13a', 'Delayed' => '#d94b4b', 'Completed' => '#2e75b6'];
+                            @endphp
+                            @foreach($healthCounts as $label => $cnt)
+                                @php
+                                    $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
+                                    $colorCode = $colors[$label];
+                                @endphp
+                                <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
+                                   class="block p-3 rounded-xl transition hover:bg-gray-50 border border-gray-100 hover:border-gray-200 cursor-pointer"
+                                   style="flex:1;min-width:110px;text-decoration:none;color:inherit">
+                                    <div
+                                        style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;margin-bottom:6px">
+                                        <i style="width:8px;height:8px;border-radius:50%;background:{{ $colorCode }};display:inline-block"></i>
+                                        <span>{{ $label }}</span>
+                                    </div>
+                                    <div style="display:flex;align-items:baseline;justify-content:space-between">
+                                        <span
+                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
+                                        <span
+                                            style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
+                                    </div>
+                                    <div class="bar" style="height:5px;margin-top:8px">
+                                        <i style="width:{{ $percentage }}%;background:{{ $colorCode }}"></i>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
 
-            <!-- 6-Month Collection Trend Sparkline -->
-            <div class="card">
-                <div class="card-head">
+                <!-- Team Collection Trend -->
+                <div class="card">
+                    <div class="card-head flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-emerald-50 text-[#5aa236] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                                <polyline points="17 6 23 6 23 12"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Team Revenue Trend</h3>
+                            <div class="text-xs text-[#8894ac]">{{ $totalProjectsCount }} realized collections from team
+                                accounts
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @php $maxVal = max(array_merge([1], array_column($trend, 'value'))); @endphp
+                        <div class="spark-chart" style="display:flex;gap:8px;align-items:flex-end">
+                            @foreach($trend as $point)
+                                @php $barHeight = max(4, round(($point['value'] / $maxVal) * 100)); @endphp
+                                <div class="spark-col">
+                                    <div class="spark-val"
+                                         x-text="$store.currency.format({{ (float)$point['value'] }}, true)"></div>
+                                    <div class="spark-bar-wrap">
+                                        <i style="height:{{ $barHeight }}%"
+                                           :title="'{{ $point['label'] }}: ' + $store.currency.format({{ (float)$point['value'] }}, false)"></i>
+                                    </div>
+                                    <div class="spark-label">{{ $point['label'] }}</div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coordinator Workload & Delivery Velocity -->
+            <div class="card mb-6">
+                <div class="card-head flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-indigo-50 text-[#7a5af8] flex items-center justify-center shrink-0">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                        </svg>
+                    </div>
                     <div>
-                        <h3 class="font-bold text-sm text-[#0d1b34]">Collection Trend</h3>
-                        <div class="text-xs text-[#8894ac]">Last 6 months</div>
+                        <h3 class="font-bold text-sm text-[#0d1b34]">Coordinator Workload &amp; Delivery Velocity</h3>
+                        <div class="text-xs text-[#8894ac]">Active projects and health distribution by coordinator</div>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Coordinator</th>
+                            <th>Active Projects</th>
+                            <th>On Track</th>
+                            <th>Delayed / At Risk</th>
+                            <th>Delivery Status</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @forelse($teamCoordinators as $coord)
+                            <tr>
+                                <td>
+                                    <div class="font-semibold text-[#0d1b34]">{{ $coord->name }}</div>
+                                    <div class="text-xs text-[#8894ac]">{{ $coord->email }}</div>
+                                </td>
+                                <td class="font-bold text-slate-800">{{ $coord->active_projects_count }}</td>
+                                <td class="font-semibold text-emerald-600">{{ $coord->on_track_projects_count }}</td>
+                                <td class="font-semibold {{ $coord->delayed_projects_count > 0 ? 'text-red-600' : 'text-slate-400' }}">
+                                    {{ $coord->delayed_projects_count }}
+                                </td>
+                                <td>
+                                    @if($coord->delayed_projects_count > 0)
+                                        <span class="badge b-red">Attention Needed</span>
+                                    @elseif($coord->active_projects_count > 0)
+                                        <span class="badge b-green">Healthy</span>
+                                    @else
+                                        <span class="badge b-gray">Available</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center py-6 text-gray-400 text-xs">
+                                    No coordinators currently assigned to your team.
+                                </td>
+                            </tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Team Sales Performance -->
+            @if(!empty($salesRows))
+                <div class="card">
+                    <div class="card-head">
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Team Sales Performance</h3>
+                            <div class="text-xs text-[#8894ac]">Bookings and cash realization across supervised sales
+                                team
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Salesperson</th>
+                                <th>Customers</th>
+                                <th>Projects</th>
+                                <th class="num">Contract Value</th>
+                                <th class="num">Received</th>
+                                <th>Collection</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach($salesRows as $salesRow)
+                                <tr>
+                                    <td class="strong">{{ $salesRow['name'] }}</td>
+                                    <td>{{ $salesRow['customers'] }}</td>
+                                    <td>{{ $salesRow['projects'] }}</td>
+                                    <td class="num font-semibold">
+                                        <x-money :value="$salesRow['value']"/>
+                                    </td>
+                                    <td class="num font-semibold text-emerald-700">
+                                        <x-money :value="$salesRow['received']"/>
+                                    </td>
+                                    <td style="min-width:130px">
+                                        <div
+                                            class="bar {{ $salesRow['rate'] >= 80 ? 'green' : ($salesRow['rate'] >= 40 ? 'amber' : '') }}">
+                                            <i style="width:{{ $salesRow['rate'] }}%"></i>
+                                        </div>
+                                        <span class="muted" style="font-size:10.8px">{{ $salesRow['rate'] }}%</span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+            @break
+        @case('Coordinator')
+            <!-- Coordinator Project Delivery & Milestone Health KPIs (5 Blocks) -->
+            <div class="kpis mb-6">
+                <x-kpi-card label="Active Projects" :value="$coordinatorData['activeProjectsCount']"
+                            sub="My Active Projects · In-progress" icon="proj"
+                            :ismoney="false" color="#0b3d91" bg="#e8eefc"
+                            :href="route('projects.index', ['status' => 'In Progress'])"/>
+                <x-kpi-card label="Milestones" :value="$coordinatorData['completedMilestones']"
+                            :sub="'Milestones Progress · ' . $coordinatorData['milestoneRate'] . '% completed (' . $coordinatorData['totalMilestones'] . ' total)'"
+                            icon="check"
+                            :ismoney="false" color="#5aa236" bg="#eef7e8" :href="route('schedule.index')"/>
+                <x-kpi-card label="Total Receivable" :value="$m['scheduled']" sub="Assigned project value" icon="cash"
+                            :ismoney="true" color="#2e75b6" bg="#e8f1fa" :href="route('projects.index')"/>
+                <x-kpi-card label="Due" :value="$m['due']" sub="Net Pending Collection · On my projects" icon="clock"
+                            color="#e0a13a"
+                            :ismoney="true" bg="#fdf3e2" :href="route('schedule.index')"/>
+                <x-kpi-card label="Overdue" :value="$m['overdue']" :sub="$overdueCount . ' late on my accounts'"
+                            icon="alert"
+                            :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
+            </div>
+            <!-- COORDINATOR VIEW: Milestones & Project Deliveries -->
+            <div class="grid-2 mb-6">
+                <!-- My Projects Health -->
+                <div class="card">
+                    <div class="card-head flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-blue-50 text-[#0b3d91] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">My Projects Health</h3>
+                            <div class="text-xs text-[#8894ac]">{{ $totalProjectsCount }} projects assigned to you</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="display:flex;gap:14px;flex-wrap:wrap">
+                            @php
+                                $colors = ['On Track' => '#5aa236', 'At Risk' => '#e0a13a', 'Delayed' => '#d94b4b', 'Completed' => '#2e75b6'];
+                            @endphp
+                            @foreach($healthCounts as $label => $cnt)
+                                @php
+                                    $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
+                                    $colorCode = $colors[$label];
+                                @endphp
+                                <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
+                                   class="block p-3 rounded-xl transition hover:bg-gray-50 border border-gray-100 hover:border-gray-200 cursor-pointer"
+                                   style="flex:1;min-width:110px;text-decoration:none;color:inherit">
+                                    <div
+                                        style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;margin-bottom:6px">
+                                        <i style="width:8px;height:8px;border-radius:50%;background:{{ $colorCode }};display:inline-block"></i>
+                                        <span>{{ $label }}</span>
+                                    </div>
+                                    <div style="display:flex;align-items:baseline;justify-content:space-between">
+                                        <span
+                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
+                                        <span
+                                            style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
+                                    </div>
+                                    <div class="bar" style="height:5px;margin-top:8px">
+                                        <i style="width:{{ $percentage }}%;background:{{ $colorCode }}"></i>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Project Deliveries (Next 30 Days) -->
+                <div class="card">
+                    <div class="card-head flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-emerald-50 text-[#5aa236] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 14 14"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Upcoming Deliveries</h3>
+                            <div class="text-xs text-[#8894ac]">Projects scheduled for completion in next 30 days</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @forelse($coordinatorData['upcomingDeliveries'] as $proj)
+                            @php
+                                $delDate = $proj->delivery_date ? \Carbon\Carbon::parse($proj->delivery_date) : null;
+                                $daysLeft = $delDate ? (int) round(\Carbon\Carbon::today()->startOfDay()->diffInDays($delDate->startOfDay(), false)) : 0;
+                            @endphp
+                            <div
+                                class="mini-item clickable flex items-center justify-between p-2.5 rounded-xl border border-gray-100 hover:bg-gray-50/70 transition mb-2"
+                                @click="Livewire.navigate('{{ route('projects.show', $proj->id) }}')">
+                                <div class="flex-1 min-w-0 pr-3">
+                                    <div class="font-semibold text-sm text-[#0d1b34]">{{ $proj->name }}</div>
+                                    <div class="text-xs text-[#8894ac] flex items-center gap-1.5 mt-0.5">
+                                        <span>{{ $proj->customer?->display_name ?? '—' }}</span>
+                                        <span>&middot;</span>
+                                        <span>Due {{ $delDate ? $delDate->format('d M') : '—' }}</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                <span class="badge {{ $daysLeft <= 7 ? 'b-red' : 'b-amber' }}">
+                                    {{ $daysLeft == 0 ? 'Today' : ($daysLeft < 0 ? abs($daysLeft) . 'd late' : $daysLeft . 'd left') }}
+                                </span>
+                                    <x-health-badge :health="$proj->health"/>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="empty py-6 text-center text-gray-400">
+                            <span class="flex items-center justify-center mb-1 text-emerald-500">
+                                <svg viewBox="0 0 24 24" class="w-7 h-7 stroke-current fill-none"><path
+                                        d="M20 6L9 17l-5-5"/></svg>
+                            </span>
+                                <p class="text-xs font-semibold text-gray-500">No project deliveries due in next 30
+                                    days</p>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6-Month Realized Revenue Trend -->
+            <div class="card">
+                <div class="card-head flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-emerald-50 text-[#5aa236] flex items-center justify-center shrink-0">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                            <polyline points="17 6 23 6 23 12"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-[#0d1b34]">Project Cash Flow Trend</h3>
+                        <div class="text-xs text-[#8894ac]">Collections recorded on your assigned accounts</div>
                     </div>
                 </div>
                 <div class="card-body">
                     @php $maxVal = max(array_merge([1], array_column($trend, 'value'))); @endphp
-                    <div class="spark-chart" style="display:flex;gap:6px;align-items:flex-end">
+                    <div class="spark-chart" style="display:flex;gap:8px;align-items:flex-end">
                         @foreach($trend as $point)
                             @php $barHeight = max(4, round(($point['value'] / $maxVal) * 100)); @endphp
                             <div class="spark-col">
-                                <div class="spark-val" x-text="$store.currency.format({{ (float)$point['value'] }}, true)"></div>
+                                <div class="spark-val"
+                                     x-text="$store.currency.format({{ (float)$point['value'] }}, true)"></div>
                                 <div class="spark-bar-wrap">
                                     <i style="height:{{ $barHeight }}%"
                                        :title="'{{ $point['label'] }}: ' + $store.currency.format({{ (float)$point['value'] }}, false)"></i>
@@ -176,261 +650,156 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- 3. Upcoming & Overdue Installments -->
-    <div class="grid-2e" style="margin-bottom:15px">
-        <!-- Upcoming Payments -->
-        <div class="card">
-            <div class="card-head">
-                <div>
-                    <h3 class="font-bold text-sm text-[#0d1b34]">Upcoming Payments</h3>
-                    <div class="text-xs text-[#8894ac]">Next {{ $alertDays }} days</div>
-                </div>
+            @break
+        @case('Sales')
+            <!-- Sales Deal Bookings & Performance KPIs (5 Blocks) -->
+            <div class="kpis mb-6">
+                <x-kpi-card label="Total Receivable" :value="$salesData['totalDealsValue']"
+                            :sub="'Total Closed Bookings · ' . $salesData['dealsCount'] . ' deals closed'" icon="cash"
+                            :ismoney="true" color="#0b3d91" bg="#e8eefc" :href="route('projects.index')"/>
+                @if($salesData['target'] > 0)
+                    <x-kpi-card label="Target" :value="$salesData['target']"
+                                :sub="$salesData['targetProgress'] . '% quota achieved'" icon="target"
+                                :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('projects.index')"/>
+                @else
+                    <x-kpi-card label="Avg Deal Value" :value="$salesData['avgDealSize']" sub="Per closed project"
+                                icon="chart"
+                                :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('projects.index')"/>
+                @endif
+                <x-kpi-card label="Received" :value="$salesData['grossRealized']"
+                            :sub="$salesData['tdsRealized'] > 0
+                            ? ('Cash Inflow Realized · ' . view('components.money', ['value' => $salesData['cashRealized']])->render() . ' Cash + ' . view('components.money', ['value' => $salesData['tdsRealized']])->render() . ' TDS Credit (' . $salesData['realizationRate'] . '% settled)')
+                            : ('Cash Inflow Realized · ' . $salesData['realizationRate'] . '% cash collected')"
+                            icon="cash" color="#2e75b6"
+                            :ismoney="true" bg="#e8f1fa"
+                            :href="auth()->user()->hasPermission('payments', 'view') ? route('payments.index') : route('projects.index')"/>
+                <x-kpi-card label="Customers" :value="$salesData['customersAcquired']" sub="Client accounts acquired"
+                            icon="cust" color="#e0a13a"
+                            :ismoney="false" bg="#fdf3e2" :href="route('customers.index')"/>
+                <x-kpi-card label="Projects" :value="$totalProjectsCount" sub="Active client projects" icon="proj"
+                            color="#0b3d91"
+                            :ismoney="false" bg="#e8eefc" :href="route('projects.index')"/>
             </div>
-            <div class="card-body">
-                @forelse($upcomingTerms as $term)
-                    @php
-                        $balance = max(0, (float)$term->amount - (float)$term->received - (float)$term->tds);
-                        $dueDate = $term->due_date ? \Carbon\Carbon::parse($term->due_date) : null;
-                    @endphp
-                    <div class="term clickable"
-                         @click="Livewire.navigate('{{ route('projects.show', $term->project_id) }}')">
-                        <div class="term-body">
-                            <div class="term-title">{{ $term->project?->customer?->display_name }}</div>
-                            <div class="term-meta">
-                                <span>{{ $term->label }}</span>
-                                <span>Due {{ $dueDate ? $dueDate->format('d M') : '—' }}</span>
-                            </div>
-                        </div>
-                        <div class="term-amt">
-                            <div class="a">
-                                <x-money :value="$balance"/>
-                            </div>
-                            <div class="b">{{ $term->project?->code }}</div>
-                        </div>
-                    </div>
-                @empty
-                    <div class="empty py-6 text-center text-gray-400">
-                        <span class="flex items-center justify-center mb-1">
-                            <svg viewBox="0 0 24 24" class="w-8 h-8 stroke-current fill-none">
-                                <rect x="3" y="4" width="18" height="18" rx="2"/>
-                                <path d="M16 2v4M8 2v4M3 10h18"/>
+            <!-- SALES VIEW: Deal Origination, Quota Progress & Client Projects -->
+            <div class="grid-2 mb-6">
+                <!-- Client Projects Fulfillment Status -->
+                <div class="card">
+                    <div class="card-head flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-blue-50 text-[#0b3d91] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
                             </svg>
-                        </span>
-                        <p class="text-xs font-semibold text-gray-500">Nothing due in the next few days</p>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Client Projects Fulfillment</h3>
+                            <div class="text-xs text-[#8894ac]">Execution status of projects sold by you</div>
+                        </div>
                     </div>
-                @endforelse
-            </div>
-        </div>
-
-        <!-- Overdue Payments -->
-        <div class="card">
-            <div class="card-head">
-                <div>
-                    <h3 class="font-bold text-sm text-[#0d1b34]">Overdue Payments</h3>
-                    <div class="text-xs text-[#8894ac]">Needs immediate follow-up</div>
+                    <div class="card-body">
+                        <div style="display:flex;gap:14px;flex-wrap:wrap">
+                            @php
+                                $colors = ['On Track' => '#5aa236', 'At Risk' => '#e0a13a', 'Delayed' => '#d94b4b', 'Completed' => '#2e75b6'];
+                            @endphp
+                            @foreach($healthCounts as $label => $cnt)
+                                @php
+                                    $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
+                                    $colorCode = $colors[$label];
+                                @endphp
+                                <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
+                                   class="block p-3 rounded-xl transition hover:bg-gray-50 border border-gray-100 hover:border-gray-200 cursor-pointer"
+                                   style="flex:1;min-width:110px;text-decoration:none;color:inherit">
+                                    <div
+                                        style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;margin-bottom:6px">
+                                        <i style="width:8px;height:8px;border-radius:50%;background:{{ $colorCode }};display:inline-block"></i>
+                                        <span>{{ $label }}</span>
+                                    </div>
+                                    <div style="display:flex;align-items:baseline;justify-content:space-between">
+                                        <span
+                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
+                                        <span
+                                            style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
+                                    </div>
+                                    <div class="bar" style="height:5px;margin-top:8px">
+                                        <i style="width:{{ $percentage }}%;background:{{ $colorCode }}"></i>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="card-body">
-                @forelse($fullOverdueTerms as $term)
-                    @php
-                        $balance = max(0, (float)$term->amount - (float)$term->received - (float)$term->tds);
-                        $dueDate = $term->due_date ? \Carbon\Carbon::parse($term->due_date) : null;
-                        $daysLate = $dueDate ? abs(\Carbon\Carbon::parse($today)->diffInDays($dueDate, false)) : 0;
-                    @endphp
-                    <div class="term over clickable"
-                         @click="Livewire.navigate('{{ route('projects.show', $term->project_id) }}')">
-                        <div class="term-body">
-                            <div class="term-title">{{ $term->project?->customer?->display_name }}</div>
-                            <div class="term-meta">
-                                <span>{{ $term->label }}</span>
-                                <span>Due {{ $dueDate ? $dueDate->format('d M') : '—' }}</span>
-                                <span style="color:#d94b4b;font-weight:600">{{ $daysLate }} days late</span>
-                            </div>
-                        </div>
-                        <div class="term-amt">
-                            <div class="a">
-                                <x-money :value="$balance"/>
-                            </div>
-                            <div class="b">{{ $term->project?->code }}</div>
-                        </div>
-                    </div>
-                @empty
-                    <div class="empty py-6 text-center text-gray-400">
-                        <span class="flex items-center justify-center mb-1">
-                            <svg viewBox="0 0 24 24" class="w-8 h-8 stroke-current fill-none">
-                                <circle cx="12" cy="12" r="9"/>
-                                <path d="M12 8v5M12 16.5v.5"/>
+
+                <!-- Recent Closed Deals & Accounts -->
+                <div class="card">
+                    <div class="card-head flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-emerald-50 text-[#5aa236] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M22 21v-2a4 4 0 00-3-3.87"/>
                             </svg>
-                        </span>
-                        <p class="text-xs font-semibold text-gray-500">No overdue payments</p>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Recent Closed Deals</h3>
+                            <div class="text-xs text-[#8894ac]">Latest client accounts originated</div>
+                        </div>
                     </div>
-                @endforelse
-            </div>
-        </div>
-    </div>
-
-    <!-- 4. Sales-wise Performance & Operational Cards (AMC + Handover) -->
-    <div class="grid-2e" style="margin-bottom:15px">
-        <!-- Sales Performance Table -->
-        <div class="card">
-            <div class="card-head">
-                <div>
-                    <h3 class="font-bold text-sm text-[#0d1b34]">Sales-wise performance</h3>
-                    <div class="text-xs text-[#8894ac]">Revenue and collection by salesperson</div>
-                </div>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Salesperson</th>
-                        <th>Customers</th>
-                        <th>Projects</th>
-                        <th class="num">Value</th>
-                        <th class="num">Received</th>
-                        <th>Collection</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @forelse($salesRows as $salesRow)
-                        <tr>
-                            <td class="strong">{{ $salesRow['name'] }}</td>
-                            <td>{{ $salesRow['customers'] }}</td>
-                            <td>{{ $salesRow['projects'] }}</td>
-                            <td class="num">
-                                <x-money :value="$salesRow['value']"/>
-                            </td>
-                            <td class="num">
-                                <x-money :value="$salesRow['received']"/>
-                            </td>
-                            <td style="min-width:120px">
-                                <div class="bar {{ $salesRow['rate'] >= 80 ? 'green' : ($salesRow['rate'] >= 40 ? 'amber' : '') }}">
-                                    <i style="width:{{ $salesRow['rate'] }}%"></i>
+                    <div class="card-body">
+                        @forelse($salesData['recentDeals'] as $deal)
+                            <div
+                                class="mini-item clickable flex items-center justify-between p-2.5 rounded-xl border border-gray-100 hover:bg-gray-50/70 transition mb-2"
+                                @click="Livewire.navigate('{{ route('projects.show', $deal->id) }}')">
+                                <div class="flex-1 min-w-0 pr-3">
+                                    <div class="font-semibold text-sm text-[#0d1b34]">{{ $deal->name }}</div>
+                                    <div class="text-xs text-[#8894ac] flex items-center gap-1.5 mt-0.5">
+                                        <span>{{ $deal->customer?->display_name ?? '—' }}</span>
+                                        <span>&middot;</span>
+                                        <span class="font-semibold text-emerald-700"><x-money
+                                                :value="$deal->value"/></span>
+                                    </div>
                                 </div>
-                                <span class="muted" style="font-size:10.8px">{{ $salesRow['rate'] }}%</span>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6">
-                                <div class="empty py-6 text-center text-gray-400">
-                                    <p class="text-xs">No sales attribution data yet</p>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <x-health-badge :health="$deal->health"/>
                                 </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- AMC / Renewal & Handover Pending Widgets -->
-        <div>
-            <!-- AMC Renewal -->
-            <div class="card" style="margin-bottom:15px">
-                <div class="card-head">
-                    <div>
-                        <h3 class="font-bold text-sm text-[#0d1b34]">AMC / Renewal</h3>
-                        <div class="text-xs text-[#8894ac]">{{ $alertDays }} days before alert</div>
+                            </div>
+                        @empty
+                            <div class="empty py-6 text-center text-gray-400">
+                                <p class="text-xs font-semibold text-gray-500">No deals originated yet</p>
+                            </div>
+                        @endforelse
                     </div>
-                </div>
-                <div class="card-body">
-                    @forelse($amcProjects as $a)
-                        @php
-                            $amcEndDate = $a->amc_end ? \Carbon\Carbon::parse($a->amc_end) : null;
-                            $diff = $amcEndDate ? \Carbon\Carbon::parse($today)->diffInDays($amcEndDate, false) : 0;
-                        @endphp
-                        <div class="mini-item clickable"
-                             @click="Livewire.navigate('{{ route('projects.show', $a->id) }}')">
-                            <span
-                                style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#eef7e8;color:#5aa236;flex:0 0 30px">
-                                <svg viewBox="0 0 24 24" class="w-4 h-4"><path d="M21 12a9 9 0 11-3-6.7"/><path
-                                        d="M21 3v6h-6"/></svg>
-                            </span>
-                            <div class="flex-1 min-w-0">
-                                <div class="t">{{ $a->customer?->display_name }}</div>
-                                <div class="s">{{ $a->name }} · AMC
-                                    ends {{ $amcEndDate ? $amcEndDate->format('d M') : '—' }}</div>
-                            </div>
-                            <div class="r">
-                                <span class="badge {{ $diff < 0 ? 'b-red' : 'b-amber' }}">
-                                    {{ $diff < 0 ? abs($diff) . ' days late' : ($diff === 0 ? 'today' : $diff . ' days') }}
-                                </span>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="empty py-6 text-center text-gray-400">
-                            <p class="text-xs">No renewals pending</p>
-                        </div>
-                    @endforelse
                 </div>
             </div>
 
-            <!-- Handover Pending -->
-            <div class="card">
-                <div class="card-head">
-                    <div>
-                        <h3 class="font-bold text-sm text-[#0d1b34]">Handover Pending</h3>
-                        <div class="text-xs text-[#8894ac]">Delivered but checklist incomplete</div>
+            @if($salesData['target'] > 0)
+                <!-- Quota Progress Card for Sales -->
+                <div class="card">
+                    <div class="card-head">
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Sales Quota Target</h3>
+                            <div class="text-xs text-[#8894ac]">Closed revenue vs assigned sales quota</div>
+                        </div>
                     </div>
-                </div>
-                <div class="card-body">
-                    @forelse($handoverProjects as $h)
-                        <div class="mini-item clickable"
-                             @click="Livewire.navigate('{{ route('projects.show', $h->id) }}')">
-                            <svg viewBox="0 0 24 24" class="w-4 h-4 text-amber-600">
-                                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-                                <path d="M4 22v-7"/>
-                            </svg>
-                            <div style="margin-left:10px;flex:1;min-width:0">
-                                <div class="t">{{ $h->name }}</div>
-                                <div class="s">{{ $h->customer?->display_name }} · {{ $h->code }}</div>
+                    <div class="card-body">
+                        <div class="flex items-baseline justify-between mb-2">
+                            <div class="font-bold text-lg text-[#0d1b34]">
+                                <x-money :value="$salesData['totalDealsValue']"/>
+                                <span class="text-sm font-normal text-[#8894ac]">booked of</span>
+                                <x-money :value="$salesData['target']"/>
+                                <span class="text-sm font-normal text-[#8894ac]">quota</span>
                             </div>
-                            <div class="r"><span class="badge b-amber">Pending</span></div>
+                            <div
+                                class="font-bold text-base {{ $salesData['targetProgress'] >= 80 ? 'text-emerald-600' : 'text-blue-600' }}">
+                                {{ $salesData['targetProgress'] }}% Achieved
+                            </div>
                         </div>
-                    @empty
-                        <div class="empty py-6 text-center text-gray-400">
-                            <p class="text-xs">All handovers complete</p>
-                        </div>
-                    @endforelse
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 5. Payment Ageing Horizontal Breakdown -->
-    <div class="card">
-        <div class="card-head">
-            <div>
-                <h3 class="font-bold text-sm text-[#0d1b34]">Payment Ageing</h3>
-                <div class="text-xs text-[#8894ac]">How old the overdue amounts are</div>
-            </div>
-        </div>
-        <div class="card-body">
-            @php
-                $maxAgeVal = max(array_merge([1], array_values($ageing)));
-                $ageColors = ['0-30' => '#5aa236', '31-60' => '#2e75b6', '61-90' => '#e0a13a', '90+' => '#d94b4b'];
-            @endphp
-            <div style="display:flex;flex-direction:column;gap:13px">
-                @foreach($ageing as $bracket => $amt)
-                    @php
-                        $barPct = round(($amt / $maxAgeVal) * 100, 1);
-                        $col = $ageColors[$bracket];
-                    @endphp
-                    <div>
-                        <div style="display:flex;justify-content:space-between;font-size:12.3px;margin-bottom:5px">
-                            <span style="font-weight:600">{{ $bracket }} days</span>
-                            <span class="muted" style="font-weight:650"><x-money :value="$amt"/></span>
-                        </div>
-                        <div class="bar" style="height:8px">
-                            <i style="width:{{ $barPct }}%;background:{{ $col }}"></i>
+                        <div class="bar" style="height:10px">
+                            <i style="width:{{ $salesData['targetProgress'] }}%;background:{{ $salesData['targetProgress'] >= 80 ? '#5aa236' : '#0b3d91' }}"></i>
                         </div>
                     </div>
-                @endforeach
-            </div>
-        </div>
-    </div>
+                </div>
+            @endif
+            @break
+    @endswitch
 </div>

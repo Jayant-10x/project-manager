@@ -57,15 +57,15 @@
                     <option value="Other">Other</option>
                 </select>
 
-                <div class="flex items-center gap-1.5 text-xs text-[#8894ac]">
-                    <span>From</span>
-                    <input type="date" wire:model.live="date_from" class="i" style="width:auto; padding: 4px 8px; font-size: 12px;">
-                    <span>To</span>
-                    <input type="date" wire:model.live="date_to" class="i" style="width:auto; padding: 4px 8px; font-size: 12px;">
+                <div class="filter-date-group">
+                    <span class="filter-date-label">From</span>
+                    <input type="date" wire:model.live="date_from" class="filter-date-input">
+                    <span class="filter-date-label">To</span>
+                    <input type="date" wire:model.live="date_to" class="filter-date-input">
                 </div>
 
                 @if($search !== '' || $mode !== '' || $customer_id !== '' || $date_from !== '' || $date_to !== '')
-                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                    <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
                         </svg>
@@ -132,9 +132,40 @@
                             <x-money :value="$payment->project?->money['due'] ?? 0"/>
                         </td>
                         <td>
-                            <div class="row-actions">
+                            <div class="row-actions flex items-center justify-end gap-1.5">
+                                @if($payment->document_id)
+                                    <a href="{{ route('documents.download', $payment->document_id) }}"
+                                       class="btn btn-outline-secondary btn-xs inline-flex items-center gap-1" title="Download receipt attachment">
+                                        <svg viewBox="0 0 24 24" class="w-3 h-3">
+                                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                            <path d="M7 10l5 5 5-5"/>
+                                            <path d="M12 15V3"/>
+                                        </svg>
+                                        <span>Receipt</span>
+                                    </a>
+                                @elseif($payment->attachment)
+                                    <a href="{{ asset('storage/' . $payment->attachment) }}" target="_blank"
+                                       class="btn btn-outline-secondary btn-xs inline-flex items-center gap-1" title="View receipt attachment">
+                                        <svg viewBox="0 0 24 24" class="w-3 h-3">
+                                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                            <path d="M7 10l5 5 5-5"/>
+                                            <path d="M12 15V3"/>
+                                        </svg>
+                                        <span>Receipt</span>
+                                    </a>
+                                @endif
+                                @if($payment->project_id)
+                                    <a href="{{ route('projects.show', $payment->project_id) }}" wire:navigate
+                                       class="btn btn-outline-primary btn-xs" title="View Project">
+                                        <svg viewBox="0 0 24 24" class="w-3 h-3">
+                                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
+                                            <circle cx="12" cy="12" r="3"/>
+                                        </svg>
+                                        <span>Project</span>
+                                    </a>
+                                @endif
                                 <button type="button"
-                                        class="mini-btn danger"
+                                        class="btn btn-outline-danger btn-xs"
                                         @click="$dispatch('confirm-dialog', {
                                             title: 'Delete Payment Receipt?',
                                             message: 'Remove payment entry {{ $payment->code ?: '' }}? The receipt will be deleted and the installment balance will adjust.',
@@ -146,10 +177,11 @@
                                             params: {{ $payment->id }}
                                         })"
                                         title="Delete receipt">
-                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                    <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path
                                             d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                                     </svg>
+                                    <span>Delete</span>
                                 </button>
                             </div>
                         </td>

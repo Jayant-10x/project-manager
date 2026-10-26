@@ -1,10 +1,14 @@
 <div>
     <div class="page-head">
         <span class="info">
-            {{ $projects->total() }} project{{ $projects->total() === 1 ? '' : 's' }} · due <b><x-money
-                    :value="$totalDue"/></b>
-            @if($totalOverdue > 0)
-                · <b style="color:#d94b4b"><x-money :value="$totalOverdue"/> overdue</b>
+            @if(auth()->user()->role === 'Sales')
+                {{ $projects->total() }} project{{ $projects->total() === 1 ? '' : 's' }} originated
+            @else
+                {{ $projects->total() }} project{{ $projects->total() === 1 ? '' : 's' }} · due <b><x-money
+                        :value="$totalDue"/></b>
+                @if($totalOverdue > 0)
+                    · <b style="color:#d94b4b"><x-money :value="$totalOverdue"/> overdue</b>
+                @endif
             @endif
         </span>
         <span class="spacer"></span>
@@ -81,7 +85,7 @@
                 @endif
 
                 @if($search !== '' || $health !== '' || $status !== '' || $customer_id !== '' || $coordinator_id !== '' || $sales_person_id !== '' || $project_type !== '')
-                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                    <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
                         </svg>
@@ -149,20 +153,22 @@
                         @endif
                         <td class="nowrap muted">{{ $project->delivery_date?->format('d M') ?? '—' }}</td>
                         <td>
-                            <div class="row-actions">
-                                <a href="{{ route('projects.show', $project) }}" wire:navigate class="mini-btn inline-grid"
-                                   title="View" @click.stop>
-                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                            <div class="row-actions flex items-center justify-end gap-1.5">
+                                <a href="{{ route('projects.show', $project) }}" wire:navigate class="btn btn-outline-primary btn-xs"
+                                   title="View Project" @click.stop>
+                                    <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
                                         <circle cx="12" cy="12" r="3"/>
                                     </svg>
+                                    <span>View</span>
                                 </a>
-                                <button type="button" class="mini-btn" title="Edit"
+                                <button type="button" class="btn btn-outline-secondary btn-xs" title="Edit Project"
                                         @click.stop="Livewire.dispatch('open-project-modal', { id: {{ $project->id }} })">
-                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                    <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path d="M12 20h9"/>
                                         <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
                                     </svg>
+                                    <span>Edit</span>
                                 </button>
                             </div>
                         </td>

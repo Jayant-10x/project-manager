@@ -202,10 +202,10 @@
 
         <!-- Drawer Footer -->
         <div class="p-3.5 border-t border-[#eef2f9] bg-[#fbfcfe]">
-            <a href="{{ route('notifications.index') }}"
+            <a href="{{ Route::has('notifications.index') ? route('notifications.index') : '#' }}"
                wire:navigate
                @click="open = false"
-               class="btn btn-ghost btn-sm w-full justify-center text-xs font-semibold py-2">
+               class="btn btn-outline-primary btn-sm w-full justify-center text-xs font-semibold py-2">
                 View all notifications
                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 ml-1">
                     <path d="M9 18l6-6-6-6"/>

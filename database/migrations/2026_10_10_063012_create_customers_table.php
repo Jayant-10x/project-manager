@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('customer_code', 20)->unique();
             $table->string('company', 160)->nullable()->default(null)->unique('company');
-            $table->string('contact_name', 80)->nullable()->default(null);
+            $table->string('contact_name', 80)->default('');
             $table->string('email', 160)->unique()->nullable()->default(null);
             $table->string('phone', 30)->unique()->nullable()->default(null);
             $table->string('alt_phone', 30)->nullable()->default(null);

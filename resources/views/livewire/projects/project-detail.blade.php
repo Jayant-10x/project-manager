@@ -1,4 +1,20 @@
-<div>
+<div x-data="{}"
+     x-on:prompt-milestone-payment.window="
+        const d = $event.detail?.[0] || $event.detail;
+        if (!d) return;
+        window.dispatchEvent(new CustomEvent('confirm-dialog', {
+            detail: {
+                title: 'Milestone Completed',
+                message: 'Milestone \'' + (d.milestoneName || 'Milestone') + '\' marked as done. Would you like to record payment for installment #' + d.termSeq + ' (' + d.termLabel + ') now?',
+                confirmText: 'Record Payment Now',
+                cancelText: 'Later',
+                type: 'info',
+                onConfirm: () => {
+                    Livewire.dispatch('open-payment-modal', { projectId: d.projectId, termId: d.termId });
+                }
+            }
+        }));
+     ">
     <div class="mb-4">
         <button type="button"
                 @click="window.history.length > 1 ? window.history.back() : Livewire.navigate('{{ route('projects.index') }}')"
@@ -30,7 +46,7 @@
             @if($project->delivery_date)
                 <br>Delivery target: {{ $project->delivery_date->format('d M Y') }}
                 @if($daysLate > 0)
-                    · <b style="color:#d94b4b">{{ $daysLate }} days late</b>
+                    · <b style="color:#d94b4b">{{ (int) round($daysLate) }} days late</b>
                 @endif
             @endif
         </div>
@@ -57,15 +73,19 @@
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button type="button" class="btn btn-ghost btn-sm"
+                    <button type="button" class="btn btn-outline-primary btn-sm"
                             @click="$dispatch('open-milestone-modal', { projectId: {{ $project->id }} })">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M12 2l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/>
+                            @if($milestones->isEmpty())
+                                <path d="M12 5v14M5 12h14"/>
+                            @else
+                                <path d="M12 2l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/>
+                            @endif
                         </svg>
-                        Milestones
+                        <span>{{ $milestones->isEmpty() ? 'Add Milestone' : 'Edit Milestone' }}</span>
                     </button>
-                    @if(auth()->user()->role !== 'Sales')
-                        <button type="button" class="btn btn-ghost btn-sm"
+                    @if(auth()->user()->hasPermission('schedules', 'view'))
+                        <button type="button" class="btn btn-outline-primary btn-sm"
                                 @click="$dispatch('open-schedule-modal', { projectId: {{ $project->id }} })">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <rect x="3" y="4" width="18" height="18" rx="2"/>
@@ -73,15 +93,17 @@
                             </svg>
                             Schedule
                         </button>
+                    @endif
+                    @if(auth()->user()->hasPermission('payments', 'add'))
                         <button type="button" class="btn btn-green btn-sm"
                                 @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $project->id }} })">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path d="M12 5v14M5 12h14"/>
                             </svg>
-                            Payment
+                            Record Payment
                         </button>
                     @endif
-                    <button type="button" class="btn btn-ghost btn-sm"
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
                             @click="Livewire.dispatch('open-project-modal', { id: {{ $project->id }} })"
                             title="Edit project" aria-label="Edit project">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
@@ -89,8 +111,8 @@
                             <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
                         </svg>
                     </button>
-                    @if(auth()->user()->role === 'Admin')
-                        <button type="button" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50"
+                    @if(auth()->user()->hasPermission('projects', 'delete'))
+                        <button type="button" class="btn btn-outline-danger btn-sm"
                                 @click="$dispatch('confirm-dialog', {
                                     title: 'Delete Project?',
                                     message: 'Are you sure you want to permanently delete {{ addslashes($project->name) }} ({{ $project->code }}) and all associated milestones, payment schedules, and receipts?',
@@ -110,17 +132,18 @@
                 </div>
             </div>
 
-            @if(auth()->user()->role !== 'Sales')
+            @if(auth()->user()->hasPermission('payments', 'view') || auth()->user()->hasPermission('schedules', 'view'))
                 <div class="money-grid">
                     <div class="money-cell cursor-pointer hover:bg-gray-50 transition rounded-xl p-1.5"
                          wire:click="$set('activeTab', 'milestones')" title="View milestones">
-                        <div class="k">Project Value</div>
+                        <div class="k">Total Receivable</div>
                         <div class="v">
                             <x-money :value="$project->value > 0 ? $project->value : $project->money['scheduled']"/>
                         </div>
                         @if($project->value > 0 && abs((float)$project->value - (float)$project->money['scheduled']) > 0.01)
                             <div class="text-[11px] text-[#8894ac] mt-0.5">
-                                Sched: <x-money :value="$project->money['scheduled']"/>
+                                Sched:
+                                <x-money :value="$project->money['scheduled']"/>
                             </div>
                         @endif
                     </div>
@@ -130,12 +153,24 @@
                         <div class="v text-[#5aa236]">
                             <x-money :value="$project->money['received']"/>
                         </div>
+                        @if($project->money['tds'] > 0)
+                            <div class="text-[11px] text-[#8894ac] mt-0.5">
+                                <x-money :value="$project->money['cash']"/> Cash + <x-money :value="$project->money['tds']"/> TDS ({{ $r }}% settled)
+                            </div>
+                        @else
+                            <div class="text-[11px] text-[#8894ac] mt-0.5">
+                                {{ $r }}% settled
+                            </div>
+                        @endif
                     </div>
                     <div class="money-cell due cursor-pointer hover:bg-amber-50/50 transition rounded-xl p-1.5"
                          wire:click="$set('activeTab', 'schedule')" title="View payment schedule">
                         <div class="k">Due</div>
                         <div class="v text-[#e0a13a]">
                             <x-money :value="$project->money['due']"/>
+                        </div>
+                        <div class="text-[11px] text-[#8894ac] mt-0.5">
+                            Net pending collection
                         </div>
                     </div>
                     <div class="money-cell over cursor-pointer hover:bg-red-50/50 transition rounded-xl p-1.5"
@@ -160,7 +195,8 @@
 
             @if($project->amc_required)
                 <div class="divider"></div>
-                <div class="money-grid" style="grid-template-columns:repeat({{ auth()->user()->role === 'Sales' ? 2 : 3 }},1fr)">
+                <div class="money-grid"
+                     style="grid-template-columns:repeat({{ auth()->user()->hasPermission('payments', 'view') ? 3 : 2 }},1fr)">
                     <div class="money-cell">
                         <div class="k">AMC Start</div>
                         <div class="v" style="font-size:14px">{{ $project->amc_start?->format('d M Y') ?? '—' }}</div>
@@ -169,7 +205,7 @@
                         <div class="k">AMC End</div>
                         <div class="v" style="font-size:14px">{{ $project->amc_end?->format('d M Y') ?? '—' }}</div>
                     </div>
-                    @if(auth()->user()->role !== 'Sales')
+                    @if(auth()->user()->hasPermission('payments', 'view'))
                         <div class="money-cell">
                             <div class="k">AMC Amount</div>
                             <div class="v" style="font-size:14px">
@@ -202,11 +238,13 @@
                     class="tab {{ $activeTab === 'milestones' ? 'active' : '' }}">
                 Milestones <span class="n">{{ $milestones->count() }}</span>
             </button>
-            @if(auth()->user()->role !== 'Sales')
+            @if(auth()->user()->hasPermission('schedules', 'view'))
                 <button wire:click="$set('activeTab', 'schedule')"
                         class="tab {{ $activeTab === 'schedule' ? 'active' : '' }}">
                     Payment schedule <span class="n">{{ $terms->count() }}</span>
                 </button>
+            @endif
+            @if(auth()->user()->hasPermission('payments', 'view'))
                 <button wire:click="$set('activeTab', 'payments')"
                         class="tab {{ $activeTab === 'payments' ? 'active' : '' }}">
                     Receipts <span class="n">{{ $payments->count() }}</span>
@@ -248,10 +286,12 @@
                             <div class="k text-xs font-bold text-gray-400 uppercase">Salesperson</div>
                             <div class="v font-semibold">{{ $project->salesPerson?->name ?? '—' }}</div>
                         </div>
-                        <div class="field">
-                            <div class="k text-xs font-bold text-gray-400 uppercase">Delay reason</div>
-                            <div class="v font-semibold">{{ $project->delay_reason ?: '—' }}</div>
-                        </div>
+                        @if($project->health === 'Delayed' || $project->status === 'Delayed' || $project->delay_reason)
+                            <div class="field">
+                                <div class="k text-xs font-bold text-gray-400 uppercase">Delay reason</div>
+                                <div class="v font-semibold">{{ $project->delay_reason ?: '—' }}</div>
+                            </div>
+                        @endif
                     </div>
                     <div>
                         <div class="field mb-3">
@@ -300,8 +340,19 @@
                                 {{ $milestone->done ? '✓' : ($idx + 1) }}
                             </span>
                             <div class="ms-body flex-1 min-w-0">
-                                <div
-                                    class="ms-name font-bold text-sm {{ $milestone->done ? 'text-gray-400' : '' }}">{{ $milestone->name }}</div>
+                                <div class="flex items-center justify-between gap-2">
+                                    <div
+                                        class="ms-name font-bold text-sm {{ $milestone->done ? 'text-gray-400' : '' }}">{{ $milestone->name }}</div>
+                                    @if(auth()->user()->role !== 'Sales')
+                                        <button type="button"
+                                                class="btn btn-outline-secondary btn-xs text-[10.5px] py-0.5 px-1.5"
+                                                @click="Livewire.dispatch('open-chase-modal', { milestoneId: {{ $milestone->id }} })"
+                                                title="Log collection chase note">
+                                            <svg viewBox="0 0 24 24" class="w-2.5 h-2.5 mr-0.5 inline"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                                            Chase
+                                        </button>
+                                    @endif
+                                </div>
                                 <div class="ms-meta text-xs text-[#8894ac] mt-0.5">
                                     {{ $milestone->due_date ? 'Due ' . $milestone->due_date->format('d M Y') : 'No date' }}
                                     @if($milestone->done && $milestone->done_on)
@@ -309,10 +360,17 @@
                                     @endif
                                     · {{ $milestone->status }}
                                     @if(!$milestone->done && $milestone->due_date && $milestone->due_date->toDateString() < now()->toDateString())
-                                        · <b style="color:#d94b4b">{{ abs(now()->diffInDays($milestone->due_date, false)) }}
-                                            days late</b>
+                                        · <b style="color:#d94b4b">{{ (int) round(abs(now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($milestone->due_date)->startOfDay(), false))) }} days late</b>
                                     @endif
                                 </div>
+                                @if($milestone->chase_notes)
+                                    <div class="text-[11px] text-amber-800 bg-amber-50/70 border border-amber-200/60 rounded p-1.5 mt-1.5">
+                                        <span class="font-semibold text-amber-900">Chase:</span> {{ $milestone->chase_notes }}
+                                        @if($milestone->next_chase_date)
+                                            <span class="ml-1 text-amber-700 font-medium">(Next: {{ $milestone->next_chase_date->format('d M Y') }})</span>
+                                        @endif
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     @endforeach
@@ -324,30 +382,56 @@
                     <button type="button" class="btn btn-primary btn-sm"
                             @click="$dispatch('open-milestone-modal', { projectId: {{ $project->id }} })">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M12 20h9"/>
-                            <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                            @if($milestones->isEmpty())
+                                <path d="M12 5v14M5 12h14"/>
+                            @else
+                                <path d="M12 20h9"/>
+                                <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                            @endif
                         </svg>
-                        Edit milestones
+                        <span>{{ $milestones->isEmpty() ? 'Add Milestone' : 'Edit Milestone' }}</span>
                     </button>
                 </div>
                 @forelse($milestones as $idx => $milestone)
-                    <div wire:key="milestone-row-{{ $milestone->id }}" class="ms-row flex items-center justify-between p-3 border border-[#e2e8f3] rounded-lg mb-2">
-                        <div class="flex items-center gap-3">
-                            <input type="checkbox"
-                                   wire:key="milestone-chk-{{ $milestone->id }}-{{ $milestone->done ? 'done' : 'open' }}"
-                                   wire:click="toggleMilestone({{ $milestone->id }})"
-                                   {{ $milestone->done ? 'checked' : '' }} class="h-4 w-4 rounded accent-[#0b3d91] cursor-pointer">
-                            <div>
-                                <div
-                                    class="text-sm font-bold {{ $milestone->done ? 'line-through text-gray-400' : '' }}">{{ $milestone->name }}</div>
-                                <div class="text-xs text-[#8894ac]">
-                                    Due: {{ $milestone->due_date?->format('d M Y') ?? 'Flexible' }}</div>
+                    <div wire:key="milestone-row-{{ $milestone->id }}"
+                         class="ms-row p-3 border border-[#e2e8f3] rounded-lg mb-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox"
+                                       wire:key="milestone-chk-{{ $milestone->id }}-{{ $milestone->done ? 'done' : 'open' }}"
+                                       wire:click="toggleMilestone({{ $milestone->id }})"
+                                       {{ $milestone->done ? 'checked' : '' }} class="h-4 w-4 rounded accent-[#0b3d91] cursor-pointer">
+                                <div>
+                                    <div
+                                        class="text-sm font-bold {{ $milestone->done ? 'line-through text-gray-400' : '' }}">{{ $milestone->name }}</div>
+                                    <div class="text-xs text-[#8894ac]">
+                                        Due: {{ $milestone->due_date?->format('d M Y') ?? 'Flexible' }}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="badge {{ $milestone->done ? 'b-green' : ($milestone->status === 'In Progress' ? 'b-navy' : ($milestone->status === 'Blocked' ? 'b-red' : 'b-amber')) }}">
+                                    {{ $milestone->status }}
+                                </span>
+                                @if(auth()->user()->role !== 'Sales')
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-xs whitespace-nowrap"
+                                            @click="Livewire.dispatch('open-chase-modal', { milestoneId: {{ $milestone->id }} })"
+                                            title="Log collection chase note">
+                                        <svg viewBox="0 0 24 24" class="w-3 h-3 mr-1 inline"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                                        Chase Note
+                                    </button>
+                                @endif
                             </div>
                         </div>
-                        <span
-                            class="badge {{ $milestone->done ? 'b-green' : ($milestone->status === 'In Progress' ? 'b-navy' : ($milestone->status === 'Blocked' ? 'b-red' : 'b-amber')) }}">
-                            {{ $milestone->status }}
-                        </span>
+                        @if($milestone->chase_notes)
+                            <div class="text-xs text-amber-800 bg-amber-50/70 border border-amber-200/60 rounded-md p-2 mt-2">
+                                <span class="font-semibold text-amber-900">Collection Chase:</span> {{ $milestone->chase_notes }}
+                                @if($milestone->next_chase_date)
+                                    <span class="ml-1 text-amber-700 font-medium">· Next chase: {{ $milestone->next_chase_date->format('d M Y') }}</span>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 @empty
                     <div class="empty">
@@ -362,7 +446,7 @@
                 @endforelse
 
                 <!-- 3. SCHEDULE -->
-            @elseif(auth()->user()->role !== 'Sales' && $activeTab === 'schedule')
+            @elseif(auth()->user()->hasPermission('schedules', 'view') && $activeTab === 'schedule')
                 @php
                     $schedSum = $terms->sum('amount');
                     $paidSum = $terms->sum('received');
@@ -373,21 +457,25 @@
                             :value="$paidSum"/> received
                     </span>
                     <div style="margin-left:auto;display:flex;gap:8px">
-                        <button type="button" class="btn btn-ghost btn-sm"
-                                @click="$dispatch('open-recurring-modal', { projectId: {{ $project->id }} })">
-                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                                <path d="M21 12a9 9 0 11-3-6.7M21 3v6h-6"/>
-                            </svg>
-                            Generate monthly
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm"
-                                @click="$dispatch('open-schedule-modal', { projectId: {{ $project->id }} })">
-                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                                <path d="M12 20h9"/>
-                                <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
-                            </svg>
-                            Edit schedule
-                        </button>
+                        @if(auth()->user()->hasPermission('schedules', 'add'))
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                    @click="$dispatch('open-recurring-modal', { projectId: {{ $project->id }} })">
+                                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                    <path d="M21 12a9 9 0 11-3-6.7M21 3v6h-6"/>
+                                </svg>
+                                Generate monthly
+                            </button>
+                        @endif
+                        @if(auth()->user()->hasPermission('schedules', 'edit'))
+                            <button type="button" class="btn btn-primary btn-sm"
+                                    @click="$dispatch('open-schedule-modal', { projectId: {{ $project->id }} })">
+                                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                    <path d="M12 20h9"/>
+                                    <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                                </svg>
+                                Edit schedule
+                            </button>
+                        @endif
                     </div>
                 </div>
 
@@ -423,32 +511,38 @@
                                 {{ $bal > 0 ? 'remaining' : 'paid' }}
                             </div>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:4px">
-                            @if($bal > 0)
-                                <button type="button" class="mini-btn" @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $project->id }}, termId: {{ $term->id }} })"
-                                        title="Record payment">
-                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                        <div style="display:flex;align-items:center;gap:6px">
+                            @if($bal > 0 && auth()->user()->hasPermission('payments', 'add'))
+                                <button type="button" class="btn btn-outline-green btn-xs whitespace-nowrap"
+                                        @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $project->id }}, termId: {{ $term->id }} })"
+                                        title="Record payment for this installment">
+                                    <svg viewBox="0 0 24 24" class="w-3 h-3 mr-1 inline" fill="none"
+                                         stroke="currentColor" stroke-width="2">
                                         <path d="M12 5v14M5 12h14"/>
                                     </svg>
+                                    Record Payment
                                 </button>
                             @endif
-                            <button type="button" class="mini-btn danger"
-                                    @click="$dispatch('confirm-dialog', {
-                                        title: 'Remove Installment Term?',
-                                        message: 'Are you sure you want to remove {{ addslashes($term->label) }} (₹{{ number_format($term->amount) }}) from the schedule?',
-                                        confirmText: 'Remove Installment',
-                                        cancelText: 'Cancel',
-                                        danger: true,
-                                        wire: $wire,
-                                        action: 'deleteTerm',
-                                        params: {{ $term->id }}
-                                    })"
-                                    title="Remove">
-                                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                                    <path
-                                        d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-                                </svg>
-                            </button>
+                            @if(auth()->user()->hasPermission('schedules', 'delete'))
+                                <button type="button" class="btn btn-outline-danger btn-xs"
+                                        @click="$dispatch('confirm-dialog', {
+                                            title: 'Remove Installment Term?',
+                                            message: 'Are you sure you want to remove {{ addslashes($term->label) }} (₹{{ number_format($term->amount) }}) from the schedule?',
+                                            confirmText: 'Remove Installment',
+                                            cancelText: 'Cancel',
+                                            danger: true,
+                                            wire: $wire,
+                                            action: 'deleteTerm',
+                                            params: {{ $term->id }}
+                                        })"
+                                        title="Remove">
+                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                        <path
+                                            d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                                    </svg>
+                                    <span>Remove</span>
+                                </button>
+                            @endif
                         </div>
                     </div>
                 @empty
@@ -465,16 +559,18 @@
                 @endforelse
 
                 <!-- 4. PAYMENTS -->
-            @elseif(auth()->user()->role !== 'Sales' && $activeTab === 'payments')
-                <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-                    <button type="button" class="btn btn-green btn-sm"
-                            @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $project->id }} })">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M12 5v14M5 12h14"/>
-                        </svg>
-                        Record payment
-                    </button>
-                </div>
+            @elseif(auth()->user()->hasPermission('payments', 'view') && $activeTab === 'payments')
+                @if(auth()->user()->hasPermission('payments', 'add'))
+                    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+                        <button type="button" class="btn btn-green btn-sm"
+                                @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $project->id }} })">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            Record payment
+                        </button>
+                    </div>
+                @endif
                 @if($payments->isNotEmpty())
                     <div class="table-wrap">
                         <table>
@@ -512,8 +608,31 @@
                                         @endif</td>
                                     <td class="muted nowrap">{{ $pay->enteredBy?->name ?? '—' }}</td>
                                     <td>
-                                        <div class="row-actions">
-                                            <button type="button" class="mini-btn danger"
+                                        <div class="row-actions flex items-center gap-1.5">
+                                            @if($pay->document_id)
+                                                <a href="{{ route('documents.download', $pay->document_id) }}"
+                                                   class="btn btn-outline-secondary btn-xs inline-flex items-center gap-1"
+                                                   title="Download receipt slip">
+                                                    <svg viewBox="0 0 24 24" class="w-3 h-3">
+                                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                                        <path d="M7 10l5 5 5-5"/>
+                                                        <path d="M12 15V3"/>
+                                                    </svg>
+                                                    Receipt
+                                                </a>
+                                            @elseif($pay->attachment)
+                                                <a href="{{ asset('storage/' . $pay->attachment) }}" target="_blank"
+                                                   class="btn btn-outline-secondary btn-xs inline-flex items-center gap-1"
+                                                   title="View receipt slip">
+                                                    <svg viewBox="0 0 24 24" class="w-3 h-3">
+                                                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                                                        <path d="M7 10l5 5 5-5"/>
+                                                        <path d="M12 15V3"/>
+                                                    </svg>
+                                                    Receipt
+                                                </a>
+                                            @endif
+                                            <button type="button" class="btn btn-outline-danger btn-xs"
                                                     @click="$dispatch('confirm-dialog', {
                                                         title: 'Delete Payment Receipt?',
                                                         message: 'Remove this payment entry ({{ $pay->code ?: 'Receipt' }})? The receipt will be deleted and the installment balance adjusted.',
@@ -529,6 +648,7 @@
                                                     <path
                                                         d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                                                 </svg>
+                                                <span>Delete</span>
                                             </button>
                                         </div>
                                     </td>
@@ -576,7 +696,7 @@
                                 : asset('storage/' . $doc->stored_as);
                         @endphp
                         <button type="button"
-                                class="mini-btn mr-1"
+                                class="btn btn-outline-primary btn-xs mr-1"
                                 @click="Livewire.dispatch('open-document-preview', {
                                     data: {
                                         title: '{{ addslashes($doc->title) }}',
@@ -593,14 +713,17 @@
                                 <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
                                 <circle cx="12" cy="12" r="3"/>
                             </svg>
+                            <span>Preview</span>
                         </button>
-                        <a href="{{ route('documents.download', $doc->id, absolute: false) }}" download="{{ $doc->file_name }}"
-                           class="mini-btn mr-1" title="Download">
+                        <a href="{{ route('documents.download', $doc->id, absolute: false) }}"
+                           download="{{ $doc->file_name }}"
+                           class="btn btn-outline-secondary btn-xs mr-1" title="Download">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                             </svg>
+                            <span>Download</span>
                         </a>
-                        <button type="button" class="mini-btn danger"
+                        <button type="button" class="btn btn-outline-danger btn-xs"
                                 @click="$dispatch('confirm-dialog', {
                                     title: 'Remove Document?',
                                     message: 'Are you sure you want to remove {{ addslashes($doc->file_name) }}? The file will be permanently deleted.',
@@ -616,6 +739,7 @@
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                             </svg>
+                            <span>Remove</span>
                         </button>
                     </div>
                 @empty

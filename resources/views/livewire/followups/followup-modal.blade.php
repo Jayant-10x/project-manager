@@ -87,7 +87,7 @@
         </div>
 
         <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
-            <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
+            <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
             <button type="submit" class="btn btn-primary">Save follow-up</button>
         </div>
     </form>

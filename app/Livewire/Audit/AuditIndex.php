@@ -52,13 +52,10 @@ class AuditIndex extends Component
 
         if ($currentUser->role === 'Admin') {
             $allowedUserIds = null;
-        } elseif (in_array($currentUser->role, ['Manager', 'Coordinator'])) {
+        } else {
+            // Manager, Coordinator, Sales and downline are strictly limited to their own hierarchy
             $allowedUserIds = $currentUser->getDownlineUserIds();
             $query->whereIn('user_id', $allowedUserIds);
-        } else {
-            // Sales and other roles are strictly restricted to their own activity
-            $allowedUserIds = [$currentUser->id];
-            $query->where('user_id', $currentUser->id);
         }
 
         // Apply user_id filter with anti-tampering protection
@@ -89,14 +86,12 @@ class AuditIndex extends Component
                 ->whereIn('id', ActivityLog::whereNotNull('user_id')->distinct()->pluck('user_id'))
                 ->orderBy('name')
                 ->get();
-        } elseif ($currentUser->role !== 'Sales') {
+        } else {
             $users = User::query()
                 ->whereIn('id', $allowedUserIds)
                 ->whereIn('id', ActivityLog::whereNotNull('user_id')->distinct()->pluck('user_id'))
                 ->orderBy('name')
                 ->get();
-        } else {
-            $users = collect();
         }
 
         $actionsQuery = ActivityLog::query();

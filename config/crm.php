@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'app_name' => env('APP_NAME', '10X Agency | Project Coordinator'),
+    'app_name' => env('APP_NAME', 'Project Manager 10X Agency'),
     'app_short' => env('CRM_APP_SHORT', 'PJT CRM'),
     'app_url' => env('APP_URL', 'https://project.the10xagency.in'),
     'session_ttl' => (int) env('CRM_SESSION_TTL', 60 * 60 * 24 * 7),

@@ -74,7 +74,7 @@ class NavigationAndRedirectionTest extends TestCase
         Livewire::withQueryParams(['tab' => 'milestones'])
             ->test(ProjectDetail::class, ['project' => $project])
             ->assertSet('activeTab', 'milestones')
-            ->assertSee('Edit milestones');
+            ->assertSee('Add Milestone');
     }
 
     public function test_editing_project_does_not_force_redirect_to_index(): void

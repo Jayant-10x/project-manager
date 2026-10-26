@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Tasks;
 
+use App\Models\Followup;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
@@ -234,6 +235,19 @@ class TaskIndex extends Component
             ->get();
         $openCount = $baseTasks->where('done', false)->count();
         $doneCount = $baseTasks->where('done', true)->count();
+        $urgentCount = $baseTasks->where('done', false)->whereIn('priority', ['Urgent', 'High'])->count();
+
+        // Follow-up calls due within 7 days
+        $followups = Followup::query()
+            ->whereNotNull('next_date')
+            ->where('next_date', '<=', Carbon::today()->addDays(7)->toDateString())
+            ->when($currentUser->role !== 'Admin', function ($q) use ($currentUser) {
+                $q->where('created_by', $currentUser->id)
+                    ->orWhereHas('customer', fn ($cq) => $cq->forUser($currentUser));
+            })
+            ->with(['customer', 'project'])
+            ->orderBy('next_date')
+            ->get();
 
         $projects = Project::query()->forUser($currentUser)->orderBy('name')->get();
         $users = User::whereIn('id', $this->getAllowedAssigneeIds())->orderBy('name')->get();
@@ -242,6 +256,8 @@ class TaskIndex extends Component
             'tasks' => $tasks,
             'openCount' => $openCount,
             'doneCount' => $doneCount,
+            'urgentCount' => $urgentCount,
+            'followups' => $followups,
             'projects' => $projects,
             'users' => $users,
             'today' => $today,

@@ -156,11 +156,11 @@ class DocumentUploadModal extends Component
         $user = auth()->user();
 
         return view('livewire.documents.document-upload-modal', [
-            'customers' => Customer::orderByRaw('COALESCE(NULLIF(company, ""), contact_name) ASC')->get(),
+            'customers' => Customer::where('status', 'Active')->orderByRaw('COALESCE(NULLIF(company, ""), contact_name) ASC')->get(),
             'projects' => $this->customer_id
                 ? Project::forUser($user)->where('customer_id', $this->customer_id)->orderBy('name')->get()
                 : Project::forUser($user)->orderBy('name')->get(),
-            'categories' => ['Contract', 'KYC/GST', 'Invoice', 'Proposal', 'Quotation', 'Delivery Proof', 'AMC', 'Other'],
+            'categories' => ['Contract', 'KYC/GST', 'Invoice', 'Proposal', 'Quotation', 'Delivery Proof', 'Other'],
         ]);
     }
 }

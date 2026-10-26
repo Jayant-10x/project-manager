@@ -23,7 +23,7 @@
                     <h2 style="font-size:19px;font-weight:700;letter-spacing:-.3px">{{ $customer->display_name }}</h2>
                     <div class="muted" style="font-size:12.5px;margin-top:3px">
                         {{ $customer->code }}
-                        @if($customer->contact_name)
+                        @if($customer->company && $customer->contact_name)
                             · {{ $customer->contact_name }}
                         @endif
                         @if($customer->phone)
@@ -50,30 +50,36 @@
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button type="button" class="btn btn-ghost btn-sm"
-                            @click="$dispatch('open-customer-modal', { id: {{ $customer->id }} })">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M12 20h9"/>
-                            <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
-                        </svg>
-                        Edit
-                    </button>
-                    <button type="button" class="btn btn-ghost btn-sm"
-                            @click="Livewire.dispatch('open-followup-modal', { customerId: {{ $customer->id }} })">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-                        </svg>
-                        Log Follow-up
-                    </button>
-                    <button type="button" class="btn btn-primary btn-sm"
-                            @click="Livewire.dispatch('open-project-modal', { id: null, customerId: {{ $customer->id }} })">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M12 5v14M5 12h14"/>
-                        </svg>
-                        New Project
-                    </button>
-                    @if(auth()->user()->role === 'Admin')
-                        <button type="button" class="btn btn-ghost btn-sm text-red-600 hover:bg-red-50"
+                    @if(auth()->user()->hasPermission('customers', 'edit'))
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                @click="$dispatch('open-customer-modal', { id: {{ $customer->id }} })">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                <path d="M12 20h9"/>
+                                <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                            </svg>
+                            Edit
+                        </button>
+                    @endif
+                    @if(auth()->user()->hasPermission('payments', 'add'))
+                        <button type="button" class="btn btn-outline-green btn-sm inline-flex items-center gap-1.5"
+                                @click="Livewire.dispatch('open-payment-modal', { customerId: {{ $customer->id }} })">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            Record Payment
+                        </button>
+                    @endif
+                    @if(auth()->user()->hasPermission('projects', 'add'))
+                        <button type="button" class="btn btn-primary btn-sm"
+                                @click="Livewire.dispatch('open-project-modal', { id: null, customerId: {{ $customer->id }} })">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            New Project
+                        </button>
+                    @endif
+                    @if(auth()->user()->hasPermission('customers', 'delete') || auth()->user()->role === 'Admin')
+                        <button type="button" class="btn btn-outline-danger btn-sm"
                                 @click="$dispatch('confirm-dialog', {
                                     title: 'Delete Customer?',
                                     message: 'Are you sure? This will delete {{ addslashes($customer->display_name) }} and all associated projects, payment records, and documents permanently.',
@@ -93,14 +99,14 @@
                 </div>
             </div>
 
-            @if(auth()->user()->role !== 'Sales')
+            @if(auth()->user()->hasPermission('payments', 'view'))
                 <div class="divider"></div>
 
                 <!-- Financial Strip -->
                 <div class="money-grid">
                     <div class="money-cell cursor-pointer hover:bg-gray-50 transition rounded-xl p-1.5"
                          wire:click="$set('activeTab', 'projects')" title="View projects">
-                        <div class="k">Total Value</div>
+                        <div class="k">Total Receivable</div>
                         <div class="v">
                             <x-money :value="$money['contract'] > 0 ? $money['contract'] : $money['scheduled']"/>
                         </div>
@@ -117,12 +123,24 @@
                         <div class="v text-[#5aa236]">
                             <x-money :value="$money['received']"/>
                         </div>
+                        @if(($money['tds'] ?? 0) > 0)
+                            <div class="text-[11px] text-[#8894ac] mt-0.5">
+                                <x-money :value="$money['cash']"/> Cash + <x-money :value="$money['tds']"/> TDS ({{ $money['rate'] }}% settled)
+                            </div>
+                        @else
+                            <div class="text-[11px] text-[#8894ac] mt-0.5">
+                                {{ $money['rate'] }}% settled
+                            </div>
+                        @endif
                     </div>
                     <div class="money-cell due cursor-pointer hover:bg-amber-50/50 transition rounded-xl p-1.5"
                          wire:click="$set('activeTab', 'payments')" title="View installments due">
                         <div class="k">Due</div>
                         <div class="v text-[#e0a13a]">
                             <x-money :value="$money['due']"/>
+                        </div>
+                        <div class="text-[11px] text-[#8894ac] mt-0.5">
+                            Net pending collection
                         </div>
                     </div>
                     <div class="money-cell over cursor-pointer hover:bg-red-50/50 transition rounded-xl p-1.5"
@@ -158,7 +176,7 @@
                     class="tab {{ $activeTab === 'projects' ? 'active' : '' }}">
                 Projects <span class="n">{{ $projects->count() }}</span>
             </button>
-            @if(auth()->user()->role !== 'Sales')
+            @if(auth()->user()->hasPermission('payments', 'view'))
                 <button wire:click="$set('activeTab', 'payments')"
                         class="tab {{ $activeTab === 'payments' ? 'active' : '' }}">
                     Payments <span class="n">{{ $payments->count() }}</span>
@@ -168,10 +186,12 @@
                     class="tab {{ $activeTab === 'documents' ? 'active' : '' }}">
                 Documents <span class="n">{{ $documents->count() }}</span>
             </button>
+            {{-- [Temporarily hidden - Follow-ups tab]
             <button wire:click="$set('activeTab', 'followups')"
                     class="tab {{ $activeTab === 'followups' ? 'active' : '' }}">
                 Follow-ups <span class="n">{{ $followups->count() }}</span>
             </button>
+            --}}
         </div>
 
         <div class="card-body">
@@ -276,7 +296,7 @@
                                 $totMs = $project->milestones->count();
                             @endphp
                             <div class="card clickable p-4"
-                                 onclick="window.location='{{ route('projects.show', $project) }}'">
+                                  onclick="window.location='{{ route('projects.show', $project) }}'">
                                 <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
                                     <div style="flex:1">
                                         <div class="muted"
@@ -321,7 +341,7 @@
                 @endif
 
                 <!-- 3. PAYMENTS TAB -->
-            @elseif($activeTab === 'payments' && auth()->user()->role !== 'Sales')
+            @elseif($activeTab === 'payments' && auth()->user()->hasPermission('payments', 'view'))
                 <div class="card-head" style="padding:0 0 12px;border:none">
                     <div>
                         <h3>Payment schedule</h3>
@@ -334,7 +354,7 @@
                         class="term {{ $term->status === 'Paid' ? 'paid' : ($term->status === 'Overdue' ? 'over' : '') }}">
                         <div class="term-no">{{ $term->seq }}</div>
                         <div class="term-body">
-                            <div class="term-title">{{ $term->project?->code }} — {{ $term->label }}</div>
+                            <div class="term-title">{{ $term->project?->name ?: ($term->project?->code ?? $customer->display_name) }} — {{ $term->label }}</div>
                             <div class="term-meta">
                                 <span>{{ ucfirst($term->trigger_type) }}</span>
                                 <span>Due {{ $term->due_date?->format('d M') ?? '—' }}</span>
@@ -342,11 +362,31 @@
                                     class="badge {{ $term->status === 'Paid' ? 'b-green' : ($term->status === 'Overdue' ? 'b-red' : 'b-amber') }}">{{ $term->status }}</span>
                             </div>
                         </div>
-                        <div class="term-amt">
-                            <div class="a">
-                                <x-money :value="$term->amount"/>
+                        <div class="term-amt" style="display:flex;align-items:center;gap:10px">
+                            <div style="text-align:right">
+                                <div class="a">
+                                    <x-money :value="$term->amount"/>
+                                </div>
+                                <div class="b text-xs">
+                                    @if($balance > 0 && $term->received > 0)
+                                        Due <x-money :value="$balance"/>
+                                    @elseif($balance > 0)
+                                        Unpaid
+                                    @else
+                                        Paid
+                                    @endif
+                                </div>
                             </div>
-                            <div class="b text-xs">{{ $balance > 0 ? 'Remaining' : 'Full Paid' }}</div>
+                            @if($balance > 0 && auth()->user()->hasPermission('payments', 'add'))
+                                <button type="button" class="btn btn-outline-green btn-xs whitespace-nowrap"
+                                        @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $term->project_id }}, termId: {{ $term->id }} })"
+                                        title="Record payment for this installment">
+                                    <svg viewBox="0 0 24 24" class="w-3 h-3 mr-1 inline" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14"/>
+                                    </svg>
+                                    Record Payment
+                                </button>
+                            @endif
                         </div>
                     </div>
                 @empty
@@ -386,7 +426,7 @@
                                 <tr>
                                     <td class="strong">{{ $pay->code }}</td>
                                     <td class="nowrap">{{ $pay->paid_on->format('d M Y') }}</td>
-                                    <td class="muted">{{ $pay->project?->code }}</td>
+                                    <td class="muted">{{ $pay->project?->name ?: ($pay->project?->code ?? $customer->display_name) }}</td>
                                     <td class="num font-bold text-[#5aa236]">
                                         <x-money :value="$pay->amount"/>
                                     </td>
@@ -397,7 +437,7 @@
                                         @endif</td>
                                     <td>
                                         <div class="row-actions">
-                                            <button type="button" class="mini-btn danger"
+                                            <button type="button" class="btn btn-outline-danger btn-xs"
                                                     @click="$dispatch('confirm-dialog', {
                                                         title: 'Delete Payment Receipt?',
                                                         message: 'Remove this receipt entry ({{ $pay->code ?: 'Payment' }})? The receipt will be permanently deleted.',
@@ -413,6 +453,7 @@
                                                     <path
                                                         d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                                                 </svg>
+                                                <span>Delete</span>
                                             </button>
                                         </div>
                                     </td>
@@ -429,8 +470,42 @@
 
                 <!-- 4. DOCUMENTS TAB -->
             @elseif($activeTab === 'documents')
-                <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-                    <button type="button" class="btn btn-primary btn-sm"
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div class="filterbar flex-1">
+                        <div class="gsearch" style="width: 220px;">
+                            <svg viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="7"/>
+                                <path d="M21 21l-4.3-4.3"/>
+                            </svg>
+                            <input wire:model.live.debounce.300ms="docSearch" placeholder="Search by title, file...">
+                        </div>
+
+                        <select wire:model.live="docCategory" class="i" style="width:auto">
+                            <option value="">All Categories</option>
+                            @foreach($docCategories as $cat)
+                                <option value="{{ $cat }}">{{ $cat }}</option>
+                            @endforeach
+                        </select>
+
+                        <select wire:model.live="docProject" class="i" style="width:auto; max-width: 220px;">
+                            <option value="">All Projects</option>
+                            <option value="general">General (No Project)</option>
+                            @foreach($customerProjects as $pjt)
+                                <option value="{{ $pjt->id }}">{{ $pjt->name }}</option>
+                            @endforeach
+                        </select>
+
+                        @if($docSearch !== '' || $docCategory !== '' || $docProject !== '')
+                            <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearDocFilters" title="Clear document filters">
+                                <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                    <path d="M18 6L6 18M6 6l12 12"/>
+                                </svg>
+                                Clear
+                            </button>
+                        @endif
+                    </div>
+
+                    <button type="button" class="btn btn-primary btn-sm flex-shrink-0"
                             @click="Livewire.dispatch('open-document-upload-modal', { customerId: {{ $customer->id }} })">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M12 19V5M5 12l7-7 7 7"/>
@@ -442,7 +517,12 @@
                     <div class="doc flex items-center justify-between p-3 border-b border-[#eef2f9]">
                         <span class="doc-ico">{{ strtoupper(pathinfo($doc->file_name, PATHINFO_EXTENSION)) }}</span>
                         <div style="flex:1;min-width:0;margin-left:10px">
-                            <div class="doc-n font-bold text-sm">{{ $doc->title }}</div>
+                            <div class="doc-n font-bold text-sm flex items-center gap-2 flex-wrap">
+                                <span>{{ $doc->title }}</span>
+                                @if($doc->project)
+                                    <span class="badge b-navy text-[11px] font-normal">{{ $doc->project->name }}</span>
+                                @endif
+                            </div>
                             <div class="doc-m text-xs text-[#8894ac]">{{ $doc->file_name }} · {{ $doc->size_kb }} KB
                                 · {{ $doc->created_at->format('d M H:i') }}</div>
                         </div>
@@ -453,7 +533,7 @@
                                 : asset('storage/' . $doc->stored_as);
                         @endphp
                         <button type="button"
-                                class="mini-btn mr-1"
+                                class="btn btn-outline-primary btn-xs mr-1"
                                 @click="Livewire.dispatch('open-document-preview', {
                                     data: {
                                         title: '{{ addslashes($doc->title) }}',
@@ -470,15 +550,17 @@
                                 <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
                                 <circle cx="12" cy="12" r="3"/>
                             </svg>
+                            <span>Preview</span>
                         </button>
                         <a href="{{ route('documents.download', $doc->id, absolute: false) }}"
                            download="{{ $doc->file_name }}"
-                           class="mini-btn mr-1" title="Download">
+                           class="btn btn-outline-secondary btn-xs mr-1" title="Download">
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                             </svg>
+                            <span>Download</span>
                         </a>
-                        <button type="button" class="mini-btn danger"
+                        <button type="button" class="btn btn-outline-danger btn-xs"
                                 @click="$dispatch('confirm-dialog', {
                                     title: 'Remove Document?',
                                     message: 'Are you sure you want to remove {{ addslashes($doc->file_name) }}? The file will be permanently deleted.',
@@ -494,6 +576,7 @@
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                             </svg>
+                            <span>Remove</span>
                         </button>
                     </div>
                 @empty
@@ -503,32 +586,40 @@
                                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
                             </svg>
                          </span>
-                        <p>No documents yet</p>
-                        <div class="sm">Upload a contract, KYC or invoice</div>
+                        @if($docSearch !== '' || $docCategory !== '' || $docProject !== '')
+                            <p>No documents match the active filters</p>
+                            <div class="sm mt-2">
+                                <button type="button" class="btn btn-outline-primary btn-xs" wire:click="clearDocFilters">Reset filters</button>
+                            </div>
+                        @else
+                            <p>No documents yet</p>
+                            <div class="sm">Upload a contract, KYC or invoice</div>
+                        @endif
                     </div>
                 @endforelse
 
+                {{-- [Temporarily hidden - Followups tab pane]
                 <!-- 5. FOLLOWUPS TAB -->
-            @elseif($activeTab === 'followups')
-                <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-                    <button type="button" class="btn btn-primary btn-sm"
-                            @click="Livewire.dispatch('open-followup-modal', { customerId: {{ $customer->id }} })">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M12 5v14M5 12h14"/>
-                        </svg>
-                        Log Follow-up
-                    </button>
-                </div>
-                @forelse($followups as $followup)
-                    <div class="fu flex items-start gap-3 p-3 border-b border-[#eef2f9]">
-                        <span class="fu-ico">{{ substr($followup->type, 0, 1) }}</span>
-                        <div style="flex:1;min-width:0">
-                            <div class="fu-s font-bold text-sm">{{ $followup->summary }}</div>
-                            @if($followup->detail)
-                                <div class="fu-t text-xs text-gray-500 mt-0.5">{{ $followup->detail }}</div>
-                            @endif
-                            <div class="fu-t text-xs text-[#8894ac] mt-1">{{ $followup->type }}
-                                · {{ $followup->happened_on->format('d M H:i') }}</div>
+                @elseif($activeTab === 'followups')
+                    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+                        <button type="button" class="btn btn-primary btn-sm"
+                                @click="Livewire.dispatch('open-followup-modal', { customerId: {{ $customer->id }} })">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            Log Follow-up
+                        </button>
+                    </div>
+                    @forelse($followups as $followup)
+                        <div class="fu flex items-start gap-3 p-3 border-b border-[#eef2f9]">
+                            <span class="fu-ico">{{ substr($followup->type, 0, 1) }}</span>
+                            <div style="flex:1;min-width:0">
+                                <div class="fu-s font-bold text-sm">{{ $followup->summary }}</div>
+                                @if($followup->detail)
+                                    <div class="fu-t text-xs text-gray-500 mt-0.5">{{ $followup->detail }}</div>
+                                @endif
+                                <div class="fu-t text-xs text-[#8894ac] mt-1">{{ $followup->type }}
+                                    · {{ $followup->happened_on->format('d M H:i') }}</div>
                             @if($followup->next_date)
                                 <div class="mt-1">
                                     <span
@@ -538,7 +629,7 @@
                                 </div>
                             @endif
                         </div>
-                        <button type="button" class="mini-btn danger"
+                        <button type="button" class="btn btn-outline-danger btn-xs"
                                 @click="$dispatch('confirm-dialog', {
                                     title: 'Remove Follow-up?',
                                     message: 'Are you sure you want to remove this follow-up entry?',
@@ -553,6 +644,7 @@
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                             </svg>
+                            <span>Remove</span>
                         </button>
                     </div>
                 @empty
@@ -566,6 +658,7 @@
                         <div class="sm">Log your first conversation</div>
                     </div>
                 @endforelse
+                --}}
             @endif
         </div>
     </div>

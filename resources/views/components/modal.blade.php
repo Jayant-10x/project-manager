@@ -1,9 +1,22 @@
-@props(['name', 'show' => false, 'focusable' => false, 'title' => null, 'sub' => null, 'wide' => false])
+@props(['name', 'show' => false, 'focusable' => false, 'title' => null, 'sub' => null, 'wide' => false, 'size' => null])
 
-<div x-data="{
+@php
+    $maxWidthClass = match($size) {
+        'sm' => 'max-w-xl',
+        'md' => 'max-w-2xl',
+        'lg' => 'max-w-4xl',
+        'xl', 'wide' => 'max-w-5xl',
+        '2xl', 'full' => 'max-w-6xl',
+        default => ($wide ? 'max-w-5xl' : 'max-w-3xl')
+    };
+@endphp
+
+<div wire:ignore.self
+     x-data="{
         show: @js($show),
         isDirty: false,
         confirmClose() {
+            if (window._confirmModalActive) return;
             if (this.isDirty) {
                 window.dispatchEvent(new CustomEvent('confirm-dialog', {
                     detail: {
@@ -25,44 +38,54 @@
         forceClose() {
             this.show = false;
             this.isDirty = false;
+            window.ModalManager?.close('{{ $name }}');
         }
      }"
      x-init="
         $watch('show', value => {
             if (value) {
-                document.body.classList.add('overflow-hidden');
+                window.ModalManager?.open('{{ $name }}');
             } else {
-                setTimeout(() => {
-                    const openModals = document.querySelectorAll('.overlay:not([style*=\'display: none\']), [data-confirm-modal]:not([style*=\'display: none\'])');
-                    if (openModals.length === 0) {
-                        document.body.classList.remove('overflow-hidden');
-                    }
-                }, 50);
+                window.ModalManager?.close('{{ $name }}');
             }
         });
      "
-     x-show="show"
+     x-show="typeof show !== 'undefined' && show"
      x-on:open-modal.window="
         const d = $event.detail;
         if (d === '{{ $name }}' || d?.name === '{{ $name }}' || (Array.isArray(d) && d[0] === '{{ $name }}') || d?.[0] === '{{ $name }}') {
-            show = true;
-            isDirty = false;
+            if (typeof show !== 'undefined') {
+                show = true;
+            } else if (this._x_dataStack && this._x_dataStack[0]) {
+                this._x_dataStack[0].show = true;
+            }
+            if (typeof isDirty !== 'undefined') {
+                isDirty = false;
+            } else if (this._x_dataStack && this._x_dataStack[0]) {
+                this._x_dataStack[0].isDirty = false;
+            }
+            window.ModalManager?.open('{{ $name }}');
         }
      "
      x-on:close-modal.window="
         const d = $event.detail;
         if (!d || d === '{{ $name }}' || d?.name === '{{ $name }}' || (Array.isArray(d) && d[0] === '{{ $name }}') || d?.[0] === '{{ $name }}') {
-            forceClose();
+            if (typeof forceClose === 'function') {
+                forceClose();
+            } else if (this._x_dataStack && typeof this._x_dataStack[0]?.forceClose === 'function') {
+                this._x_dataStack[0].forceClose();
+            }
         }
      "
-     x-on:close.stop="forceClose()"
-     x-on:keydown.escape.window="if (show && !window._confirmModalActive) confirmClose()"
+     x-on:close.stop="if (typeof forceClose === 'function') { forceClose(); } else if (this._x_dataStack && typeof this._x_dataStack[0]?.forceClose === 'function') { this._x_dataStack[0].forceClose(); }"
+     x-on:keydown.escape.window="if (typeof show !== 'undefined' && show && !window._confirmModalActive) confirmClose()"
+     data-modal="{{ $name }}"
      style="display: none; background-color: rgba(8, 20, 42, 0.60); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);"
-     class="overlay fixed inset-0 flex items-start justify-center p-6 z-50 overflow-y-auto overscroll-contain">
+     class="overlay fixed inset-0 flex items-start justify-center p-6 z-[120] overflow-y-auto overscroll-contain">
 
     <div
-        class="modal bg-white rounded-2xl w-full {{ $wide ? 'max-w-4xl' : 'max-w-2xl' }} shadow-2xl overflow-hidden my-auto"
-        @click.outside="if (show && !window._confirmModalActive && !$event.target.closest('[data-confirm-modal]')) confirmClose()"
+        class="modal bg-white rounded-2xl w-full {{ $maxWidthClass }} shadow-2xl overflow-hidden my-auto"
+        @click.outside="if (typeof show !== 'undefined' && show && !window._confirmModalActive && !$event.target.closest('[data-confirm-modal]')) confirmClose()"
         @input="isDirty = true"
         @change="isDirty = true">
 
@@ -82,7 +105,7 @@
         </div>
         @endif
 
-        <div class="modal-body p-6 max-h-[75vh] overflow-y-auto overscroll-contain">
+        <div class="modal-body p-6 max-h-[82vh] overflow-y-auto overscroll-contain">
             {{ $slot }}
         </div>
     </div>

@@ -34,6 +34,26 @@ class Customer extends Model
         return $this->display_name;
     }
 
+    public function setCompanyAttribute($value): void
+    {
+        $this->attributes['company'] = (is_string($value) && trim($value) === '') ? null : $value;
+    }
+
+    public function setEmailAttribute($value): void
+    {
+        $this->attributes['email'] = (is_string($value) && trim($value) === '') ? null : $value;
+    }
+
+    public function setGstNumberAttribute($value): void
+    {
+        $this->attributes['gst_number'] = (is_string($value) && trim($value) === '') ? null : (is_string($value) ? strtoupper(trim($value)) : $value);
+    }
+
+    public function setPanNumberAttribute($value): void
+    {
+        $this->attributes['pan_number'] = (is_string($value) && trim($value) === '') ? null : (is_string($value) ? strtoupper(trim($value)) : $value);
+    }
+
     /**
      * Local query scope for role-based customer data isolation.
      *

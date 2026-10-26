@@ -4,7 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>{{ config('app.name', '10X Agency CRM') }}</title>
+    @php
+        $pageTitle = trim($__env->yieldContent('title'));
+        if (empty($pageTitle)) {
+            $pageTitle = $title ?? ($header ?? null);
+        }
+        $appName = config('app.name', 'Project Manager 10X Agency');
+        if ($pageTitle && str_contains($pageTitle, $appName)) {
+            $fullTitle = $pageTitle;
+        } else {
+            $fullTitle = $pageTitle ? "{$pageTitle} | {$appName}" : $appName;
+        }
+    @endphp
+    <title>{{ $fullTitle }}</title>
 
     <link rel="icon" type="image/png" href="{{ asset('assets/logo.png') }}">
 

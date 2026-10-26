@@ -54,15 +54,6 @@
             </label>
 
             <label class="f">
-                <span>City</span>
-                <input wire:model.live.blur="city"
-                       class="i @error('city') border-red-500! bg-red-50/20! @enderror">
-                @error('city')
-                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
-                @enderror
-            </label>
-
-            <label class="f">
                 <span>State <span class="text-red-500">*</span></span>
                 <select wire:model.live="state"
                         class="i @error('state') border-red-500! bg-red-50/20! @enderror">
@@ -72,6 +63,15 @@
                     @endforeach
                 </select>
                 @error('state')
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
+                @enderror
+            </label>
+
+            <label class="f">
+                <span>City</span>
+                <input wire:model.live.blur="city"
+                       class="i @error('city') border-red-500! bg-red-50/20! @enderror">
+                @error('city')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
@@ -115,20 +115,22 @@
                 @enderror
             </label>
 
-            <label class="f">
-                <span>Onboarded by (salesperson) <span class="text-red-500">*</span></span>
-                <select wire:model.live="sales_person_id"
-                        class="i @error('sales_person_id') border-red-500! bg-red-50/20! @enderror">
-                    <option value="">— select —</option>
-                    @foreach($salesPeople as $sp)
-                        <option value="{{ $sp->id }}">{{ $sp->name }}</option>
-                    @endforeach
-                </select>
-                @error('sales_person_id')
-                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
-                @enderror
-                <div class="hint">Attributed salesperson for performance reporting</div>
-            </label>
+            @if(auth()->user()->role !== 'Sales')
+                <label class="f">
+                    <span>Onboarded by (salesperson) <span class="text-red-500">*</span></span>
+                    <select wire:model.live="sales_person_id"
+                            class="i @error('sales_person_id') border-red-500! bg-red-50/20! @enderror">
+                        <option value="">— select —</option>
+                        @foreach($salesPeople as $sp)
+                            <option value="{{ $sp->id }}">{{ $sp->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('sales_person_id')
+                    <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
+                    @enderror
+                    <div class="hint">Attributed salesperson for performance reporting</div>
+                </label>
+            @endif
 
             <label class="f">
                 <span>Status <span class="text-red-500">*</span></span>
@@ -176,9 +178,19 @@
         </div>
 
         <div class="mt-6 flex justify-end gap-3">
-            <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
-            <button type="submit" class="btn btn-primary">
-                {{ $customerId ? 'Save changes' : 'Create customer' }}
+            <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
+            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled" wire:target="save">
+                <span wire:loading.remove
+                      wire:target="save">{{ $customerId ? 'Save changes' : 'Create customer' }}</span>
+                <span wire:loading wire:target="save" class="inline-flex items-center gap-1.5">
+                    <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                </span>
             </button>
         </div>
     </form>

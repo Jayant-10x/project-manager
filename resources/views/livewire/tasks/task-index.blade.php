@@ -1,4 +1,23 @@
 <div>
+    <!-- Interactive Metric Summary KPI Cards -->
+    <div class="kpis four mb-6">
+        <x-kpi-card label="Pending Tasks" :value="$openCount" sub="Assigned to you · Incomplete" icon="list"
+                    color="#0b3d91" bg="#e8eefc"
+                    wire:click="$set('filterStatus', '{{ $filterStatus === 'open' ? '' : 'open' }}')"
+                    :class="$filterStatus === 'open' ? 'ring-2 ring-[#0b3d91] bg-blue-50/50' : ''"/>
+        <x-kpi-card label="Completed" :value="$doneCount" sub="Checklist completed" icon="check"
+                    color="#5aa236" bg="#eef7e8"
+                    wire:click="$set('filterStatus', '{{ $filterStatus === 'done' ? '' : 'done' }}')"
+                    :class="$filterStatus === 'done' ? 'ring-2 ring-[#5aa236] bg-green-50/50' : ''"/>
+        <x-kpi-card label="Urgent / High" :value="$urgentCount" sub="Priority attention" icon="alert"
+                    color="#d94b4b" bg="#fdeaea"
+                    wire:click="$set('filterPriority', '{{ $filterPriority === 'Urgent' ? '' : 'Urgent' }}')"
+                    :class="$filterPriority === 'Urgent' ? 'ring-2 ring-[#d94b4b] bg-red-50/50' : ''"/>
+        <x-kpi-card label="Follow-up Calls" :value="$followups->count()" sub="Scheduled calls & touchpoints" icon="chat"
+                    color="#7a5af8" bg="#f0ecff"
+                    href="#followup-calls-section"/>
+    </div>
+
     <!-- Header with Live Count Summary & Add Task Action -->
     <div class="page-head mb-4 flex items-center justify-between">
         <span class="info text-sm text-[#8894ac]">
@@ -141,7 +160,7 @@
                 @endif
 
                 @if($filterSearch !== '' || $filterStatus !== '' || $filterPriority !== '' || $filterProjectId !== '' || $filterAssignedTo !== '')
-                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                    <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
                         </svg>
@@ -159,7 +178,7 @@
                 @php
                     $isDone = (bool) $task->done;
                     $isLate = !$isDone && $task->due_date && $task->due_date->toDateString() < $today;
-                    $daysLate = $isLate ? abs(\Carbon\Carbon::parse($today)->diffInDays($task->due_date, false)) : 0;
+                    $daysLate = $isLate ? (int) round(abs(\Carbon\Carbon::parse($today)->startOfDay()->diffInDays(\Carbon\Carbon::parse($task->due_date)->startOfDay(), false))) : 0;
                     $custName = $task->project?->customer?->display_name ?? ($task->customer?->display_name ?? '');
                     $priorityClass = match($task->priority) {
                         'Urgent' => 'b-red',
@@ -208,7 +227,7 @@
                     <span class="badge {{ $priorityClass }} text-xs">{{ $task->priority }}</span>
 
                     <button type="button"
-                            class="mini-btn danger"
+                            class="btn btn-outline-danger btn-xs"
                             @click="$dispatch('confirm-dialog', {
                                 title: 'Remove Task?',
                                 message: 'Are you sure you want to remove this task ({{ addslashes($task->title) }}) from your list?',
@@ -224,6 +243,7 @@
                             <path
                                 d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                         </svg>
+                        <span>Remove</span>
                     </button>
                 </div>
             @empty
@@ -237,4 +257,96 @@
             @endforelse
         </div>
     </div>
+
+    <!-- Follow-up Calls Scheduled -->
+    @if($followups->isNotEmpty())
+        <div class="card p-4 mt-6" id="followup-calls-section">
+            <div class="card-head pb-3 mb-3 border-b border-[#eef2f9] flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-50 text-[#0b3d91] flex items-center justify-center shrink-0">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm text-[#0d1b34]">Follow-up calls</h3>
+                        <div class="text-xs text-[#8894ac]">{{ $followups->count() }} scheduled conversations</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{{ route('followups.index') }}" wire:navigate class="text-xs font-semibold text-[#0b3d91] hover:underline flex items-center gap-1">
+                        <span>All Follow-ups</span>
+                        <svg viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                </div>
+            </div>
+            <div class="space-y-3">
+                @foreach($followups as $f)
+                    @php
+                        $fDate = $f->next_date ? \Carbon\Carbon::parse($f->next_date) : null;
+                        $isOverdueFup = $fDate && $fDate->toDateString() < $today;
+                        $message = $f->detail ?: $f->summary;
+                    @endphp
+                    <div class="p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold {{ $f->type === 'Call' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-700 border border-slate-200' }}">
+                                    @if($f->type === 'Call')
+                                        <svg viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
+                                    @else
+                                        <svg viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                                    @endif
+                                    {{ $f->type }}
+                                </span>
+                                <a href="{{ route('customers.show', $f->customer_id) }}" wire:navigate class="font-semibold text-sm text-[#0d1b34] hover:text-[#0b3d91] hover:underline">
+                                    {{ $f->customer?->display_name ?? '—' }}
+                                </a>
+                                @if($f->project)
+                                    <a href="{{ route('projects.show', $f->project_id) }}" wire:navigate class="text-xs text-[#8894ac] hover:text-[#0b3d91] hover:underline">
+                                        &middot; {{ $f->project->code }}
+                                    </a>
+                                @endif
+                                @if($f->customer?->phone)
+                                    <a href="tel:{{ $f->customer->phone }}" class="text-xs text-blue-600 hover:underline flex items-center gap-1 font-medium" title="Call {{ $f->customer->phone }}">
+                                        <span>📞</span>
+                                        <span>{{ $f->customer->phone }}</span>
+                                    </a>
+                                @endif
+                            </div>
+                            <div class="flex items-center gap-1.5 flex-shrink-0">
+                                <span class="badge {{ $isOverdueFup ? 'b-red' : 'b-navy' }}">
+                                    {{ $fDate ? $fDate->format('d M') : '—' }}
+                                </span>
+                                <button type="button" class="btn btn-outline-primary btn-xs whitespace-nowrap" title="Log Follow-up"
+                                        @click.stop="Livewire.dispatch('open-followup-modal', { customerId: {{ $f->customer_id }}, projectId: {{ $f->project_id ?? 'null' }} })">
+                                    <svg viewBox="0 0 24 24" class="w-3 h-3">
+                                        <path d="M12 5v14M5 12h14"/>
+                                    </svg>
+                                   Follow-up
+                                </button>
+                            </div>
+                        </div>
+
+                        @if($f->summary && (!$f->detail || $f->summary !== $f->detail))
+                            <div class="font-semibold text-xs text-slate-800 mt-2">
+                                {{ $f->summary }}
+                            </div>
+                        @endif
+
+                        @if($f->detail)
+                            <div class="mt-1.5 text-xs text-slate-700 bg-slate-50 rounded-lg p-2.5 border border-slate-200/80 leading-relaxed font-normal whitespace-pre-line">
+                                <span class="font-semibold text-slate-800 block mb-0.5">Discussion / Message:</span>
+                                {{ $f->detail }}
+                            </div>
+                        @endif
+
+                        @if($f->next_note)
+                            <div class="mt-1.5 text-xs text-blue-800 flex items-center gap-1.5 font-medium">
+                                <span class="text-blue-600 font-bold">➜ Next:</span>
+                                <span>{{ $f->next_note }}</span>
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 </div>

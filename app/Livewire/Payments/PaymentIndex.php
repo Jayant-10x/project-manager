@@ -36,7 +36,7 @@ class PaymentIndex extends Component
     public function mount(): void
     {
         $user = auth()->user();
-        if (! $user || $user->role === 'Sales') {
+        if (! $user || ! $user->hasPermission('payments', 'view')) {
             abort(403, 'Unauthorized access to payment ledger.');
         }
     }
