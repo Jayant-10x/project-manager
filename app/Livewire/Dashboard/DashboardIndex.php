@@ -13,11 +13,15 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 #[Layout('layouts.app')]
 class DashboardIndex extends Component
 {
+    #[Url]
+    public ?int $selectedUserId = null;
+
     #[On('payment-saved')]
     #[On('payment-deleted')]
     #[On('project-saved')]
@@ -34,10 +38,35 @@ class DashboardIndex extends Component
         $moneyService->refreshOverdueStatus();
 
         $today = Carbon::today()->toDateString();
-        $role = $user->role ?? 'Coordinator';
+        $role = $user->role ?? 'Unknown';
 
-        // Role-scoped projects
-        $projectsQuery = Project::query()->forUser($user);
+        // Downline / Team filter setup
+        $accessibleUsers = collect();
+        if ($role === 'Admin') {
+            $accessibleUsers = User::where('status', 'Active')
+                ->where('id', '!=', $user->id)
+                ->where('role', '!=', 'TakePerson')
+                ->orderBy('role')
+                ->orderBy('name', 'asc')
+                ->get();
+        } elseif ($role === 'Manager' || $role === 'Coordinator') {
+            $downlineIds = array_diff($user->getDownlineUserIds(), [$user->id]);
+            $accessibleUsers = User::whereIn('id', $downlineIds)
+                ->where('status', 'Active')
+                ->where('role', '!=', 'TakePerson')
+                ->orderBy('role')
+                ->orderBy('name')
+                ->get();
+        }
+
+        // Active viewing target: either portfolio or selected downline person
+        $activeViewingUser = $user;
+        if ($this->selectedUserId && $accessibleUsers->contains('id', (int) $this->selectedUserId)) {
+            $activeViewingUser = User::find($this->selectedUserId) ?? $user;
+        }
+
+        // Role-scoped projects for active viewing user
+        $projectsQuery = Project::query()->forUser($activeViewingUser);
         $projectIds = (clone $projectsQuery)->pluck('id');
 
         // Common Core Money metrics (scoped to visible projects)
@@ -65,7 +94,7 @@ class DashboardIndex extends Component
 
         // Project Health Breakdown (scoped to user)
         $healthRaw = Project::query()
-            ->forUser($user)
+            ->forUser($activeViewingUser)
             ->select('health', DB::raw('count(*) as count'))
             ->groupBy('health')
             ->pluck('count', 'health')
@@ -170,10 +199,11 @@ class DashboardIndex extends Component
                 ->get();
         }
 
-        // Coordinator Highlights: Upcoming Delivery Deadlines & Milestones Completion
+        // Coordinator & TakePerson Highlights: Upcoming Delivery Deadlines & Milestones Completion
         $coordinatorData = [];
-        if ($role === 'Coordinator') {
-            $activeProjectsCount = Project::where('coordinator_id', $user->id)
+        if ($role === 'Coordinator' || $role === 'TakePerson' || $role === 'Take Person') {
+            $isTakePerson = in_array($role, ['TakePerson', 'Take Person'], true);
+            $activeProjectsCount = Project::where($isTakePerson ? 'take_person_id' : 'coordinator_id', $user->id)
                 ->where('status', 'In Progress')
                 ->count();
 
@@ -184,7 +214,7 @@ class DashboardIndex extends Component
                 })->count();
             $milestoneRate = $totalMilestones > 0 ? round(($completedMilestones / $totalMilestones) * 100) : 0;
 
-            $upcomingDeliveries = Project::where('coordinator_id', $user->id)
+            $upcomingDeliveries = Project::where($isTakePerson ? 'take_person_id' : 'coordinator_id', $user->id)
                 ->where('status', 'In Progress')
                 ->whereNotNull('delivery_date')
                 ->whereBetween('delivery_date', [$today, Carbon::parse($today)->addDays(30)->toDateString()])
@@ -260,6 +290,9 @@ class DashboardIndex extends Component
             'teamCoordinators' => $teamCoordinators,
             'coordinatorData' => $coordinatorData,
             'salesData' => $salesData,
+            'accessibleUsers' => $accessibleUsers,
+            'selectedUserId' => $this->selectedUserId,
+            'activeViewingUser' => $activeViewingUser,
             'user' => $user,
             'role' => $role,
         ])->layoutData([

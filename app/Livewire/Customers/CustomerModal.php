@@ -60,13 +60,11 @@ class CustomerModal extends Component
     public ?int $sales_person_id = null;
 
     #[Validate]
-    public string $status = 'Active';
+    public string $status = '';
 
-    // Added #[Validate] attribute
     #[Validate]
     public string $internal_notes = '';
 
-    // Optional but recommended for dynamic rules: guarantees validateOnly on change
     public function updated($propertyName): void
     {
         if ($propertyName === 'company' && is_string($this->company) && trim($this->company) === '') {
@@ -109,7 +107,7 @@ class CustomerModal extends Component
             $this->source = $customer->source ?? '';
             $this->industry = $customer->industry ?? '';
             $this->sales_person_id = $customer->sales_person_id ?? null;
-            $this->status = $customer->status ?? 'Active';
+            $this->status = $customer->status;
             $this->internal_notes = $customer->internal_notes ?? '';
         } else {
             if (auth()->check() && auth()->user()->role === 'Sales') {

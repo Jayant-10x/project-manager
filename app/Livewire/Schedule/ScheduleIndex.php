@@ -57,12 +57,37 @@ class ScheduleIndex extends Component
         $user = auth()->user();
         $projectIds = Project::forUser($user)->pluck('id');
 
-        $terms = PaymentTerm::query()
+        $allTerms = PaymentTerm::query()
             ->whereIn('project_id', $projectIds)
             ->with(['project.customer'])
             ->orderByRaw("CASE status WHEN 'Overdue' THEN 1 WHEN 'Pending' THEN 2 WHEN 'Partial' THEN 3 WHEN 'Paid' THEN 4 WHEN 'Cancelled' THEN 5 ELSE 6 END")
-            ->orderBy('due_date')
+            ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC')
             ->get();
+
+        $terms = $allTerms
+            ->when($this->status, function ($collection) {
+                if ($this->status === 'Upcoming') {
+                    return $collection->whereIn('status', ['Pending', 'Partial']);
+                }
+
+                return $collection->where('status', $this->status);
+            })
+            ->when($this->trigger_type, function ($collection) {
+                return $collection->where('trigger_type', $this->trigger_type);
+            })
+            ->when($this->customer_id, function ($collection) {
+                return $collection->where('project.customer_id', (int) $this->customer_id);
+            })
+            ->when($this->search, function ($collection) {
+                $searchQuery = strtolower(trim($this->search));
+
+                return $collection->filter(function ($term) use ($searchQuery) {
+                    return str_contains(strtolower($term->label ?? ''), $searchQuery) ||
+                           str_contains(strtolower($term->project?->name ?? ''), $searchQuery) ||
+                           str_contains(strtolower($term->project?->code ?? ''), $searchQuery) ||
+                           str_contains(strtolower($term->project?->customer?->display_name ?? ''), $searchQuery);
+                });
+            });
 
         app(AuditNotificationService::class)->log(
             auth()->id(),

@@ -119,9 +119,10 @@ class IssuesBatchTwoTest extends TestCase
                     'locked' => false,
                 ],
             ])
+            ->assertSee('Unscheduled Balance')
             ->call('save')
-            ->assertHasErrors(['terms']);
+            ->assertHasNoErrors();
 
-        $this->assertEquals(0, PaymentTerm::where('project_id', $project->id)->count());
+        $this->assertEquals(1, PaymentTerm::where('project_id', $project->id)->count());
     }
 }

@@ -50,7 +50,7 @@
                     <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Project (optional)</label>
                     <select wire:model.live="project_id"
                             class="i text-sm @error('project_id') border-red-500! bg-red-50/20! @enderror">
-                        <option value="">— none —</option>
+                        <option value="">*** None ***</option>
                         @foreach($projects as $projectOption)
                             <option value="{{ $projectOption->id }}">{{ $projectOption->code }} — {{ $projectOption->name }}</option>
                         @endforeach

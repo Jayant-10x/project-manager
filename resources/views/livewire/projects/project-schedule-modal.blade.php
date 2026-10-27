@@ -3,21 +3,47 @@
          sub="Project value: ₹{{ number_format($projectValue, 2) }} · Fixed date, milestone linked or recurring"
          :wide="true">
     <form wire:submit="save" novalidate>
-        <div class="notice mb-4 {{ abs($diff) < 0.01 ? '' : 'warn' }}">
+        <div class="notice mb-4 {{ abs($diff) < 0.01 ? '' : ($diff < -0.01 ? '' : 'warn') }}">
             <svg viewBox="0 0 24 24" class="w-4 h-4">
-                <path d="M12 8v5M12 16.5v.5"/>
-            </svg>
-            <div>
-                Schedule total <b>
-                    <x-money :value="$total"/>
-                </b> · Project value <b>
-                    <x-money :value="$projectValue"/>
-                </b>
                 @if(abs($diff) < 0.01)
-                    — <span class="text-green-600 font-bold">Matched</span>
+                    <polyline points="20 6 9 17 4 12"/>
+                @elseif($diff < -0.01)
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
                 @else
-                    — <span class="text-amber-700 font-bold"><x-money :value="abs($diff)"/> {{ $diff > 0 ? 'short' : 'over' }}</span>
+                    <path d="M12 8v5M12 16.5v.5"/>
                 @endif
+            </svg>
+            <div class="flex-1 flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                    <div>Schedule total <b><x-money :value="$total"/></b> &middot; Project value <b><x-money :value="$projectValue"/></b></div>
+                    @if($diff < -0.01)
+                        <div class="text-[11px] text-[#5a6a85] mt-0.5">
+                            Includes <x-money :value="abs($diff)"/> in additional / recurring installments beyond the project value
+                        </div>
+                    @elseif($diff > 0.01)
+                        <div class="text-[11px] text-[#96660f] mt-0.5">
+                            <x-money :value="abs($diff)"/> of project value is not yet allocated to installments
+                        </div>
+                    @endif
+                </div>
+                <div>
+                    @if(abs($diff) < 0.01)
+                        <span class="badge b-green">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            Matched (100% scheduled)
+                        </span>
+                    @elseif($diff < -0.01)
+                        <span class="badge b-navy">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            <x-money :value="abs($diff)"/> Extra / Recurring Overage
+                        </span>
+                    @else
+                        <span class="badge b-amber">
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.5"/></svg>
+                            <x-money :value="abs($diff)"/> Unscheduled Balance
+                        </span>
+                    @endif
+                </div>
             </div>
         </div>
 
@@ -64,6 +90,7 @@
                                 <select wire:model.live="terms.{{ $i }}.trigger"
                                         class="i text-sm @error('terms.'.$i.'.trigger') border-red-500! bg-red-50/20! @enderror"
                                     {{ $t['locked'] ? 'disabled' : '' }}>
+                                    <option value="">*** Select Trigger Mode ***</option>
                                     <option value="fixed">Fixed date</option>
                                     <option value="milestone">Milestone linked</option>
                                     <option value="recurring">Recurring</option>
@@ -75,7 +102,7 @@
 
                             <div>
                                 <label class="text-[10px] font-bold text-gray-400 uppercase block mb-1">
-                                    Due Date {{ ($t['trigger'] ?? '') === 'fixed' ? '*' : '' }}
+                                    Due Date <span class="text-red-500"> {{ ($t['trigger'] ?? '') === 'fixed' ? '*' : '' }}</span>
                                 </label>
                                 <input type="date"
                                        wire:model.blur="terms.{{ $i }}.dueDate"
@@ -93,7 +120,7 @@
                                     <select wire:model.blur="terms.{{ $i }}.milestoneId"
                                             class="i text-sm @error('terms.'.$i.'.milestoneId') border-red-500! bg-red-50/20! @enderror"
                                         {{ $t['locked'] ? 'disabled' : '' }}>
-                                        <option value="">— Select Milestone —</option>
+                                        <option value="">*** Select Milestone ***</option>
                                         @foreach($availableMilestones as $avm)
                                             <option value="{{ $avm['id'] }}">{{ $avm['name'] }}</option>
                                         @endforeach
@@ -142,12 +169,15 @@
             @endforeach
         </div>
 
-        <div class="flex gap-2 mt-4">
+        <div class="flex gap-2 mt-4 flex-wrap">
             <button type="button" class="btn btn-outline-primary btn-sm" wire:click="addRow">
                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                     <path d="M12 5v14M5 12h14"/>
                 </svg>
                 Add installment
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" wire:click="split5050">
+                50-50 Split
             </button>
             <button type="button" class="btn btn-outline-secondary btn-sm" wire:click="autoSplit">
                 Auto-split (30/40/30)

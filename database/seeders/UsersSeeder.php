@@ -122,7 +122,7 @@ class UsersSeeder extends Seeder
         $salesReps = [
             [
                 'name' => 'Arjun Nair',
-                'email' => 'sales.arjun@the10xagency.in',
+                'email' => 'sales1@the10xagency.in',
                 'phone' => '9876543221',
                 'designation' => 'Enterprise Account Executive',
                 'city' => 'Mumbai',
@@ -131,7 +131,7 @@ class UsersSeeder extends Seeder
             ],
             [
                 'name' => 'Kavita Rao',
-                'email' => 'sales.kavita@the10xagency.in',
+                'email' => 'sales2@the10xagency.in',
                 'phone' => '9876543222',
                 'designation' => 'Regional Sales Lead',
                 'city' => 'Bengaluru',
@@ -140,7 +140,7 @@ class UsersSeeder extends Seeder
             ],
             [
                 'name' => 'Sameer Khan',
-                'email' => 'sales.sameer@the10xagency.in',
+                'email' => 'sales3@the10xagency.in',
                 'phone' => '9876543223',
                 'designation' => 'Business Development Manager',
                 'city' => 'Delhi',
@@ -149,7 +149,7 @@ class UsersSeeder extends Seeder
             ],
             [
                 'name' => 'Ananya Joshi',
-                'email' => 'sales.ananya@the10xagency.in',
+                'email' => 'sales4@the10xagency.in',
                 'phone' => '9876543224',
                 'designation' => 'Inside Sales Specialist',
                 'city' => 'Hyderabad',
@@ -158,7 +158,7 @@ class UsersSeeder extends Seeder
             ],
             [
                 'name' => 'Yash Gupta',
-                'email' => 'sales.yash@the10xagency.in',
+                'email' => 'sales5@the10xagency.in',
                 'phone' => '9876543245',
                 'designation' => 'Inside Sales Specialist',
                 'city' => 'Kanpur',
@@ -181,6 +181,53 @@ class UsersSeeder extends Seeder
                     'password' => $passwordHash,
                     'must_change' => false,
                     'reporting_to' => $rep['coordinator']->id,
+                ]
+            );
+        }
+        $takePersons = [
+            [
+                'name' => 'Sahil Khan',
+                'email' => 'take1@the10xagency.in',
+                'phone' => '123123123123',
+                'designation' => 'Wordpress Developer',
+                'city' => 'Noida',
+                'target' => 0.00,
+                'reporting_to' => $manager1,
+            ],
+            [
+                'name' => 'Abdurrahman Ansari',
+                'email' => 'take2@the10xagency.in',
+                'phone' => '6655447788',
+                'designation' => 'Full Stack Developer',
+                'city' => 'Kerala',
+                'target' => 0.00,
+                'reporting_to' => $manager2,
+            ],
+            [
+                'name' => 'Utkarsh Shukla',
+                'email' => 'take3@the10xagency.in',
+                'phone' => '6655112233',
+                'designation' => 'SEO Developer',
+                'city' => 'Ghaziabad',
+                'target' => 0.00,
+                'reporting_to' => $manager1,
+            ],
+        ];
+
+        foreach ($takePersons as $takePerson) {
+            User::updateOrCreate(
+                ['email' => $takePerson['email']],
+                [
+                    'name' => $takePerson['name'],
+                    'phone' => $takePerson['phone'],
+                    'role' => 'TakePerson',
+                    'designation' => $takePerson['designation'],
+                    'city' => $takePerson['city'],
+                    'target' => $takePerson['target'],
+                    'status' => 'Active',
+                    'password' => $passwordHash,
+                    'must_change' => false,
+                    'reporting_to' => $takePerson['reporting_to']->id,
                 ]
             );
         }

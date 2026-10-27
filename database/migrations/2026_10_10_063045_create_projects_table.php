@@ -33,6 +33,7 @@ return new class extends Migration
             $table->text('notes')->nullable()->default(null);
             $table->foreignId('coordinator_id')->nullable()->default(null)->constrained('users')->nullOnDelete();
             $table->foreignId('sales_person_id')->nullable()->default(null)->constrained('users')->nullOnDelete();
+            $table->foreignId('take_person_id')->nullable()->default(null)->constrained('users')->nullOnDelete();
             $table->foreignId('created_by')->nullable()->default(null)->constrained('users')->nullOnDelete();
             $table->timestamps();
         });

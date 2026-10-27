@@ -13,6 +13,8 @@ class MilestoneChaseModal extends Component
 {
     public ?int $milestoneId = null;
 
+    public ?int $termId = null;
+
     public string $milestoneName = '';
 
     public string $projectCode = '';
@@ -27,6 +29,8 @@ class MilestoneChaseModal extends Component
     public function openModal(?int $milestoneId = null, ?int $termId = null): void
     {
         $this->resetValidation();
+        $this->termId = $termId;
+        $this->milestoneId = null;
 
         if (! $milestoneId && $termId) {
             $term = PaymentTerm::with(['milestone', 'project.customer'])->find($termId);
@@ -34,16 +38,18 @@ class MilestoneChaseModal extends Component
                 if ($term->milestone_id && $term->milestone) {
                     $milestoneId = $term->milestone_id;
                 } else {
-                    $milestone = Milestone::create([
-                        'project_id' => $term->project_id,
-                        'name' => $term->label,
-                        'due_date' => $term->due_date,
-                        'status' => $term->status === 'Paid' ? 'Done' : 'Pending',
-                        'done' => $term->status === 'Paid',
-                        'sort_order' => $term->seq ?: 1,
-                    ]);
-                    $term->update(['milestone_id' => $milestone->id]);
-                    $milestoneId = $milestone->id;
+                    // Do not persist a dummy milestone upon modal opening.
+                    // Populate display information directly from payment term context.
+                    $this->milestoneId = null;
+                    $this->milestoneName = $term->label;
+                    $this->projectCode = $term->project?->code ?? '';
+                    $this->projectName = $term->project?->name ?? '';
+                    $this->chase_notes = $term->notes ?? '';
+                    $this->next_chase_date = null;
+
+                    $this->dispatch('open-modal', 'milestone-chase-modal');
+
+                    return;
                 }
             }
         }
@@ -87,6 +93,20 @@ class MilestoneChaseModal extends Component
 
         $validated = $this->validate();
 
+        if (! $this->milestoneId && $this->termId) {
+            $term = PaymentTerm::with('project.customer')->findOrFail($this->termId);
+            $milestone = Milestone::create([
+                'project_id' => $term->project_id,
+                'name' => $term->label,
+                'due_date' => $term->due_date,
+                'status' => $term->status === 'Paid' ? 'Done' : 'Pending',
+                'done' => $term->status === 'Paid',
+                'sort_order' => $term->seq ?: 1,
+            ]);
+            $term->update(['milestone_id' => $milestone->id]);
+            $this->milestoneId = $milestone->id;
+        }
+
         $milestone = Milestone::with('project.customer')->findOrFail($this->milestoneId);
         $milestone->update([
             'chase_notes' => $validated['chase_notes'],
@@ -128,7 +148,7 @@ class MilestoneChaseModal extends Component
             }
         }
 
-        $this->reset(['milestoneId', 'milestoneName', 'projectCode', 'projectName', 'chase_notes', 'next_chase_date']);
+        $this->reset(['milestoneId', 'termId', 'milestoneName', 'projectCode', 'projectName', 'chase_notes', 'next_chase_date']);
         $this->dispatch('close-modal', 'milestone-chase-modal');
         $this->dispatch('project-saved');
         $this->dispatch('followup-saved');

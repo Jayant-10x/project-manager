@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Projects\ProjectMilestoneModal;
 use App\Livewire\Projects\ProjectScheduleModal;
 use App\Livewire\Schedule\ScheduleIndex;
 use App\Models\Customer;
@@ -190,9 +191,41 @@ class MilestoneScheduleModuleTest extends TestCase
         $this->assertEquals(100000.00, $total);
     }
 
+    public function test_50_50_split_calculates_and_balances_terms(): void
+    {
+        $m1 = Milestone::create([
+            'project_id' => $this->project->id,
+            'name' => 'Final Milestone',
+            'sort_order' => 1,
+            'due_date' => now()->addDays(45)->toDateString(),
+            'status' => 'Pending',
+            'done' => false,
+        ]);
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectScheduleModal::class)
+            ->call('load', $this->project->id)
+            ->call('split5050');
+
+        $terms = $component->get('terms');
+
+        $this->assertCount(2, $terms);
+        $this->assertEquals('Advance', $terms[0]['label']);
+        $this->assertEquals(50000.00, $terms[0]['amount']);
+        $this->assertEquals('fixed', $terms[0]['trigger']);
+
+        $this->assertEquals('On delivery', $terms[1]['label']);
+        $this->assertEquals(50000.00, $terms[1]['amount']);
+        $this->assertEquals('milestone', $terms[1]['trigger']);
+        $this->assertEquals($m1->id, $terms[1]['milestoneId']);
+
+        $total = array_sum(array_column($terms, 'amount'));
+        $this->assertEquals(100000.00, $total);
+    }
+
     public function test_penny_matching_balance_checks_against_project_value(): void
     {
-        // 1. Installment sum short of contract value
+        // 1. Installment sum short of contract value displays unscheduled balance badge but allows saving
         Livewire::actingAs($this->admin)
             ->test(ProjectScheduleModal::class)
             ->call('load', $this->project->id)
@@ -208,12 +241,47 @@ class MilestoneScheduleModuleTest extends TestCase
                     'locked' => false,
                 ],
             ])
+            ->assertSee('Unscheduled Balance')
             ->call('save')
-            ->assertHasErrors(['terms']);
+            ->assertHasNoErrors();
 
-        $this->assertDatabaseMissing('payment_terms', ['project_id' => $this->project->id]);
+        $this->assertDatabaseHas('payment_terms', [
+            'project_id' => $this->project->id,
+            'label' => 'Advance',
+            'amount' => 50000.00,
+        ]);
 
-        // 2. Installment sum accurately matches contract value
+        // 2. Extra / recurring overage displays overage badge and allows saving
+        Livewire::actingAs($this->admin)
+            ->test(ProjectScheduleModal::class)
+            ->call('load', $this->project->id)
+            ->set('terms', [
+                [
+                    'id' => null,
+                    'label' => 'Advance',
+                    'amount' => 60000.00,
+                    'trigger' => 'fixed',
+                    'milestoneId' => null,
+                    'dueDate' => now()->toDateString(),
+                    'graceDays' => 0,
+                    'locked' => false,
+                ],
+                [
+                    'id' => null,
+                    'label' => 'Extra Retainer',
+                    'amount' => 60000.00,
+                    'trigger' => 'recurring',
+                    'milestoneId' => null,
+                    'dueDate' => now()->addDays(30)->toDateString(),
+                    'graceDays' => 0,
+                    'locked' => false,
+                ],
+            ])
+            ->assertSee('Extra / Recurring Overage')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        // 3. Installment sum accurately matches contract value displays matched badge
         Livewire::actingAs($this->admin)
             ->test(ProjectScheduleModal::class)
             ->call('load', $this->project->id)
@@ -239,6 +307,7 @@ class MilestoneScheduleModuleTest extends TestCase
                     'locked' => false,
                 ],
             ])
+            ->assertSee('Matched (100% scheduled)')
             ->call('save')
             ->assertHasNoErrors()
             ->assertDispatched('close-modal', 'project-schedule-modal');
@@ -360,5 +429,47 @@ class MilestoneScheduleModuleTest extends TestCase
             ->assertSee('Paid')
             ->call('exportCsv')
             ->assertFileDownloaded('payment-schedule-'.now()->toDateString().'.csv');
+    }
+
+    public function test_saving_milestones_converts_empty_date_strings_to_null(): void
+    {
+        $milestone = Milestone::create([
+            'project_id' => $this->project->id,
+            'name' => 'Existing Milestone',
+            'sort_order' => 1,
+            'due_date' => '2026-10-25',
+            'status' => 'Pending',
+            'done' => false,
+            'chase_notes' => null,
+            'next_chase_date' => null,
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(ProjectMilestoneModal::class)
+            ->call('load', $this->project->id)
+            ->set('items.0.next_chase_date', '')
+            ->set('items.0.chase_notes', '')
+            ->set('items.0.dueDate', '')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $milestone->refresh();
+        $this->assertNull($milestone->next_chase_date);
+        $this->assertNull($milestone->chase_notes);
+        $this->assertNull($milestone->due_date);
+
+        // Also verify direct Eloquent mutator converts empty string to null
+        $milestone->update([
+            'due_date' => '',
+            'done_on' => '',
+            'next_chase_date' => '',
+            'chase_notes' => '',
+        ]);
+
+        $milestone->refresh();
+        $this->assertNull($milestone->due_date);
+        $this->assertNull($milestone->done_on);
+        $this->assertNull($milestone->next_chase_date);
+        $this->assertNull($milestone->chase_notes);
     }
 }

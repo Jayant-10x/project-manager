@@ -6,6 +6,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Middleware\EnsurePasswordIsChanged;
 use App\Livewire\Audit\AuditIndex;
 use App\Livewire\Auth\ForcePasswordChange;
+use App\Livewire\Calendar\PaymentCalendarIndex;
 use App\Livewire\Customers\CustomerDetail;
 use App\Livewire\Customers\CustomerIndex;
 use App\Livewire\Dashboard\DashboardIndex;
@@ -55,6 +56,7 @@ Route::middleware(['auth', 'verified', EnsurePasswordIsChanged::class])->group(f
     // Module 3, 4 & 5: Money & Operational Queue
     Route::get('/schedules', ScheduleIndex::class)->name('schedule.index');
     Route::get('/payments', PaymentIndex::class)->name('payments.index');
+    Route::get('/calendar', PaymentCalendarIndex::class)->name('calendar.index');
     Route::get('/today-work', TodayWorkIndex::class)->name('today.index');
 
     // Reports & Analytics

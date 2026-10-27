@@ -167,7 +167,7 @@ class TeamIndex extends Component
         $query = User::query()
             ->whereIn('id', $teamMemberIds)
             ->with(['reportingTo', 'subordinates'])
-            ->withCount(['projects', 'salesProjects', 'subordinates'])
+            ->withCount(['projects', 'salesProjects', 'takenProjects', 'subordinates'])
             ->withSum('salesProjects as total_sales_value', 'value');
 
         if ($this->search !== '') {
@@ -185,19 +185,20 @@ class TeamIndex extends Component
             $query->where('role', $this->roleFilter);
         }
 
-        $members = $query->orderByRaw("CASE role WHEN 'Manager' THEN 1 WHEN 'Coordinator' THEN 2 WHEN 'Sales' THEN 3 ELSE 4 END")
+        $members = $query->orderByRaw("CASE role WHEN 'Manager' THEN 1 WHEN 'Coordinator' THEN 2 WHEN 'TakePerson' THEN 3 WHEN 'Sales' THEN 4 ELSE 5 END")
             ->orderBy('name')
             ->paginate(12);
 
         $stats = [
             'total' => count($teamMemberIds),
             'coordinators' => User::whereIn('id', $teamMemberIds)->where('role', 'Coordinator')->count(),
+            'take_persons' => User::whereIn('id', $teamMemberIds)->whereIn('role', ['TakePerson', 'Take Person'])->count(),
             'sales' => User::whereIn('id', $teamMemberIds)->where('role', 'Sales')->count(),
         ];
 
         $viewingMember = $this->viewMemberId && in_array($this->viewMemberId, $teamMemberIds, true)
             ? User::with(['reportingTo', 'subordinates'])
-                ->withCount(['projects', 'salesProjects', 'subordinates'])
+                ->withCount(['projects', 'salesProjects', 'takenProjects', 'subordinates'])
                 ->withSum('salesProjects as total_sales_value', 'value')
                 ->find($this->viewMemberId)
             : null;

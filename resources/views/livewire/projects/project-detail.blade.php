@@ -283,6 +283,10 @@
                             <div class="v font-semibold">{{ $project->coordinator?->name ?? '—' }}</div>
                         </div>
                         <div class="field mb-3">
+                            <div class="k text-xs font-bold text-gray-400 uppercase">Take Person</div>
+                            <div class="v font-semibold">{{ $project->takePerson?->name ?? '—' }}</div>
+                        </div>
+                        <div class="field mb-3">
                             <div class="k text-xs font-bold text-gray-400 uppercase">Salesperson</div>
                             <div class="v font-semibold">{{ $project->salesPerson?->name ?? '—' }}</div>
                         </div>

@@ -22,7 +22,7 @@ class DocumentUploadModal extends Component
 
     public ?int $project_id = null;
 
-    public string $category = 'Contract';
+    public string $category = '';
 
     public string $title = '';
 
@@ -31,7 +31,7 @@ class DocumentUploadModal extends Component
     {
         $this->resetValidation();
         $this->reset(['file', 'title']);
-        $this->category = 'Contract';
+        $this->category = '';
         $this->customer_id = $customerId;
         $this->project_id = $projectId;
 

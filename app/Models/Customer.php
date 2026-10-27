@@ -81,13 +81,21 @@ class Customer extends Model
                 $subQuery->whereIn('sales_person_id', $downlineIds)
                     ->orWhereHas('projects', function ($projectQuery) use ($downlineIds) {
                         $projectQuery->whereIn('coordinator_id', $downlineIds)
-                            ->orWhereIn('sales_person_id', $downlineIds);
+                            ->orWhereIn('sales_person_id', $downlineIds)
+                            ->orWhereIn('take_person_id', $downlineIds);
                     });
             });
         }
 
         if ($user->role === 'Sales') {
             return $query->where('sales_person_id', $user->id);
+        }
+
+        if ($user->isTakePerson()) {
+            return $query->where(function ($subQuery) use ($user) {
+                $subQuery->where('created_by', $user->id)
+                    ->orWhereHas('projects', fn ($projectQuery) => $projectQuery->where('take_person_id', $user->id));
+            });
         }
 
         // Coordinator: customers with projects assigned to coordinator or created/attributed to them

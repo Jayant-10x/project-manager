@@ -16,8 +16,8 @@
             <label class="f">
                 <span>Customer <span class="text-red-500"> *</span></span>
                 <select wire:model.blur="customer_id" @disabled($projectId)
-                        class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
-                    <option value="">— Select Customer —</option>
+                class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
+                    <option value="">*** Select Customer ***</option>
                     @foreach($customers as $c)
                         <option value="{{ $c->id }}">{{ $c->display_name }}</option>
                     @endforeach
@@ -47,7 +47,7 @@
             <label class="f">
                 <span>Internal cost (₹)</span>
                 <input wire:model.blur="cost"
-                       type="number" step="0.01" min="0"
+                       type="number" step="0.01" min="0" value=""
                        class="i @error('cost') border-red-500! bg-red-50/20! @enderror">
                 @error('cost') <span
                     class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
@@ -68,9 +68,9 @@
                     <span>Coordinator <span class="text-red-500"> *</span></span>
                     <select wire:model.blur="coordinator_id"
                             class="i @error('coordinator_id') border-red-500! bg-red-50/20! @enderror">
-                        <option value="">— Assign Staff Member —</option>
+                        <option value="">*** Select Project Coordinator ***</option>
                         @foreach($coordinators as $coord)
-                            <option value="{{ $coord->id }}">{{ $coord->name }}</option>
+                            <option value="{{ $coord->id }}">{{ $coord->name }} ({{ $coord->designation }})</option>
                         @endforeach
                     </select>
                     @error('coordinator_id') <span
@@ -83,9 +83,9 @@
                     <span>Salesperson <span class="text-red-500"> *</span></span>
                     <select wire:model.blur="sales_person_id"
                             class="i @error('sales_person_id') border-red-500! bg-red-50/20! @enderror">
-                        <option value="">— Select Salesperson —</option>
+                        <option value="">*** Select Salesperson ***</option>
                         @foreach($salesUsers as $su)
-                            <option value="{{ $su->id }}">{{ $su->name }}</option>
+                            <option value="{{ $su->id }}">{{ $su->name }} ({{ $su->designation }})</option>
                         @endforeach
                     </select>
                     @error('sales_person_id')
@@ -95,9 +95,24 @@
             @endif
 
             <label class="f">
+                <span>Take Person <span class="text-red-500"> *</span></span>
+                <select wire:model.blur="take_person_id"
+                        class="i @error('take_person_id') border-red-500! bg-red-50/20! @enderror">
+                    <option value="" selected>*** Select Take Person ***</option>
+                    @foreach($takePersons as $tp)
+                        <option value="{{ $tp->id }}">{{ $tp->name }} ({{ $tp->designation }})</option>
+                    @endforeach
+                </select>
+                @error('take_person_id')
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
+                @enderror
+            </label>
+
+            <label class="f">
                 <span>Status <span class="text-red-500"> *</span></span>
                 <select wire:model.live="status"
                         class="i @error('status') border-red-500! bg-red-50/20! @enderror">
+                    <option value="">*** Select Status ***</option>
                     <option value="Onboarding">Onboarding</option>
                     <option value="In Progress">In Progress</option>
                     <option value="On Hold">On Hold</option>
@@ -112,6 +127,7 @@
                 <span>Health <span class="text-red-500"> *</span></span>
                 <select wire:model.live="health"
                         class="i @error('health') border-red-500! bg-red-50/20! @enderror">
+                    <option value="">*** Select Project Health ***</option>
                     <option value="On Track">On Track</option>
                     <option value="At Risk">At Risk</option>
                     <option value="Delayed">Delayed</option>
@@ -225,8 +241,10 @@
                 <span wire:loading.remove wire:target="save">{{ $projectId ? 'Save changes' : 'Create project' }}</span>
                 <span wire:loading wire:target="save" class="inline-flex items-center gap-1.5">
                     <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     Saving...
                 </span>

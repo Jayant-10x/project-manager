@@ -27,7 +27,7 @@ class PaymentModal extends Component
 
     public ?float $amount = null;
 
-    public ?float $tds = 0.0;
+    public ?float $tds = null;
 
     public string $paid_on = '';
 
@@ -66,8 +66,8 @@ class PaymentModal extends Component
         $this->resetValidation();
         $this->reset(['project_id', 'term_id', 'amount', 'tds', 'reference', 'bank', 'note', 'customer_id', 'receipt_file']);
         $this->paid_on = now()->toDateString();
-        $this->mode = 'NEFT';
-        $this->tds = 0.0;
+        $this->mode = '';
+        $this->tds = null;
 
         if ($termId) {
             $term = PaymentTerm::find($termId);
@@ -75,7 +75,7 @@ class PaymentModal extends Component
                 $this->term_id = $termId;
                 $this->project_id = $term->project_id;
                 $this->updateProjectContext();
-                $this->updateTermAmount();
+                $this->updateTermAmount(force: true);
             }
         } elseif ($projectId) {
             $this->project_id = $projectId;
@@ -119,13 +119,15 @@ class PaymentModal extends Component
         $this->projectSub = 'Log verified settlement to ledger';
     }
 
-    private function updateTermAmount(): void
+    private function updateTermAmount(bool $force = false): void
     {
         if ($this->term_id) {
             $term = PaymentTerm::find($this->term_id);
             if ($term) {
                 $bal = max(0, (float) $term->amount - (float) $term->received - (float) $term->tds);
-                $this->amount = $bal > 0 ? $bal : null;
+                if ($force || empty($this->amount) || (float) $this->amount <= 0) {
+                    $this->amount = $bal > 0 ? $bal : null;
+                }
             }
         }
     }
@@ -136,7 +138,7 @@ class PaymentModal extends Component
             'project_id' => 'required|integer|exists:projects,id',
             'term_id' => 'nullable|integer|exists:payment_terms,id',
             'amount' => 'required|numeric|min:0.01',
-            'tds' => 'required|numeric|min:0',
+            'tds' => 'nullable|numeric|min:0',
             'paid_on' => 'required|date',
             'mode' => 'required|in:Cash,UPI,NEFT,RTGS,Cheque,Card,Other',
             'reference' => 'nullable|string|max:80',

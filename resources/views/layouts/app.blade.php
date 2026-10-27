@@ -21,6 +21,19 @@
 
     <link rel="icon" type="image/png" href="{{ asset('assets/logo.png') }}">
 
+    <script>
+        (function() {
+            try {
+                var isSaved = localStorage.getItem('pjt_sidebar_collapsed');
+                var isCookie = document.cookie.indexOf('pjt_sidebar_collapsed=true') !== -1;
+                var shouldCollapse = window.innerWidth > 860 && (isSaved === 'true' || (isSaved === null && isCookie));
+                if (shouldCollapse) {
+                    document.documentElement.classList.add('sidebar-collapsed-init');
+                }
+            } catch (e) {}
+        })();
+    </script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('css/crm-style.css') }}">
     @livewireStyles
@@ -261,21 +274,31 @@
         });
     </script>
 </head>
+@php
+    $isServerSidebarCollapsed = (isset($_COOKIE['pjt_sidebar_collapsed']) && $_COOKIE['pjt_sidebar_collapsed'] === 'true');
+@endphp
 <body class="bg-[#f5f7fb] text-[#0d1b34] font-sans antialiased"
       x-data="{
-          collapsed: window.innerWidth > 860 ? (localStorage.getItem('pjt_sidebar_collapsed') === 'true') : false,
+          collapsed: window.innerWidth > 860 ? (localStorage.getItem('pjt_sidebar_collapsed') !== null ? (localStorage.getItem('pjt_sidebar_collapsed') === 'true') : {{ $isServerSidebarCollapsed ? 'true' : 'false' }}) : false,
           mobileOpen: false,
           toggleSidebar() {
               if (window.innerWidth <= 860) {
                   this.mobileOpen = !this.mobileOpen;
               } else {
                   this.collapsed = !this.collapsed;
-                  localStorage.setItem('pjt_sidebar_collapsed', this.collapsed);
+                  try {
+                      localStorage.setItem('pjt_sidebar_collapsed', this.collapsed);
+                      document.cookie = 'pjt_sidebar_collapsed=' + this.collapsed + '; path=/; max-age=31536000; SameSite=Lax';
+                  } catch (e) {}
               }
           }
       }"
       @notification-updated.window="if ($event.detail && typeof $event.detail.unreadCount !== 'undefined') $store.notifications.setCount($event.detail.unreadCount)"
       x-init="
+        setTimeout(() => {
+            document.documentElement.classList.remove('sidebar-collapsed-init');
+        }, 120);
+
         Alpine.store('currency', {
             cur: localStorage.getItem('pjt_cur') || 'INR',
             rate: {{ app(\App\Services\CurrencyRateService::class)->getUsdInrRate() }},
@@ -375,7 +398,7 @@
 @endauth
 
 <!-- Global Application Modals -->
-@if(auth()->check() && auth()->user()->hasPermission('users', 'add/edit'))
+@if(auth()->check() && auth()->user()->role === 'Admin')
     <livewire:settings.user-modal/>
 @endif
 

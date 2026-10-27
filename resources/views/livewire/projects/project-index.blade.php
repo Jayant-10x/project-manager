@@ -66,6 +66,15 @@
                     </select>
                 @endif
 
+                @if($takePersons->isNotEmpty())
+                    <select wire:model.live="take_person_id" class="i" style="width:auto; max-width: 160px;">
+                        <option value="">All take persons</option>
+                        @foreach($takePersons as $tp)
+                            <option value="{{ $tp->id }}">{{ $tp->name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+
                 @if($salesPeople->isNotEmpty())
                     <select wire:model.live="sales_person_id" class="i" style="width:auto; max-width: 160px;">
                         <option value="">All salespeople</option>
@@ -84,7 +93,7 @@
                     </select>
                 @endif
 
-                @if($search !== '' || $health !== '' || $status !== '' || $customer_id !== '' || $coordinator_id !== '' || $sales_person_id !== '' || $project_type !== '')
+                @if($search !== '' || $health !== '' || $status !== '' || $customer_id !== '' || $coordinator_id !== '' || $take_person_id !== '' || $sales_person_id !== '' || $project_type !== '')
                     <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
@@ -105,6 +114,7 @@
                     <th>Project</th>
                     <th>Customer</th>
                     <th>Coordinator</th>
+                    <th>Take Person</th>
                     <th>Health</th>
                     @if(auth()->user()->role !== 'Sales')
                         <th class="num">Value</th>
@@ -136,6 +146,7 @@
                         </td>
                         <td>{{ $project->customer?->display_name ?? '—' }}</td>
                         <td class="muted">{{ $project->coordinator?->name ?? '—' }}</td>
+                        <td class="muted">{{ $project->takePerson?->name ?? '—' }}</td>
                         <td>
                             <x-health-badge :health="$project->health"/>
                         </td>

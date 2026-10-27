@@ -254,7 +254,7 @@ class UserIndex extends Component
     {
         $query = User::query()
             ->with(['reportingTo', 'subordinates'])
-            ->withCount(['projects', 'salesProjects', 'subordinates'])
+            ->withCount(['projects', 'salesProjects', 'takenProjects', 'subordinates'])
             ->withSum('salesProjects as total_sales_value', 'value');
 
         if ($this->search !== '') {
@@ -285,6 +285,7 @@ class UserIndex extends Component
             'admins' => User::where('role', 'Admin')->count(),
             'managers' => User::where('role', 'Manager')->count(),
             'coordinators' => User::where('role', 'Coordinator')->count(),
+            'take_persons' => User::where('role', 'TakePerson')->count(),
             'sales' => User::where('role', 'Sales')->count(),
         ];
 

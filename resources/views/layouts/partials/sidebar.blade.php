@@ -1,8 +1,9 @@
 @php
     $user = auth()->user();
+    $isServerSidebarCollapsed = (isset($_COOKIE['pjt_sidebar_collapsed']) && $_COOKIE['pjt_sidebar_collapsed'] === 'true');
 @endphp
 
-<aside class="sidebar"
+<aside class="sidebar {{ $isServerSidebarCollapsed ? 'collapsed' : '' }}"
        id="sb"
        :class="{ 'collapsed': collapsed, 'open': mobileOpen }">
 
@@ -98,51 +99,17 @@
                     <span class="lbl">Payment Schedule</span>
                 </a>
             @endif
+            @if(auth()->user()->hasPermission('payments', 'view') || auth()->user()->hasPermission('schedules', 'view'))
+                <a href="{{ route('calendar.index') }}" wire:navigate
+                   class="nav-item {{ request()->routeIs('calendar.*') ? 'active' : '' }}" title="Payment Calendar">
+                    <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+                    <span class="lbl">Payment Calendar</span>
+                </a>
+            @endif
             @if(auth()->user()->hasPermission('reports', 'view'))
                 <a href="{{ route('reports.index') }}" wire:navigate
                    class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}" title="Reports & Analytics">
                     <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg></span>
-                    <span class="lbl">Reports</span>
-                </a>
-            @endif
-        @endif
-
-        <!-- System & Governance -->
-        <div class="nav-label">System</div>
-        <a href="{{ route('notifications.index') }}" wire:navigate
-           class="nav-item {{ request()->routeIs('notifications.*') ? 'active' : '' }}" title="Notifications">
-            <span class="nav-ico">
-                <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
-            </span>
-            <span class="lbl">Notifications</span>
-            <livewire:components.dynamic-counter type="notifications" :warn="true" :hideZero="true" />
-        </a>
-        <a href="{{ route('audit.index') }}" wire:navigate
-           class="nav-item {{ request()->routeIs('audit.*') ? 'active' : '' }}" title="Activity Log">
-            <span class="nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-            <span class="lbl">Activity Log</span>
-        </a>
-        @if(auth()->user()->hasPermission('settings', 'view') || auth()->user()->role === 'Admin')
-            <a href="{{ route('settings.index') }}" wire:navigate
-               class="nav-item {{ request()->routeIs('settings.*') ? 'active' : '' }}" title="Settings">
-                <span class="nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path
-                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
-                <span class="lbl">Settings</span>
-            </a>
-        @endif
-
-
-        <!-- 3. Money -->
-        @if(in_array($user->role, ['Admin', 'Manager', 'Coordinator']))
-            <div class="nav-label">Money</div>
-            @if(in_array($user->role, ['Admin', 'Manager']))
-                <a href="{{ route('reports.index') }}" wire:navigate
-                   class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}" title="Reports">
-                    <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="11" width="3"
-                                                                                                height="6"/><rect x="12" y="7"
-                                                                                                                  width="3"
-                                                                                                                  height="10"/><rect
-                                x="17" y="13" width="3" height="4"/></svg></span>
                     <span class="lbl">Reports</span>
                 </a>
             @endif
@@ -174,8 +141,7 @@
         <a href="{{ route('notifications.index') }}" wire:navigate
            class="nav-item {{ request()->routeIs('notifications.*') ? 'active' : '' }}" title="Notifications">
             <span class="nav-ico">
-                <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path
-                        d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
             </span>
             <span class="lbl">Notifications</span>
             <livewire:components.dynamic-counter type="notifications" :warn="true" :hideZero="true" />
@@ -185,13 +151,14 @@
             <span class="nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
             <span class="lbl">Activity Log</span>
         </a>
-        <a href="{{ route('settings.index') }}" wire:navigate
-           class="nav-item {{ request()->routeIs('settings.*') ? 'active' : '' }}" title="Settings">
-            <span class="nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path
-                        d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
-            <span class="lbl">Settings</span>
-        </a>
-        --}}
+        @if(auth()->user()->hasPermission('settings', 'view') || auth()->user()->role === 'Admin')
+            <a href="{{ route('settings.index') }}" wire:navigate
+               class="nav-item {{ request()->routeIs('settings.*') ? 'active' : '' }}" title="Settings">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path
+                            d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg></span>
+                <span class="lbl">Settings</span>
+            </a>
+        @endif
     </nav>
 
     <div class="sb-foot">

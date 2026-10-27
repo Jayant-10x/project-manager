@@ -5,7 +5,7 @@
                 <span>Target Project<span class="text-red-500"> *</span></span>
                 <select wire:model.live="project_id"
                         class="i @error('project_id') border-red-500! bg-red-50/20! @enderror">
-                    <option value="">— Select Assigned Project —</option>
+                    <option value="">*** Select Assigned Project ***</option>
                     @foreach($projects as $p)
                         <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }} (due
                             ₹{{ number_format($p->money['due'], 0) }})
@@ -21,7 +21,7 @@
                     <span>Against which installment</span>
                     <select wire:model.live="term_id"
                             class="i @error('term_id') border-red-500! bg-red-50/20! @enderror">
-                        <option value="">— no installment (on account) —</option>
+                        <option value="">*** No Installment (on account) ***</option>
                         @foreach($terms as $t)
                             @php $bal = max(0, $t->amount - $t->received - $t->tds); @endphp
                             <option value="{{ $t->id }}">
@@ -41,6 +41,7 @@
                 <span>Amount received (₹)<span class="text-red-500"> *</span></span>
                 <input wire:model.blur="amount"
                        type="number" step="0.01" min="0.01"
+                       placeholder="0.00"
                        class="i @error('amount') border-red-500! bg-red-50/20! @enderror">
                 @error('amount') <span
                     class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
@@ -50,6 +51,7 @@
                 <span>TDS deducted (₹)</span>
                 <input wire:model.blur="tds"
                        type="number" step="0.01" min="0"
+                       placeholder="0.00"
                        class="i @error('tds') border-red-500! bg-red-50/20! @enderror">
                 @error('tds') <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
                 <div class="hint text-xs text-[#8894ac] mt-1">Enter this if the customer deducted TDS</div>
@@ -68,6 +70,7 @@
                 <span>Mode<span class="text-red-500"> *</span></span>
                 <select wire:model.blur="mode"
                         class="i @error('mode') border-red-500! bg-red-50/20! @enderror">
+                    <option value="">*** Select Payment Mode ***</option>
                     <option value="NEFT">NEFT</option>
                     <option value="RTGS">RTGS</option>
                     <option value="UPI">UPI</option>

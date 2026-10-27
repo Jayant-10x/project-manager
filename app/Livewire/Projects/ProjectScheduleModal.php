@@ -65,13 +65,51 @@ class ProjectScheduleModal extends Component
         $this->terms[] = [
             'id' => null,
             'label' => 'Installment '.(count($this->terms) + 1),
-            'amount' => 0.0,
+            'amount' => '',
             'trigger' => 'fixed',
             'milestoneId' => null,
             'dueDate' => '',
             'graceDays' => 0,
             'locked' => false,
         ];
+    }
+
+    public function split5050(): void
+    {
+        $projectValue = $this->projectValue;
+        $milestoneCount = count($this->availableMilestones);
+        $lastMilestone = $milestoneCount > 0 ? end($this->availableMilestones)['id'] : null;
+
+        $advanceAmount = round($projectValue * 0.5, 2);
+        $deliveryAmount = round($projectValue - $advanceAmount, 2);
+
+        $advanceDate = $this->projectStartDate ?? now()->toDateString();
+        $deliveryDate = $this->projectDeliveryDate ?? now()->addDays(60)->toDateString();
+
+        $this->terms = [
+            [
+                'id' => null,
+                'label' => 'Advance',
+                'amount' => $advanceAmount,
+                'trigger' => 'fixed',
+                'milestoneId' => null,
+                'dueDate' => $advanceDate,
+                'graceDays' => 0,
+                'locked' => false,
+            ],
+            [
+                'id' => null,
+                'label' => 'On delivery',
+                'amount' => $deliveryAmount,
+                'trigger' => $lastMilestone ? 'milestone' : 'fixed',
+                'milestoneId' => $lastMilestone,
+                'dueDate' => $lastMilestone ? '' : $deliveryDate,
+                'graceDays' => 7,
+                'locked' => false,
+            ],
+        ];
+
+        $this->resetValidation();
     }
 
     public function autoSplit(): void
@@ -173,17 +211,6 @@ class ProjectScheduleModal extends Component
 
     public function updated(string $propertyName): void
     {
-        // Sanitize numeric inputs if cleared
-        if (str_ends_with($propertyName, '.amount')) {
-            $parts = explode('.', $propertyName);
-            $idx = $parts[1] ?? null;
-            if ($idx !== null && isset($this->terms[$idx])) {
-                if ($this->terms[$idx]['amount'] === '' || $this->terms[$idx]['amount'] === null) {
-                    $this->terms[$idx]['amount'] = 0.0;
-                }
-            }
-        }
-
         $this->validateOnly($propertyName);
     }
 
@@ -200,19 +227,6 @@ class ProjectScheduleModal extends Component
         $this->validate();
 
         $project = Project::findOrFail($this->projectId);
-
-        // ISS-031: Verify installment sum matches contracted project value (if contract value > 0)
-        $termsSum = array_sum(array_column($this->terms, 'amount'));
-        if ($project->value > 0 && abs($termsSum - (float) $project->value) >= 0.01) {
-            $diff = (float) $project->value - $termsSum;
-            $msg = $diff > 0
-                ? 'Installment sum is short by ₹'.number_format($diff, 2).'. Total installments must match contracted project value (₹'.number_format($project->value, 2).').'
-                : 'Installment sum exceeds contract value by ₹'.number_format(abs($diff), 2).'. Total installments must match contracted project value (₹'.number_format($project->value, 2).').';
-
-            $this->addError('terms', $msg);
-
-            return;
-        }
 
         // Find locked term IDs that have payments or TDS logged
         $lockedTerms = PaymentTerm::where('project_id', $this->projectId)
@@ -232,7 +246,7 @@ class ProjectScheduleModal extends Component
             $termId = ! empty($t['id']) ? (int) $t['id'] : null;
             $amt = (float) $t['amount'];
 
-            $dueDate = ($t['trigger'] === 'fixed') ? $t['dueDate'] : null;
+            $dueDate = ! empty($t['dueDate']) ? $t['dueDate'] : null;
             if ($t['trigger'] === 'milestone' && ! empty($t['milestoneId'])) {
                 $milestoneDueDate = Milestone::where('id', $t['milestoneId'])->value('due_date');
                 if ($milestoneDueDate) {
@@ -300,7 +314,11 @@ class ProjectScheduleModal extends Component
 
     public function render()
     {
-        $total = (float) array_sum(array_column($this->terms, 'amount'));
+        $numericAmounts = array_filter(
+            array_column($this->terms, 'amount'),
+            fn ($v) => is_numeric($v)
+        );
+        $total = (float) array_sum($numericAmounts);
         $diff = (float) ($this->projectValue - $total);
 
         return view('livewire.projects.project-schedule-modal', [

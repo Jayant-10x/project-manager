@@ -10,7 +10,7 @@
         <div class="mb-3">
             <label class="text-xs font-bold text-gray-500 uppercase block mb-1">Default Salesperson</label>
             <select wire:model="defaultSalesPersonId" class="i text-sm">
-                <option value="">— Select Salesperson —</option>
+                <option value="">*** Select Salesperson ***</option>
                 @foreach($salesPeople as $sp)
                     <option value="{{ $sp->id }}">{{ $sp->name }}</option>
                 @endforeach

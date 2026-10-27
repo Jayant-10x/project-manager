@@ -5,7 +5,7 @@
                 <span>Customer <span class="text-red-500">*</span></span>
                 <select wire:model.live="customer_id"
                         class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
-                    <option value="">— Select Customer —</option>
+                    <option value="">*** Select Customer ***</option>
                     @foreach($customers as $c)
                         <option value="{{ $c->id }}">{{ $c->display_name }}</option>
                     @endforeach
@@ -19,6 +19,7 @@
                 <span>Channel <span class="text-red-500">*</span></span>
                 <select wire:model.blur="type"
                         class="i @error('type') border-red-500! bg-red-50/20! @enderror">
+                    <option value="">*** Select Channel ***</option>
                     <option value="Call">Call</option>
                     <option value="Email">Email</option>
                     <option value="Meeting">Meeting</option>
@@ -31,10 +32,20 @@
             </label>
 
             <label class="f">
-                <span>Project (optional)</span>
+                <span>Interaction Date</span>
+                <input wire:model.blur="happened_on"
+                       type="date"
+                       class="i @error('happened_on') border-red-500! bg-red-50/20! @enderror">
+                @error('happened_on')
+                <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
+                @enderror
+            </label>
+
+            <label class="f">
+                <span>Project</span>
                 <select wire:model.blur="project_id"
                         class="i @error('project_id') border-red-500! bg-red-50/20! @enderror">
-                    <option value="">— none —</option>
+                    <option value="">*** None ***</option>
                     @foreach($availableProjects as $p)
                         <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }}</option>
                     @endforeach

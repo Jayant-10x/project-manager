@@ -21,21 +21,23 @@ class ProjectModal extends Component
 
     public string $name = '';
 
-    public string $project_type = 'Website';
+    public string $project_type = '';
 
     public ?float $value = null;
 
-    public ?float $cost = 0.0;
+    public ?float $cost = null;
 
     public ?int $coordinator_id = null;
+
+    public ?int $take_person_id = null;
 
     public ?string $start_date = null;
 
     public ?string $delivery_date = null;
 
-    public string $status = 'Onboarding';
+    public string $status = '';
 
-    public string $health = 'On Track';
+    public string $health = '';
 
     public string $delay_reason = '';
 
@@ -50,7 +52,7 @@ class ProjectModal extends Component
 
     public ?string $amc_end = null;
 
-    public ?float $amc_amount = 0.0;
+    public ?float $amc_amount = null;
 
     public int $renew_alert_days = 7;
 
@@ -71,6 +73,8 @@ class ProjectModal extends Component
             $this->coordinator_id = auth()->user()->reporting_to;
         } elseif (auth()->check() && auth()->user()->role === 'Coordinator') {
             $this->coordinator_id = auth()->id();
+        } elseif (auth()->check() && auth()->user()->role === 'TakePerson') {
+            $this->take_person_id = auth()->id();
         }
     }
 
@@ -93,6 +97,7 @@ class ProjectModal extends Component
 
         if ($customerId) {
             $this->customer_id = $customerId;
+            $this->sales_person_id = Customer::find($customerId)?->sales_person_id;
         }
 
         if ($id) {
@@ -101,8 +106,9 @@ class ProjectModal extends Component
             $this->name = $project->name ?? '';
             $this->project_type = $project->project_type ?? 'Website';
             $this->value = $project->value !== null ? (float) $project->value : null;
-            $this->cost = $project->cost !== null ? (float) $project->cost : 0.0;
+            $this->cost = $project->cost !== null ? (float) $project->cost : null;
             $this->coordinator_id = $project->coordinator_id;
+            $this->take_person_id = $project->take_person_id ?: null;
             $this->start_date = $project->start_date instanceof Carbon ? $project->start_date->toDateString() : ($project->start_date ? substr((string) $project->start_date, 0, 10) : null);
             $this->delivery_date = $project->delivery_date instanceof Carbon ? $project->delivery_date->toDateString() : ($project->delivery_date ? substr((string) $project->delivery_date, 0, 10) : null);
             $this->status = $project->status ?? 'Onboarding';
@@ -112,7 +118,7 @@ class ProjectModal extends Component
             $this->amc_required = (bool) $project->amc_required;
             $this->amc_start = $project->amc_start instanceof Carbon ? $project->amc_start->toDateString() : ($project->amc_start ? substr((string) $project->amc_start, 0, 10) : null);
             $this->amc_end = $project->amc_end instanceof Carbon ? $project->amc_end->toDateString() : ($project->amc_end ? substr((string) $project->amc_end, 0, 10) : null);
-            $this->amc_amount = $project->amc_amount !== null ? (float) $project->amc_amount : 0.0;
+            $this->amc_amount = $project->amc_amount !== null ? (float) $project->amc_amount : null;
             $this->renew_alert_days = (int) ($project->renew_alert_days ?: 7);
             $this->handover_done = (bool) $project->handover_done;
             $this->handover_notes = $project->handover_notes ?? '';
@@ -120,14 +126,16 @@ class ProjectModal extends Component
             $this->sales_person_id = $project->sales_person_id;
         } else {
             $this->start_date = now()->toDateString();
-            $this->cost = 0.0;
-            $this->amc_amount = 0.0;
+            $this->cost = null;
+            $this->amc_amount = null;
             $this->renew_alert_days = 7;
             if (auth()->check() && auth()->user()->role === 'Sales') {
                 $this->sales_person_id = auth()->id();
                 $this->coordinator_id = auth()->user()->reporting_to;
             } elseif (auth()->check() && auth()->user()->role === 'Coordinator') {
                 $this->coordinator_id = auth()->id();
+            } elseif (auth()->check() && auth()->user()->role === 'TakePerson') {
+                $this->take_person_id = auth()->id();
             }
         }
 
@@ -141,8 +149,9 @@ class ProjectModal extends Component
             'name' => 'required|string|max:160',
             'project_type' => 'nullable|string|max:60',
             'value' => 'required|numeric|min:0',
-            'cost' => 'required|numeric|min:0',
+            'cost' => 'nullable|numeric|min:0',
             'coordinator_id' => (auth()->check() && in_array(auth()->user()->role, ['Coordinator', 'Sales'])) ? 'nullable|integer' : 'required|integer|exists:users,id',
+            'take_person_id' => 'nullable|integer|exists:users,id',
             'start_date' => 'required|date',
             'delivery_date' => 'nullable|date|after_or_equal:start_date',
             'status' => 'required|in:Onboarding,In Progress,On Hold,Delivered,Cancelled',
@@ -152,7 +161,7 @@ class ProjectModal extends Component
             'amc_required' => 'boolean',
             'amc_start' => 'nullable|required_if:amc_required,true|date',
             'amc_end' => 'nullable|required_if:amc_required,true|date|after_or_equal:amc_start',
-            'amc_amount' => 'required|numeric|min:0',
+            'amc_amount' => 'nullable|numeric|min:0',
             'renew_alert_days' => 'required|integer|min:1|max:180',
             'handover_done' => 'boolean',
             'handover_notes' => 'nullable|string',
@@ -168,6 +177,7 @@ class ProjectModal extends Component
             'customer_id' => 'customer',
             'sales_person_id' => 'salesperson',
             'coordinator_id' => 'coordinator',
+            'take_person_id' => 'take person',
         ];
     }
 
@@ -190,23 +200,9 @@ class ProjectModal extends Component
         $this->isSaving = true;
 
         try {
-            if ($this->health !== 'Delayed' && $this->status !== 'Delayed') {
-                $this->delay_reason = '';
-            }
-
-            if (auth()->check() && auth()->user()->role === 'Coordinator') {
-                $this->coordinator_id = $this->coordinator_id ?: auth()->id();
-            }
-
-            if (auth()->check() && auth()->user()->role === 'Sales') {
-                $this->sales_person_id = auth()->id();
-                if (! $this->projectId) {
-                    $this->coordinator_id = auth()->user()->reporting_to ?: $this->coordinator_id;
-                }
-            }
-
             $this->customer_id = $this->customer_id ? (int) $this->customer_id : null;
             $this->coordinator_id = $this->coordinator_id ? (int) $this->coordinator_id : null;
+            $this->take_person_id = $this->take_person_id ? (int) $this->take_person_id : null;
             $this->cost = ($this->cost === null || $this->cost === '') ? 0.0 : (float) $this->cost;
             $this->start_date = ! empty($this->start_date) ? $this->start_date : null;
             $this->delivery_date = ! empty($this->delivery_date) ? $this->delivery_date : null;
@@ -223,9 +219,27 @@ class ProjectModal extends Component
 
             $this->renew_alert_days = (int) ($this->renew_alert_days ?: 7);
 
+            if (auth()->check() && auth()->user()->role === 'Sales') {
+                $this->sales_person_id = auth()->id();
+                if (! $this->projectId && auth()->user()->reporting_to) {
+                    $this->coordinator_id = auth()->user()->reporting_to;
+                }
+            }
+
             $validated = $this->validate();
 
             if ($this->health !== 'Delayed' && $this->status !== 'Delayed') {
+                $reasonToArchive = $this->delay_reason;
+                if (empty($reasonToArchive) && $this->projectId) {
+                    $existingProject = Project::find($this->projectId);
+                    $reasonToArchive = $existingProject?->delay_reason;
+                }
+                if (! empty($reasonToArchive)) {
+                    $archiveNote = '['.now()->format('d M Y').' Delay Resolved]: '.$reasonToArchive;
+                    $this->notes = ! empty($this->notes) ? $this->notes."\n".$archiveNote : $archiveNote;
+                    $validated['notes'] = $this->notes;
+                }
+                $this->delay_reason = '';
                 $validated['delay_reason'] = null;
             }
 
@@ -233,10 +247,14 @@ class ProjectModal extends Component
                 $validated['coordinator_id'] = $this->coordinator_id ?: auth()->id();
             }
 
+            if (auth()->check() && auth()->user()->role === 'TakePerson') {
+                $validated['take_person_id'] = $this->take_person_id ?: auth()->id();
+            }
+
             if (auth()->check() && auth()->user()->role === 'Sales') {
                 $validated['sales_person_id'] = auth()->id();
-                if (! $this->projectId) {
-                    $validated['coordinator_id'] = auth()->user()->reporting_to ?: ($this->coordinator_id ?: null);
+                if (! $this->projectId && auth()->user()->reporting_to) {
+                    $validated['coordinator_id'] = auth()->user()->reporting_to;
                 }
             }
             $codeService = app(CodeGeneratorService::class);
@@ -303,6 +321,18 @@ class ProjectModal extends Component
                         $project->id
                     );
                 }
+
+                // Notify if take person reassigned
+                if (isset($structuredChanges['take_person_id']) && $project->take_person_id && $project->take_person_id !== auth()->id()) {
+                    $auditService->notify(
+                        $project->take_person_id,
+                        'Project Assignment',
+                        "Assigned to {$project->name}",
+                        "You have been assigned as Take Person for project {$project->name} ({$project->code})",
+                        'project',
+                        $project->id
+                    );
+                }
             } else {
                 $validated['project_code'] = $codeService->generate('project', 'PJT-');
                 $validated['created_by'] = auth()->id();
@@ -321,6 +351,18 @@ class ProjectModal extends Component
                         'Project Assignment',
                         "New Project: {$project->name}",
                         "You have been assigned to project {$project->name} ({$project->code})",
+                        'project',
+                        $project->id
+                    );
+                }
+
+                // Notify assigned take person
+                if ($project->take_person_id && $project->take_person_id !== auth()->id()) {
+                    $auditService->notify(
+                        $project->take_person_id,
+                        'Project Assignment',
+                        "New Project (Take Person): {$project->name}",
+                        "You have been assigned as Take Person for project {$project->name} ({$project->code})",
                         'project',
                         $project->id
                     );
@@ -349,6 +391,12 @@ class ProjectModal extends Component
             $assignedCoordinator = auth()->user()->reportingTo;
         }
 
+        $takePersonQuery = User::where('role', 'TakePerson')->where('status', 'Active');
+        if ($this->take_person_id) {
+            $takePersonQuery->orWhere('id', $this->take_person_id);
+        }
+        $takePersons = $takePersonQuery->orderBy('name')->get();
+
         return view('livewire.projects.project-modal', [
             'customers' => Customer::query()
                 ->where(function ($q) {
@@ -361,6 +409,7 @@ class ProjectModal extends Component
                 ->get(),
             'salesUsers' => User::where('role', 'Sales')->where('status', 'Active')->orderBy('name')->get(),
             'coordinators' => User::where('role', 'Coordinator')->where('status', 'Active')->orderBy('name')->get(),
+            'takePersons' => $takePersons,
             'assignedCoordinator' => $assignedCoordinator,
         ]);
     }

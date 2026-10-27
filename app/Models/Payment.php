@@ -15,6 +15,11 @@ class Payment extends Model
         'tds' => 'float',
     ];
 
+    public function setPaidOnAttribute($value): void
+    {
+        $this->attributes['paid_on'] = ! empty($value) ? $value : null;
+    }
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);

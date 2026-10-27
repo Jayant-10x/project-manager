@@ -27,10 +27,29 @@
     <!-- 1. Grid of Salesperson Cards -->
     <div class="grid-3 mb-6" style="gap:15px">
         @forelse($rows as $r)
-            @php $sp = $r['salesPerson']; @endphp
+            @php
+                $sp = $r['salesPerson'];
+                $roleColors = [
+                    'Admin' => ['badge' => 'bg-indigo-50 text-indigo-700 border-indigo-200', 'avatar' => '#4338ca'],
+                    'Manager' => ['badge' => 'bg-purple-50 text-purple-700 border-purple-200', 'avatar' => '#7e22ce'],
+                    'Coordinator' => ['badge' => 'bg-amber-50 text-amber-700 border-amber-200', 'avatar' => '#d97706'],
+                    'TakePerson' => ['badge' => 'bg-cyan-50 text-cyan-700 border-cyan-200', 'avatar' => '#0891b2'],
+                    'Sales' => ['badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200', 'avatar' => '#059669'],
+                ];
+                $cfg = $roleColors[array_rand($roleColors)];
+                @endphp
             <div class="card p-4">
                 <div class="flex items-center gap-3 mb-3">
-                    <div class="avatar lg">{{ strtoupper(substr($sp->name, 0, 2)) }}</div>
+                    @if($sp->avatar_url)
+                        <img src="{{ $sp->avatar_url }}" alt="{{ $sp->name }}"
+                             class="w-11 h-11 rounded-xl object-cover shrink-0 shadow-2xs border border-gray-200">
+                    @else
+                        <div
+                            class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-xs"
+                            style="background:{{ $cfg['avatar'] }}">
+                            {{ strtoupper(substr($sp->name, 0, 2)) }}
+                        </div>
+                    @endif
                     <div class="min-w-0 flex-1">
                         <div class="font-bold text-base text-[#0d1b34]">{{ $sp->name }}</div>
                         <div class="text-xs text-[#8894ac]">{{ $sp->phone ?: ($sp->email ?: '—') }}</div>

@@ -11,11 +11,12 @@
 
 ### 1.1 Platform Purpose & Scope
 
-**PJT CRM** is an operations and financial management system designed specifically for digital services agencies. It bridges the gap between sales handoff, delivery coordination, milestone execution, receivables collection, and team activity tracking. The system enforces role-based access across three staff tiers:
+**PJT CRM** is an operations and financial management system designed specifically for digital services agencies. It bridges the gap between sales handoff, delivery coordination, milestone execution, receivables collection, and team activity tracking. The system enforces role-based access across five staff tiers:
 
 * **Administrators (`Admin`)**: Possess unrestricted governance over system settings, global alert thresholds, user management, salesperson commission targets, executive financial reports, and destructive entity cascades (customer and project deletion).
 * **Managers (`Manager`)**: Supervise delivery operations across assigned and downline coordinator teams via hierarchical query scoping (`reporting_to` and `getDownlineUserIds()`), with full departmental visibility over schedules, customer accounts, and performance reports.
 * **Project Coordinators (`Coordinator`)**: Manage day-to-day client onboarding, project health and delivery milestones, multi-tier installment schedules, incoming payment receipts, document uploads, personal task checklists, and scheduled follow-ups. Access is strictly scoped to assigned accounts via Eloquent query scopes (`Project::forUser()` and `Customer::forUser()`), with executive financial reports restricted.
+* **Take Persons (`Take Person`)**: Operational lead responsible for project technical intake, scope validation, milestone handoffs, and deliverable sign-offs. Access is strictly scoped to assigned projects (`take_person_id == user->id`) and their customer accounts.
 * **Sales Representatives (`Sales`)**: Attribution tier for client onboarding commissions and target monitoring. Strictly restricted to self-attributed customer accounts (`sales_person_id == user->id`) and basic project views, with financial ledgers, payment schedules, and money collection columns hidden.
 
 ---
@@ -68,7 +69,7 @@ graph TD
         OverviewModules["Overview Modules<br/>(DashboardIndex, TodayWorkIndex)"]
         CustomerModules["Customer Modules<br/>(CustomerIndex, CustomerDetail, CustomerModal, CustomerImportModal)"]
         ProjectModules["Project Modules<br/>(ProjectIndex, ProjectDetail, ProjectModal, ScheduleModal, RecurringModal, MilestoneModal, MilestoneChaseModal)"]
-        MoneyModules["Money Modules<br/>(PaymentIndex, PaymentModal, ScheduleIndex, ReportIndex)"]
+        MoneyModules["Money & Calendar Modules<br/>(PaymentIndex, PaymentModal, ScheduleIndex, PaymentCalendarIndex, ReportIndex)"]
         TeamModules["Team & Hierarchy Modules<br/>(UserIndex, TeamIndex, ProfileDrawer, UserModal)"]
         RecordModules["Record Modules<br/>(DocumentIndex, DocumentUploadModal, DocumentPreviewModal, FollowupIndex, SalesIndex)"]
         SystemModules["System Modules<br/>(NotificationIndex, NotificationDetail, AuditIndex, SettingIndex)"]
@@ -749,7 +750,7 @@ Audit logging tracks precise attribute mutations for entity updates:
 * **Mandatory Password Change**: The `EnsurePasswordIsChanged` middleware inspects `auth()->user()->must_change`. If flagged, navigation to all routes except `password.change` and `logout` is redirected to `/change-password`.
 * **Account Lockout & Presence Tracking**: Tracks consecutive authentication failures (`fail_count`) with progressive time-based lockouts (`locked_until`), plus real-time online presence monitoring (`is_online`, `last_seen`).
 * **In-App Error Pipeline & Session Resilience**: Unmatched and unauthorized HTTP exceptions are handled via `Route::fallback()` within the `web` session middleware, ensuring user sessions are maintained and errors render inside `<x-app-layout>` without exposing raw stack traces or dropping the authenticated navigation shell.
-* **Comprehensive Test Suite & Quality Verification**: The application is verified by 212 automated feature and unit tests with 1,075 assertions (`php artisan test`), covering authentication, authorization, permissions matrix, downline data isolation, error recovery, reactive financial calculations, and form UX. All PHP source files conform to Laravel Pint coding standards.
+* **Comprehensive Test Suite & Quality Verification**: The application is verified by 228 automated feature and unit tests with 1,145 assertions (`php artisan test`), covering authentication, authorization, permissions matrix, downline data isolation, error recovery, reactive financial calculations, Take Person operational workflows, datewise payment calendars, and form UX. All PHP source files conform to Laravel Pint coding standards.
 * **User Guide & Operational Documentation**: A comprehensive, non-technical manual is available in [`project-guide.md`](project-guide.md), explaining every module, action, workflow, and FAQ in plain, approachable language.
 * **Simplified Terminology & Consistent Top KPI Cards**: Replaced technical jargon with intuitive business terminology across all dashboard, report, schedule, and detail views. Key financial metric cards now consistently display standard headings: `Total Receivable`, `Received`, `Due`, and `Overdue`.
 

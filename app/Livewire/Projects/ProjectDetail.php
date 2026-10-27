@@ -43,9 +43,12 @@ class ProjectDetail extends Component
         } elseif ($user->role === 'Manager') {
             $downlineIds = $user->getDownlineUserIds();
             $allowed = ($project->coordinator_id && in_array($project->coordinator_id, $downlineIds, true))
-                || ($project->sales_person_id && in_array($project->sales_person_id, $downlineIds, true));
+                || ($project->sales_person_id && in_array($project->sales_person_id, $downlineIds, true))
+                || ($project->take_person_id && in_array($project->take_person_id, $downlineIds, true));
         } elseif ($user->role === 'Sales') {
             $allowed = ($project->sales_person_id === $user->id);
+        } elseif ($user->isTakePerson()) {
+            $allowed = ($project->take_person_id === $user->id);
         } else {
             $allowed = ($project->coordinator_id === $user->id);
         }

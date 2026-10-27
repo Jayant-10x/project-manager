@@ -17,6 +17,26 @@ class Milestone extends Model
         'next_chase_date' => 'date',
     ];
 
+    public function setDueDateAttribute($value): void
+    {
+        $this->attributes['due_date'] = ! empty($value) ? $value : null;
+    }
+
+    public function setDoneOnAttribute($value): void
+    {
+        $this->attributes['done_on'] = ! empty($value) ? $value : null;
+    }
+
+    public function setNextChaseDateAttribute($value): void
+    {
+        $this->attributes['next_chase_date'] = ! empty($value) ? $value : null;
+    }
+
+    public function setChaseNotesAttribute($value): void
+    {
+        $this->attributes['chase_notes'] = ! empty($value) ? $value : null;
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Projects;
 
+use App\Models\Payment;
 use App\Models\PaymentTerm;
 use App\Models\Project;
 use Carbon\Carbon;
@@ -28,9 +29,11 @@ class ProjectRecurringModal extends Component
         $this->resetValidation();
         $this->projectId = $projectId;
         $project = Project::findOrFail($projectId);
+        $payments = Payment::where('project_id', $projectId);
+        $payments_received = $payments->sum('amount') + $payments->sum('tds');
         $this->projectCode = $project->code;
-        $this->amount = $project->value > 0 ? round((float) $project->value / 6, 2) : 0.0;
-        $this->months = 6;
+        $this->amount = $project->value > 0 ? round((float) ($project->value - $payments_received) / 6, 2) : null;
+        //        $this->months = 6;
         $this->label = 'Monthly retainer';
         $this->startDate = $project->start_date?->toDateString() ?? now()->toDateString();
 

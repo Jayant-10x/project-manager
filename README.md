@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.2+">
   <img src="https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL 8.0+">
   <img src="https://img.shields.io/badge/Frontend-Alpine.js%20%26%20Tailwind-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
-  <img src="https://img.shields.io/badge/Tests-212%20Passed-2ea44f?style=for-the-badge&logo=githubactions&logoColor=white" alt="212 Tests Passed">
+  <img src="https://img.shields.io/badge/Tests-228%20Passed-2ea44f?style=for-the-badge&logo=githubactions&logoColor=white" alt="228 Tests Passed">
   <img src="https://img.shields.io/badge/License-Proprietary-0B3D91?style=for-the-badge" alt="Proprietary License">
 </p>
 
@@ -60,6 +60,8 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
   * **Due** `(max(0, Total Receivable - Received - TDS Deducted))`: Outstanding balance still to be collected.
   * **Overdue** `(sum(Balance) where Status == 'Overdue')`: Delinquent installments requiring immediate follow-up.
   * **This Month** `(sum(Payment Receipts) where Month == Current Month)`: Collections logged within the current calendar month.
+* **Downline Team Member Filter:** In-header filter dropdown allowing Administrators and Managers to isolate all dashboard financial metrics, project health charts, and triage items to a specific staff member's portfolio.
+* **Payment Calendar Switcher:** One-click quick link to switch directly from the Dashboard to the datewise Payment Calendar.
 * **Project Health Summary:** Real-time breakdown categorizing active projects into **On Track**, **At Risk**, **Delayed**, and **Completed**, with 1-click filtering to the Projects directory.
 * **Collection Trend Chart:** 6-month visual revenue sparkline tracking monthly collection totals over the last half year.
 * **Today's Work Quick List:** Fast daily triage widget displaying:
@@ -84,6 +86,7 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
   * **Administrator (`Admin`)**: Unrestricted global governance over system settings, staff accounts, alert thresholds, customer deletions, and executive reports.
   * **Manager (`Manager`)**: Supervisory oversight over assigned teams and reporting coordinators with full schedule, project, customer, and report visibility.
   * **Project Coordinator (`Coordinator`)**: Scoped to assigned customer accounts, projects, schedules, receipts, tasks, and follow-ups; executive financial reports are restricted.
+  * **Take Person (`Take Person`)**: Operational lead responsible for technical intake, scope validation, and deliverable sign-offs; scoped to assigned projects (`take_person_id`) and their customer accounts.
   * **Sales Representative (`Sales`)**: Client onboarding attribution and target monitoring; scoped strictly to self-attributed customer profiles and basic project overviews (financial ledgers, payment schedules, and money columns remain hidden).
   * **Custom Permission Overrides**: Administrators can customize granular module permissions (`view`, `add`, `edit`, `delete`, `export`) for individual staff members, with 1-click reset to role defaults.
 * **Team Governance & Directory:**
@@ -134,6 +137,11 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 ### 💳 7. Money, Payments & Installment Schedules
 
 * **Payments Ledger:** Comprehensive receipts table tracking **Receipt #**, **Project / Customer**, installment **Term**, payment **Amount**, **TDS Deducted**, **Total Credited**, **Paid on** date, and **Mode & Reference** (Cash, UPI, NEFT, RTGS, Cheque, Card).
+* **Datewise Payment Calendar (`/calendar`):** Full 7-column monthly view charting scheduled installment dues and payment receipts on their exact calendar dates:
+  * **Month Navigation & Quick Jump:** Seamless previous/next month transitions, current month "Today" reset, and direct month-year input selector.
+  * **Monthly Cash Flow KPIs:** Top indicators calculating Total Scheduled Due, Total Received, Total Due (Pending), and Overdue amounts.
+  * **Dual Filter System:** Toggle between All Records, Scheduled Dues Only, or Received Payments Only, with downline team member scoping for Administrators and Managers.
+  * **Itemized Day Details Modal:** Click any date cell to review comprehensive tables of due installments and payment receipts with deep-linking to project dossiers.
 * **Smart Payment Receipts:** Attach client remittance slips and bank advices directly within the payment modal; files are stored securely and automatically catalogued into the Document Vault as linked invoices.
 * **Triple Notification Dispatch:** Recording a payment automatically dispatches high-priority in-app alerts to the Project Coordinator, the Onboarding Salesperson, and System Administrators.
 * **Payment Schedule Master View:** Centralized chronological timeline tracking **Upcoming**, **Overdue**, **Collected**, and **Total Scheduled** installments across all agency projects.
@@ -473,13 +481,14 @@ All operational modules are built as dedicated Livewire 4 full-page components, 
 | | **7. User Profile** | *Slide-Over Drawer* | `Profile\ProfileDrawer` | Avatar file upload and removal, profile details update, supervisor display, password update |
 | **Money** | **8. Payments** | `payments.index` | `Payments\PaymentIndex` | `PaymentModal` with Smart Receipt file upload, auto-balance calculation, non-null TDS defaults |
 | | **9. Payment Schedule** | `schedule.index` | `Schedule\ScheduleIndex` | Master timeline, trigger badges, CSV export, live recalculations |
-| | **10. Reports** | `reports.index` | `Reports\ReportIndex` | Executive analytics: collection rate % `((received / scheduled) * 100)`, trailing 6-month sparkline `(monthly sum(payments))`, mode bars `(sum(payments) grouped by mode)`, aging bars `(overdue terms bucketed: 0–30, 31–60, 61–90, 90+ days)`, and delivery variance table `(milestone_% - collection_%)` |
-| **Records** | **11. Documents** | `documents.index` | `Documents\DocumentIndex` | `DocumentUploadModal` (public disk root), `DocumentPreviewModal` (lightbox) |
-| | **12. Follow-ups** | `followups.index` | `Followups\FollowupIndex` | Touchpoint feed, overdue alert banner, scoped project relations |
-| | **13. Sales Team** | `sales.index` | `Sales\SalesIndex` | Shared `UserModal` for quota tracking and credential management |
-| **System** | **14. Notifications** | `notifications.index`<br>`notifications.show` | `Notifications\NotificationIndex`<br>`Notifications\NotificationDetail` | `Components\NotificationBell`, `Components\NotificationDrawer`, `DynamicCounter`, deep linking |
-| | **15. Activity Log** | `audit.index` | `Audit\AuditIndex` | Color-coded action timeline, field-level structured diffs (`ActivityLog`) |
-| | **16. Settings** | `settings.index` | `Settings\SettingIndex` | `UserModal` with granular permissions editor, threshold configurations |
+| | **10. Payment Calendar** | `calendar.index` | `Calendar\PaymentCalendarIndex` | 7-column monthly cash flow grid, datewise due installments & payment receipts, downline filter, day details modal |
+| | **11. Reports** | `reports.index` | `Reports\ReportIndex` | Executive analytics: collection rate % `((received / scheduled) * 100)`, trailing 6-month sparkline `(monthly sum(payments))`, mode bars `(sum(payments) grouped by mode)`, aging bars `(overdue terms bucketed: 0–30, 31–60, 61–90, 90+ days)`, and delivery variance table `(milestone_% - collection_%)` |
+| **Records** | **12. Documents** | `documents.index` | `Documents\DocumentIndex` | `DocumentUploadModal` (public disk root), `DocumentPreviewModal` (lightbox) |
+| | **13. Follow-ups** | `followups.index` | `Followups\FollowupIndex` | Touchpoint feed, overdue alert banner, scoped project relations |
+| | **14. Sales Team** | `sales.index` | `Sales\SalesIndex` | Shared `UserModal` for quota tracking and credential management |
+| **System** | **15. Notifications** | `notifications.index`<br>`notifications.show` | `Notifications\NotificationIndex`<br>`Notifications\NotificationDetail` | `Components\NotificationBell`, `Components\NotificationDrawer`, `DynamicCounter`, deep linking |
+| | **16. Activity Log** | `audit.index` | `Audit\AuditIndex` | Color-coded action timeline, field-level structured diffs (`ActivityLog`) |
+| | **17. Settings** | `settings.index` | `Settings\SettingIndex` | `UserModal` with granular permissions editor, threshold configurations |
 | **Auth** | **Password Change** | `password.change` | `Auth\ForcePasswordChange` | Mandatory first-time password change screen triggered by `EnsurePasswordIsChanged` |
 
 ---

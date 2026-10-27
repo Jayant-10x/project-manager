@@ -49,7 +49,7 @@ class TaskIndex extends Component
     public function mount(): void
     {
         $this->assigned_to = auth()->id();
-        $this->due_date = now()->toDateString();
+        $this->due_date = null;
     }
 
     /**
@@ -199,7 +199,7 @@ class TaskIndex extends Component
 
         $this->reset(['title', 'project_id']);
         $this->priority = 'Medium';
-        $this->due_date = now()->toDateString();
+        $this->due_date = null;
         $this->assigned_to = auth()->id();
         $this->resetValidation();
     }

@@ -50,12 +50,17 @@ class Project extends Model
 
             return $query->where(function ($subQuery) use ($downlineIds) {
                 $subQuery->whereIn('coordinator_id', $downlineIds)
-                    ->orWhereIn('sales_person_id', $downlineIds);
+                    ->orWhereIn('sales_person_id', $downlineIds)
+                    ->orWhereIn('take_person_id', $downlineIds);
             });
         }
 
         if ($user->role === 'Sales') {
             return $query->where('sales_person_id', $user->id);
+        }
+
+        if ($user->isTakePerson()) {
+            return $query->where('take_person_id', $user->id);
         }
 
         return $query->where('coordinator_id', $user->id);
@@ -69,6 +74,11 @@ class Project extends Model
     public function coordinator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'coordinator_id');
+    }
+
+    public function takePerson(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'take_person_id');
     }
 
     public function salesPerson(): BelongsTo

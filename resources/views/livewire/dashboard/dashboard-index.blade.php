@@ -19,12 +19,25 @@
                             @case('Admin') Company-wide Executive Governance @break
                             @case('Manager') Operations & Team Delivery Overview @break
                             @case('Coordinator') My Active Projects & Delivery Schedule @break
+                            @case('TakePerson')
+                            @case('Take Person') My Assigned Projects & Delivery Schedule @break
                             @case('Sales') My Deals Pipeline & Client Accounts @break
                         @endswitch
                     </span>
                 </p>
             </div>
             <div class="flex items-center gap-2">
+                <a href="{{ route('calendar.index') }}" wire:navigate
+                   class="btn btn-outline-primary btn-sm flex items-center gap-1.5 shadow-xs"
+                   title="Open Datewise Payment Calendar">
+                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <span>Payment Calendar</span>
+                </a>
                 @if($user->hasPermission('today', 'view'))
                     <a href="{{ route('today.index') }}" wire:navigate
                        class="btn btn-outline-primary btn-sm flex items-center gap-1.5 shadow-xs"
@@ -60,6 +73,36 @@
             </div>
         </div>
     </div>
+
+    @if($accessibleUsers->isNotEmpty())
+        <div class="card p-3 mb-6 bg-slate-50/70 border border-slate-200/80 flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
+                    <span>Filter by Team Member:</span>
+                </span>
+                <select wire:model.live="selectedUserId" class="i text-xs py-1.5 px-3 rounded-lg border-slate-300 bg-white" style="width: auto; min-width: 220px;">
+                    <option value="">Entire Organization / Team Portfolio</option>
+                    @foreach($accessibleUsers as $au)
+                        <option value="{{ $au->id }}">{{ $au->name }} ({{ $au->role }})</option>
+                    @endforeach
+                </select>
+                @if($selectedUserId)
+                    <button type="button" wire:click="$set('selectedUserId', null)" class="btn btn-outline-danger btn-sm text-xs py-1 px-2.5">
+                        Reset Filter
+                    </button>
+                @endif
+            </div>
+            @if($selectedUserId && $activeViewingUser && $activeViewingUser->id !== $user->id)
+                <div class="text-xs text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 font-medium flex items-center gap-1.5">
+                    <span class="inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                    <span>Filtered View: <strong>{{ $activeViewingUser->name }}</strong> ({{ $activeViewingUser->role }})</span>
+                </div>
+            @endif
+        </div>
+    @endif
 
     <!-- 1. Role-Tailored KPI Row -->
     @switch($role)
@@ -496,7 +539,9 @@
             @endif
             @break
         @case('Coordinator')
-            <!-- Coordinator Project Delivery & Milestone Health KPIs (5 Blocks) -->
+        @case('TakePerson')
+        @case('Take Person')
+            <!-- Coordinator / TakePerson Project Delivery & Milestone Health KPIs (5 Blocks) -->
             <div class="kpis mb-6">
                 <x-kpi-card label="Active Projects" :value="$coordinatorData['activeProjectsCount']"
                             sub="My Active Projects · In-progress" icon="proj"

@@ -36,7 +36,7 @@
 
             <label class="f">
                 <span>Alternate phone</span>
-                <input wire:model.live.blur="alt_phone"
+                <input wire:model.live.blur="alt_phone" placeholder="+91 ..."
                        class="i @error('alt_phone') border-red-500! bg-red-50/20! @enderror">
                 @error('alt_phone')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
@@ -57,7 +57,7 @@
                 <span>State <span class="text-red-500">*</span></span>
                 <select wire:model.live="state"
                         class="i @error('state') border-red-500! bg-red-50/20! @enderror">
-                    <option value="">— select State —</option>
+                    <option value="">*** Select State ***</option>
                     @foreach(config('constants.states') as $id =>$state_name)
                         <option value="{{ $id }}">{{ $state_name }}</option>
                     @endforeach
@@ -69,7 +69,7 @@
 
             <label class="f">
                 <span>City</span>
-                <input wire:model.live.blur="city"
+                <input wire:model.live.blur="city" placeholder="e.g. Delhi"
                        class="i @error('city') border-red-500! bg-red-50/20! @enderror">
                 @error('city')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
@@ -80,7 +80,7 @@
                 <span>GSTIN</span>
                 <input wire:model.live.blur="gst_number"
                        class="i @error('gst_number') border-red-500! bg-red-50/20! @enderror"
-                       placeholder="27AABCS1429P1ZV">
+                       placeholder="e.g. 27AABCS1429P1ZV">
                 @error('gst_number')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
@@ -88,7 +88,7 @@
 
             <label class="f">
                 <span>PAN</span>
-                <input wire:model.live.blur="pan_number"
+                <input wire:model.live.blur="pan_number" placeholder="e.g. AABCA1234C"
                        class="i @error('pan_number') border-red-500! bg-red-50/20! @enderror">
                 @error('pan_number')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
@@ -117,10 +117,10 @@
 
             @if(auth()->user()->role !== 'Sales')
                 <label class="f">
-                    <span>Onboarded by (salesperson) <span class="text-red-500">*</span></span>
+                    <span>Onboarded by (sales person) <span class="text-red-500">*</span></span>
                     <select wire:model.live="sales_person_id"
                             class="i @error('sales_person_id') border-red-500! bg-red-50/20! @enderror">
-                        <option value="">— select —</option>
+                        <option value="">*** Select Sales Person ***</option>
                         @foreach($salesPeople as $sp)
                             <option value="{{ $sp->id }}">{{ $sp->name }}</option>
                         @endforeach
@@ -128,7 +128,7 @@
                     @error('sales_person_id')
                     <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                     @enderror
-                    <div class="hint">Attributed salesperson for performance reporting</div>
+                    <div class="hint">Attributed sales person for performance reporting</div>
                 </label>
             @endif
 
@@ -136,6 +136,7 @@
                 <span>Status <span class="text-red-500">*</span></span>
                 <select wire:model.live="status"
                         class="i @error('status') border-red-500! bg-red-50/20! @enderror">
+                    <option value="">*** Select Status ***</option>
                     <option value="Active">Active</option>
                     <option value="On Hold">On Hold</option>
                     <option value="Completed">Completed</option>

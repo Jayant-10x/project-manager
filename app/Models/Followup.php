@@ -14,6 +14,16 @@ class Followup extends Model
         'next_date' => 'date',
     ];
 
+    public function setHappenedOnAttribute($value): void
+    {
+        $this->attributes['happened_on'] = ! empty($value) ? $value : null;
+    }
+
+    public function setNextDateAttribute($value): void
+    {
+        $this->attributes['next_date'] = ! empty($value) ? $value : null;
+    }
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);

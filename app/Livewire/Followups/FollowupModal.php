@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Followup;
 use App\Models\Project;
 use App\Services\AuditNotificationService;
+use Carbon\Carbon;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -15,7 +16,9 @@ class FollowupModal extends Component
 
     public ?int $project_id = null;
 
-    public string $type = 'Call';
+    public string $type = '';
+
+    public ?string $happened_on = null;
 
     public string $summary = '';
 
@@ -31,6 +34,7 @@ class FollowupModal extends Component
             'customer_id' => 'required|integer|exists:customers,id',
             'project_id' => 'nullable|integer|exists:projects,id',
             'type' => 'required|in:Call,Email,Meeting,WhatsApp,Note',
+            'happened_on' => 'nullable|date',
             'summary' => 'required|string|max:300',
             'detail' => 'nullable|string|max:4000',
             'next_date' => 'nullable|date',
@@ -44,6 +48,7 @@ class FollowupModal extends Component
             'customer_id' => 'customer',
             'project_id' => 'project',
             'type' => 'interaction type',
+            'happened_on' => 'interaction date',
             'summary' => 'summary',
             'detail' => 'discussion details',
             'next_date' => 'next follow-up date',
@@ -55,8 +60,9 @@ class FollowupModal extends Component
     public function openModal(?int $customerId = null, ?int $projectId = null): void
     {
         $this->resetValidation();
-        $this->reset(['summary', 'detail', 'next_date', 'next_note']);
-        $this->type = 'Call';
+        $this->reset(['summary', 'detail', 'next_date', 'next_note', 'happened_on']);
+        $this->type = '';
+        $this->happened_on = now()->toDateString();
         $this->customer_id = $customerId;
         $this->project_id = $projectId;
 
@@ -76,8 +82,11 @@ class FollowupModal extends Component
         $this->detail = trim($this->detail);
         $this->next_note = trim($this->next_note);
         $this->next_date = ! empty($this->next_date) ? $this->next_date : null;
+        $this->happened_on = ! empty($this->happened_on) ? $this->happened_on : null;
 
         $validated = $this->validate();
+
+        $happenedOn = ! empty($validated['happened_on']) ? Carbon::parse($validated['happened_on'])->startOfDay() : now();
 
         $fu = Followup::create([
             'customer_id' => $validated['customer_id'],
@@ -85,7 +94,7 @@ class FollowupModal extends Component
             'type' => $validated['type'],
             'summary' => $validated['summary'],
             'detail' => ! empty($validated['detail']) ? $validated['detail'] : null,
-            'happened_on' => now(),
+            'happened_on' => $happenedOn,
             'next_date' => $validated['next_date'],
             'next_note' => ! empty($validated['next_note']) ? $validated['next_note'] : null,
             'created_by' => auth()->id(),
@@ -101,7 +110,7 @@ class FollowupModal extends Component
             "Logged {$validated['type']} for {$cust?->company}: {$validated['summary']}"
         );
 
-        $this->reset(['customer_id', 'project_id', 'summary', 'detail', 'next_date', 'next_note']);
+        $this->reset(['customer_id', 'project_id', 'summary', 'detail', 'next_date', 'next_note', 'happened_on']);
         $this->type = 'Call';
         $this->resetValidation();
 

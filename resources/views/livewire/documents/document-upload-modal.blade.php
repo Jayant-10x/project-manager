@@ -7,7 +7,7 @@
                 <span>Customer<span class="text-red-500"> *</span></span>
                 <select wire:model.live="customer_id"
                         class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
-                    <option value="">— Select Customer —</option>
+                    <option value="">*** Select Customer ***</option>
                     @foreach($customers as $c)
                         <option value="{{ $c->id }}">{{ $c->display_name }}</option>
                     @endforeach
@@ -21,7 +21,7 @@
                 <span>Project (optional)</span>
                 <select wire:model.live="project_id"
                         class="i @error('project_id') border-red-500! bg-red-50/20! @enderror">
-                    <option value="">— no project —</option>
+                    <option value="">*** No Project ***</option>
                     @foreach($projects as $p)
                         <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }}</option>
                     @endforeach
@@ -35,6 +35,7 @@
                 <span>Category<span class="text-red-500"> *</span></span>
                 <select wire:model.blur="category"
                         class="i @error('category') border-red-500! bg-red-50/20! @enderror">
+                    <option value="">*** Select Category ***</option>
                     @foreach($categories as $cat)
                         <option value="{{ $cat }}">{{ $cat }}</option>
                     @endforeach
@@ -57,7 +58,7 @@
 
         <div x-data="documentUploadHandler()" class="mt-4">
             <label class="text-[11px] font-bold text-gray-500 uppercase block mb-1">
-                File Attachment *
+                File Attachment <span class="text-red-500"> *</span>
             </label>
 
             <!-- Hidden native file input with accept filter -->

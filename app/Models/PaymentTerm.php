@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PaymentTerm extends Model
 {
@@ -19,6 +20,11 @@ class PaymentTerm extends Model
         'seq' => 'integer',
     ];
 
+    public function setDueDateAttribute($value): void
+    {
+        $this->attributes['due_date'] = ! empty($value) ? $value : null;
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
@@ -27,5 +33,15 @@ class PaymentTerm extends Model
     public function milestone(): BelongsTo
     {
         return $this->belongsTo(Milestone::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'term_id');
+    }
+
+    public function getBalanceAttribute(): float
+    {
+        return max(0.0, (float) $this->amount - (float) $this->received - (float) $this->tds);
     }
 }

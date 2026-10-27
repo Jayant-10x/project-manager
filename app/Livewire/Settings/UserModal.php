@@ -48,7 +48,7 @@ class UserModal extends Component
     public ?int $reporting_to = null;
 
     #[Validate]
-    public ?float $target = 0.0;
+    public ?float $target = null;
 
     public ?float $currentAchieved = null;
 
@@ -87,12 +87,12 @@ class UserModal extends Component
             $this->name = $user->name;
             $this->email = $user->email;
             $this->phone = $user->phone ?? '';
-            $this->role = $user->role ?? 'Sales';
-            $this->designation = $user->designation ?? 'Sales Person';
+            $this->role = $user->role ?? '';
+            $this->designation = $user->designation ?? '';
             $this->city = $user->city ?? '';
-            $this->status = $user->status ?? 'Active';
+            $this->status = $user->status ?? '';
             $this->reporting_to = $user->reporting_to;
-            $this->target = $user->target !== null ? (float) $user->target : 0.0;
+            $this->target = $user->target !== null ? (float) $user->target : null;
             $this->existingAvatarUrl = $user->avatar_url;
 
             if ($user->role === 'Sales') {
@@ -111,11 +111,11 @@ class UserModal extends Component
                 $this->customPermissions = false;
             }
         } else {
-            $this->role = $role ?? 'Sales';
+            $this->role = $role ?? '';
             $this->designation = $this->role === 'Sales' ? 'Sales Person' : '';
-            $this->status = 'Active';
+            $this->status = '';
             $this->reporting_to = null;
-            $this->target = 0.0;
+            $this->target = null;
             $this->currentAchieved = null;
             $this->currentDealsCount = null;
             $this->existingAvatarUrl = null;
@@ -205,7 +205,7 @@ class UserModal extends Component
         $allowedRoles = match ($this->role) {
             'Admin' => ['Admin'],
             'Manager' => ['Admin'],
-            'Coordinator' => ['Manager', 'Admin'],
+            'Coordinator', 'TakePerson', 'Take Person' => ['Manager', 'Admin'],
             'Sales' => ['Coordinator'],
             default => ['Admin', 'Manager', 'Coordinator'],
         };
@@ -224,7 +224,7 @@ class UserModal extends Component
             'name' => 'required|string|min:2|max:200',
             'email' => ['required', 'email', 'min:2', 'max:160', Rule::unique('users', 'email')->ignore($this->userId)],
             'phone' => ['nullable', 'string', 'max:30', Rule::unique('users', 'phone')->ignore($this->userId)],
-            'role' => 'required|string|in:Admin,Manager,Coordinator,Sales',
+            'role' => 'required|string|in:Admin,Manager,Coordinator,Sales,TakePerson,Take Person',
             'reporting_to' => 'nullable|integer|exists:users,id',
             'designation' => 'nullable|string|min:2|max:60',
             'city' => 'nullable|string|min:2|max:60',
@@ -256,10 +256,6 @@ class UserModal extends Component
 
     public function updated(string $propertyName): void
     {
-        if ($propertyName === 'target') {
-            $this->target = ($this->target === null || $this->target === '') ? 0.0 : (float) $this->target;
-        }
-
         $this->validateOnly($propertyName);
     }
 
@@ -284,6 +280,10 @@ class UserModal extends Component
         }
 
         $validated = $this->validate();
+
+        if ($validated['role'] === 'Take Person') {
+            $validated['role'] = 'TakePerson';
+        }
 
         $validated['phone'] = ! empty($validated['phone']) ? $validated['phone'] : null;
         $validated['city'] = ! empty($validated['city']) ? $validated['city'] : null;

@@ -15,16 +15,17 @@
 6. [Module 4: Delivery Milestones](#6-module-4-delivery-milestones)
 7. [Module 5: Payment Schedules & Invoicing Terms](#7-module-5-payment-schedules--invoicing-terms)
 8. [Module 6: Payments & Collection Ledger](#8-module-6-payments--collection-ledger)
-9. [Module 7: Client Touchpoints & Follow-ups](#9-module-7-client-touchpoints--follow-ups)
-10. [Module 8: Documents & File Vault](#10-module-8-documents--file-vault)
-11. [Module 9: Team Tasks & Daily Checklist](#11-module-9-team-tasks--daily-checklist)
-12. [Module 10: Sales Performance & Quotas](#12-module-10-sales-performance--quotas)
-13. [Module 11: Reports & Business Analytics](#13-module-11-reports--business-analytics)
-14. [Module 12: Notifications & Workspace Alerts](#14-module-12-notifications--workspace-alerts)
-15. [Module 13: Activity History (Change Log)](#15-module-13-activity-history-change-log)
-16. [Module 14: Team & Staff Management](#16-module-14-team--staff-management)
-17. [Module 15: Profile, Password & Account Settings](#17-module-15-profile-password--account-settings)
-18. [Frequently Asked Questions (FAQ) & Best Practices](#18-frequently-asked-questions-faq--best-practices)
+9. [Module 7: Payment Calendar (Datewise Cash Flow Grid)](#9-module-7-payment-calendar-datewise-cash-flow-grid)
+10. [Module 8: Client Touchpoints & Follow-ups](#10-module-8-client-touchpoints--follow-ups)
+11. [Module 9: Documents & File Vault](#11-module-9-documents--file-vault)
+12. [Module 10: Team Tasks & Daily Checklist](#12-module-10-team-tasks--daily-checklist)
+13. [Module 11: Sales Performance & Quotas](#13-module-11-sales-performance--quotas)
+14. [Module 12: Reports & Business Analytics](#14-module-12-reports--business-analytics)
+15. [Module 13: Notifications & Workspace Alerts](#15-module-13-notifications--workspace-alerts)
+16. [Module 14: Activity History (Change Log)](#16-module-14-activity-history-change-log)
+17. [Module 15: Team & Staff Management](#17-module-15-team--staff-management)
+18. [Module 16: Profile, Password & Account Settings](#18-module-16-profile-password--account-settings)
+19. [Frequently Asked Questions (FAQ) & Best Practices](#19-frequently-asked-questions-faq--best-practices)
 
 ---
 
@@ -34,15 +35,16 @@ PJT CRM is built specifically for digital and creative agencies to run two vital
 1. **Client Project Delivery** (tracking project phases, delivery dates, client communications, and team responsibilities).
 2. **Cash Flow & Payment Collections** (planning payment schedules, chasing milestones, logging incoming bank transfers, tracking TDS, and keeping payment delays at zero).
 
-### The Four Roles in the Agency
+### The Five Roles in the Agency
 
-Your agency uses four standard roles. Each role automatically sees the tools and information relevant to their job:
+Your agency uses five standard roles. Each role automatically sees the tools and information relevant to their job:
 
 | Role | Primary Responsibilities | What They Can Access |
 |:---|:---|:---|
 | **Administrator** | Overall business management, staff provisioning, system configuration, executive reporting. | **Full unrestricted access** across all clients, projects, payments, staff accounts, permissions, and system settings. |
 | **Manager** | Delivery leadership, team supervision, coordinator workload allocation, client escalation. | Global view of projects, milestones, payments, and reports for all team members reporting to them. |
 | **Project Coordinator** | End-to-end client project management, delivery milestone tracking, payment chasing. | Assigned projects, client details, payment terms, follow-ups, documents, and Today's Work queue. Sensitive executive reports and user administration remain hidden. |
+| **Take Person** | Project intake lead, scope validation, technical deliverable oversight, and handover. | Assigned projects (`take_person_id`), customer records, payment terms, schedules, documents, and operational queue. |
 | **Sales Representative** | Client onboarding, pipeline closing, basic project initiation, sales target tracking. | Onboard new customers, initiate new projects, view self-attributed accounts, and track personal sales targets. Financial collection ledgers and internal staff lists remain hidden. |
 
 ---
@@ -64,7 +66,7 @@ Organized into clean, easy-to-read sections:
 - **Overview**: Dashboard, Today's Work
 - **Clients & Projects**: Customers, Projects
 - **Team & Access**: Users (Admin only) or Team Members (Managers & Coordinators)
-- **Money**: Payments, Payment Schedule, Reports
+- **Money**: Payments, Payment Schedule, Payment Calendar, Reports
 - **System**: Notifications, Activity History, Settings
 
 > [!TIP]
@@ -82,15 +84,20 @@ Whenever you attempt to delete a record, sign out, or close a form where you typ
 ### Purpose
 The **Dashboard** gives you a real-time operational bird's-eye view tailored to your specific role. You immediately see how projects are progressing, what payments are expected this month, and what requires attention right now.
 
-### Key Metrics Explained Simply
-- **Active Projects**: Total number of projects currently in progress or review.
-- **Realized Collections**: Actual cash received in the bank during the current calendar month.
-- **Overdue Balance**: Total money past its scheduled due date that has not yet been paid by clients.
-- **Overdue Payment Timeline**: A visual breakdown showing overdue amounts grouped by days late:
-  - `0 to 30 days late` (Green): Standard recent invoices undergoing client accounting approval.
-  - `31 to 60 days late` (Blue): First escalation zone; coordinator should follow up with the client.
-  - `61 to 90 days late` (Amber): Serious delay; requires manager touchpoint.
-  - `90+ days late` (Red): Critical collection risk; delivery should be paused until settled.
+### Top Card Information & Metrics Explained Simply
+- **Total Receivable**: Total value of all scheduled installments across active client projects.
+- **Received**: Total actual cash collected into the agency bank account to date.
+- **Due**: Outstanding balance awaiting collection from clients.
+- **Overdue**: Installments that have crossed their due date and require immediate follow-up.
+- **This Month**: Total payment receipts logged during the current calendar month.
+
+### Downline Team Member Filter (Admins & Managers)
+- In the top action bar of the Dashboard, **Administrators** and **Managers** can use the **Team Member Filter** dropdown.
+- Selecting any staff member immediately recalculates the entire dashboard—including Total Receivable, Received, Due, Overdue, Project Health counts, and charts—scoped specifically to that person's assigned portfolio.
+- Click **"Clear Filter"** or **"Reset"** to return to the full agency or department overview.
+
+### Quick Switch to Payment Calendar
+- Click the **"Payment Calendar"** button in the dashboard header to jump straight to the datewise monthly calendar grid.
 
 ### Today's Work Queue (`/today`)
 Think of this page as your agency's daily **action checklist**:
@@ -171,9 +178,11 @@ The **Projects** module is the operational core of the agency. It tracks what yo
 4. Select the **Project Type** (*Website*, *Mobile App*, *Branding*, *Digital Marketing*, *Custom Software*).
 5. Enter **Project Value** (Total contract price in ₹) and **Estimated Cost** (Internal budget/expense).
 6. Pick **Start Date** and **Target Delivery Date**.
-7. Assign the **Project Coordinator** (who will lead the delivery team).
-8. If the project includes recurring maintenance, check **"Include AMC (Annual Maintenance Contract)"** and enter the annual renewal amount.
-9. Click **"Create Project"**.
+7. Assign the **Project Coordinator** (responsible for project delivery leadership).
+8. Assign the **Take Person** *(Required)*: Select the staff member responsible for project intake, technical scope validation, and deliverable sign-off.
+9. If originating from a commercial lead, assign the **Salesperson**.
+10. If the project includes recurring maintenance, check **"Include AMC (Annual Maintenance Contract)"** and enter the annual renewal amount.
+11. Click **"Create Project"**.
 
 #### 2. Updating Project Health & Managing Delays
 If client requirements expand or team bottlenecks push back a delivery date:
@@ -255,7 +264,49 @@ When a client sends money via bank transfer, cheque, or UPI:
 
 ---
 
-## 9. Module 7: Client Touchpoints & Follow-ups
+## 9. Module 7: Payment Calendar (Datewise Cash Flow Grid)
+
+### Purpose
+The **Payment Calendar** (`/calendar`) presents a full 7-column monthly view that maps out every payment installment due and every payment collected on its exact calendar date. It gives delivery leads, coordinators, and finance managers an intuitive, visual cash flow roadmap for any selected month.
+
+### Features & How to Use the Calendar
+
+#### 1. Navigating Months
+- **Previous (`‹`) and Next (`›`) Buttons**: Jump backward and forward one month at a time.
+- **"Today" Button**: Instantly resets the view to the current month and highlights today's date.
+- **Month & Year Picker**: Directly select any month and year (e.g., `October 2026`) from the date selector.
+
+#### 2. Monthly Summary Metric Strip
+Directly above the calendar grid, you see 4 real-time monthly indicators:
+- **Total Scheduled Due**: Sum of all installments with due dates falling in the active month.
+- **Total Received**: Actual cash received across payment receipts dated within the month.
+- **Total Due (Pending)**: Balance remaining to be collected on this month's installments.
+- **Total Overdue**: Sum of unpaid balances that have exceeded their due date.
+
+#### 3. Filtering What You See
+- **Type Filter Buttons**:
+  - **All Records**: Displays both scheduled installment dues (blue) and payment receipts (green).
+  - **Scheduled Dues Only**: Hides receipts to focus solely on upcoming collection deadlines.
+  - **Received Payments Only**: Focuses strictly on incoming cash receipts logged by date.
+- **Team Member Filter (Admins & Managers)**:
+  - Filter the entire calendar down to a specific coordinator, manager, or take person to inspect their individual portfolio.
+
+#### 4. Day Cells & Color Coding
+- **Blue Due Badge**: Indicates scheduled installments due on that day, showing the aggregated total ₹ amount.
+- **Green Paid Badge**: Indicates payment receipts verified on that day, showing the total collected ₹ amount.
+- **Red Overdue Indicator Dot**: Appears on days where installments remain unpaid past their due date.
+- **Current Day**: Highlighted with a distinct blue border ring and "Today" tag.
+
+#### 5. Inspecting Day Details (Clicking Any Date)
+- Click on any day cell in the calendar to open the **Date Details Modal**.
+- Displays two organized tables:
+  1. **Scheduled Installments Due**: Milestone/term label, customer, project code, installment amount, balance due, and status pill (`Pending`, `Partial`, `Overdue`, `Paid`) with a direct link to the project.
+  2. **Payments Received**: Receipt code, customer, project, mode (`NEFT`, `UPI`, `Cheque`, etc.), bank name, and verified receipt amount.
+- Press **Escape** or click **"Close"** or the dark backdrop to return to the calendar view.
+
+---
+
+## 10. Module 8: Client Touchpoints & Follow-ups
 
 ### Purpose
 A record of every important call, WhatsApp conversation, client meeting, and email so anyone on the team can step in without asking the client to repeat themselves.
@@ -269,7 +320,7 @@ A record of every important call, WhatsApp conversation, client meeting, and ema
 
 ---
 
-## 10. Module 8: Documents & File Vault
+## 11. Module 9: Documents & File Vault
 
 ### Purpose
 The **Documents** module (`/documents`) provides secure cloud storage for client contracts, proposals, GST certificates, invoices, and delivery sign-off sheets.
@@ -289,7 +340,7 @@ You can upload:
 
 ---
 
-## 11. Module 9: Team Tasks & Daily Checklist
+## 12. Module 10: Team Tasks & Daily Checklist
 
 ### Purpose
 Internal task management to keep client deliverables on track without messy paper to-do lists or lost sticky notes.
@@ -302,7 +353,7 @@ Internal task management to keep client deliverables on track without messy pape
 
 ---
 
-## 12. Module 10: Sales Performance & Quotas
+## 13. Module 11: Sales Performance & Quotas
 
 ### Purpose
 Tracks sales pipeline revenue, individual salesperson booking quotas, and ensures every client is attributed to the correct sales representative.
@@ -313,7 +364,7 @@ Tracks sales pipeline revenue, individual salesperson booking quotas, and ensure
 
 ---
 
-## 13. Module 11: Reports & Business Analytics
+## 14. Module 12: Reports & Business Analytics
 
 ### Purpose
 Available to **Administrators** and **Managers** (`/reports`), this module answers critical executive business questions:
@@ -330,7 +381,7 @@ Available to **Administrators** and **Managers** (`/reports`), this module answe
 
 ---
 
-## 14. Module 12: Notifications & Workspace Alerts
+## 15. Module 13: Notifications & Workspace Alerts
 
 ### Purpose
 Ensures team members never miss an urgent payment deadline or critical project update.
@@ -348,7 +399,7 @@ Ensures team members never miss an urgent payment deadline or critical project u
 
 ---
 
-## 15. Module 13: Activity History (Change Log)
+## 16. Module 14: Activity History (Change Log)
 
 ### Purpose
 Available at `/activity-log` for Administrators and Managers to view a complete, permanent audit trail of every important action taken across the workspace.
@@ -361,7 +412,7 @@ Available at `/activity-log` for Administrators and Managers to view a complete,
 
 ---
 
-## 16. Module 14: Team & Staff Management
+## 17. Module 15: Team & Staff Management
 
 ### Purpose
 Available at `/users` (for Administrators) and `/team` (for Managers & Coordinators) to manage your agency's team members, roles, reporting lines, and granular module permissions.
@@ -371,7 +422,7 @@ Available at `/users` (for Administrators) and `/team` (for Managers & Coordinat
 #### 1. Adding a New Staff Member (`+ Add User`)
 1. Navigate to `/users` and click **"+ Add User"**.
 2. Enter their **Full Name**, **Work Email**, **Phone Number**, **City**, and **Job Designation** (e.g., *Senior UI/UX Designer*).
-3. Select their **Role** (*Admin*, *Manager*, *Coordinator*, *Sales*).
+3. Select their **Role** (*Admin*, *Manager*, *Coordinator*, *Take Person*, *Sales*).
 4. Select their **Reporting Manager** from the dropdown to establish the team hierarchy.
 5. Enter an initial password or generate a secure temporary password.
 6. Check **"Require password change on first login"** so the staff member sets their own private password upon logging in.
@@ -390,7 +441,7 @@ Need to give a specific Coordinator permission to view reports, or restrict a us
 
 ---
 
-## 17. Module 15: Profile, Password & Account Settings
+## 18. Module 16: Profile, Password & Account Settings
 
 ### The Profile Drawer
 Click your avatar in the top header to slide open your personal **Profile Drawer**:
@@ -403,7 +454,7 @@ To protect client data and financial records, your account will automatically lo
 
 ---
 
-## 18. Frequently Asked Questions (FAQ) & Best Practices
+## 19. Frequently Asked Questions (FAQ) & Best Practices
 
 ### Q1: I started filling out a modal and clicked outside by mistake. Did I lose my text?
 **Answer**: No! The system detects that you have unsaved changes and immediately displays a confirmation window (*"Discard Unsaved Changes?"*). Click **"Keep Editing"** to return right back to your form with every word intact.

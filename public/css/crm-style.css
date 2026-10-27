@@ -190,16 +190,149 @@ a {
     position: sticky;
     top: 0;
     height: 100vh;
-    transition: width .18s;
+    transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1), flex 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-x: hidden;
+    will-change: width;
 }
 
 .sidebar.collapsed {
     width: 70px;
     flex: 0 0 70px;
+    overflow-x: hidden;
+}
+
+/* Zero-flash initial load styling for collapsed sidebar */
+html.sidebar-collapsed-init .sidebar,
+html.sidebar-collapsed-init .sidebar * {
+    transition: none !important;
+}
+
+html.sidebar-collapsed-init .sidebar {
+    width: 70px !important;
+    flex: 0 0 70px !important;
+    overflow-x: hidden !important;
+}
+
+html.sidebar-collapsed-init .sidebar .sb-head {
+    padding: 12px 8px 8px !important;
+    display: flex !important;
+    justify-content: center !important;
+}
+
+html.sidebar-collapsed-init .sidebar .sb-close-btn {
+    display: none !important;
+}
+
+html.sidebar-collapsed-init .sidebar .logo-plate {
+    width: 44px !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    padding: 6px !important;
+    border-radius: 9px !important;
+    margin: 0 auto !important;
+}
+
+html.sidebar-collapsed-init .sidebar .logo-plate img {
+    height: 22px !important;
+    max-width: 100% !important;
+    object-fit: contain !important;
+    object-position: center !important;
+}
+
+html.sidebar-collapsed-init .sidebar .sb-name,
+html.sidebar-collapsed-init .sidebar .nav-label {
+    opacity: 0 !important;
+    max-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    display: none !important;
+}
+
+html.sidebar-collapsed-init .sidebar .nav {
+    padding: 6px 8px 10px !important;
+    overflow-x: hidden !important;
+}
+
+html.sidebar-collapsed-init .sidebar .nav-item {
+    justify-content: center !important;
+    padding: 10px 0 !important;
+    gap: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+html.sidebar-collapsed-init .sidebar .nav-item > *:not(.nav-ico) {
+    display: none !important;
+    opacity: 0 !important;
+    max-width: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+
+html.sidebar-collapsed-init .sidebar .nav-item .nav-ico {
+    margin: 0 auto !important;
+}
+
+html.sidebar-collapsed-init .sidebar .nav-item.active::before {
+    left: 2px !important;
+}
+
+html.sidebar-collapsed-init .sidebar .sb-foot {
+    padding: 10px 4px !important;
+    overflow: hidden !important;
+}
+
+html.sidebar-collapsed-init .sidebar .me {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 4px 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+}
+
+html.sidebar-collapsed-init .sidebar .me button {
+    justify-content: center !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+}
+
+html.sidebar-collapsed-init .sidebar .me .avatar {
+    margin: 0 auto !important;
+}
+
+html.sidebar-collapsed-init .sidebar .me-txt {
+    display: none !important;
+}
+
+html.sidebar-collapsed-init .sidebar #sidebar-logout-form {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+}
+
+html.sidebar-collapsed-init .sidebar .sb-btn {
+    margin: 0 auto !important;
 }
 
 .sb-head {
     padding: 16px 14px 10px;
+    transition: padding 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .sb-head {
+    padding: 12px 8px 8px;
+    display: flex;
+    justify-content: center;
 }
 
 .sb-close-btn {
@@ -220,6 +353,9 @@ a {
     background: rgba(255, 255, 255, .2);
 }
 
+.sidebar.collapsed .sb-close-btn {
+    display: none !important;
+}
 
 .logo-plate {
     background: #fff;
@@ -230,6 +366,17 @@ a {
     justify-content: center;
     box-shadow: 0 6px 18px -12px rgba(0, 0, 0, .8);
     min-height: 48px;
+    width: 100%;
+    transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1), height 0.24s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.24s cubic-bezier(0.4, 0, 0.2, 1), padding 0.24s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .logo-plate {
+    width: 44px;
+    min-height: 40px;
+    height: 40px;
+    padding: 6px;
+    border-radius: 9px;
+    margin: 0 auto;
 }
 
 .logo-plate img {
@@ -238,6 +385,14 @@ a {
     display: block;
     object-fit: cover;
     object-position: 9%;
+    transition: height 0.24s cubic-bezier(0.4, 0, 0.2, 1), object-position 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .logo-plate img {
+    height: 22px;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: center;
 }
 
 .sb-name {
@@ -247,24 +402,204 @@ a {
     letter-spacing: 1px;
     text-transform: uppercase;
     font-weight: 650;
+    white-space: nowrap;
+    overflow: hidden;
+    opacity: 1;
+    max-height: 30px;
+    transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.24s cubic-bezier(0.4, 0, 0.2, 1), padding 0.24s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.sidebar.collapsed .sb-name,
-.sidebar.collapsed .nav-label,
-.sidebar.collapsed .nav-item .lbl,
-.sidebar.collapsed .nav-count {
-    display: none;
-}
-
-.sidebar.collapsed .nav-item {
-    justify-content: center;
-    padding: 10px;
+.sidebar.collapsed .sb-name {
+    opacity: 0 !important;
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    transition: opacity 0.14s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.24s cubic-bezier(0.4, 0, 0.2, 1), padding 0.24s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav {
     padding: 4px 10px 10px;
     overflow-y: auto;
     flex: 1;
+    transition: padding 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .nav {
+    padding: 6px 8px 10px;
+    overflow-x: hidden;
+}
+
+.nav-label {
+    font-size: 9.8px;
+    text-transform: uppercase;
+    letter-spacing: 1.1px;
+    color: #6b7fa8;
+    padding: 14px 10px 6px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    opacity: 1;
+    max-height: 38px;
+    transform: translateY(0);
+    transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.24s cubic-bezier(0.4, 0, 0.2, 1), padding 0.24s cubic-bezier(0.4, 0, 0.2, 1), margin 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .nav-label {
+    opacity: 0 !important;
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    transform: translateY(-4px);
+    transition: opacity 0.14s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.24s cubic-bezier(0.4, 0, 0.2, 1), padding 0.24s cubic-bezier(0.4, 0, 0.2, 1), margin 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    text-align: left;
+    padding: 8.5px 11px;
+    border-radius: 9px;
+    color: #c0cbe0;
+    font-size: 13.1px;
+    margin-bottom: 1px;
+    position: relative;
+    transition: background 0.14s ease, color 0.14s ease, padding 0.24s cubic-bezier(0.4, 0, 0.2, 1), gap 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-item .lbl {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 1;
+    max-width: 160px;
+    transform: translateX(0);
+    transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center !important;
+    padding: 10px 0 !important;
+    gap: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+.sidebar.collapsed .nav-item > *:not(.nav-ico) {
+    opacity: 0 !important;
+    max-width: 0 !important;
+    max-height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    flex: 0 0 0 !important;
+    transform: translateX(-6px);
+    transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), margin 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .nav-item .nav-ico {
+    margin: 0 auto;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .nav-item.active::before {
+    left: 2px;
+}
+
+.sb-foot {
+    border-top: 1px solid #12325f;
+    padding: 12px 14px 14px;
+    transition: padding 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .sb-foot {
+    padding: 10px 4px;
+    overflow: hidden;
+}
+
+.me {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 10px;
+    padding: 6px;
+    margin: -6px;
+    transition: background 0.15s ease, padding 0.24s cubic-bezier(0.4, 0, 0.2, 1), gap 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.me-txt {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    opacity: 1;
+    max-width: 140px;
+    transform: translateX(0);
+    transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .me {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 4px 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+}
+
+.sidebar.collapsed .me button {
+    justify-content: center !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 0 !important;
+}
+
+.sidebar.collapsed .me .avatar {
+    margin: 0 auto !important;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed .me-txt {
+    opacity: 0 !important;
+    max-width: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    flex: 0 0 0 !important;
+    transform: translateX(-6px);
+    transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.collapsed #sidebar-logout-form {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+}
+
+.sidebar.collapsed .sb-btn {
+    margin: 0 auto !important;
 }
 
 .nav-label {
@@ -2450,21 +2785,125 @@ textarea.i {
     .sidebar, .sidebar.collapsed {
         width: 250px !important;
         flex: 0 0 250px !important;
+        overflow-x: hidden;
     }
 
-    .sidebar.collapsed .sb-name,
-    .sidebar.collapsed .nav-label,
+    .sidebar.collapsed .sb-name {
+        display: block !important;
+        opacity: 1 !important;
+        max-height: 30px !important;
+        visibility: visible !important;
+        padding: 2px 16px 12px !important;
+    }
+
+    .sidebar.collapsed .nav-label {
+        display: block !important;
+        opacity: 1 !important;
+        max-height: 38px !important;
+        visibility: visible !important;
+        padding: 14px 10px 6px !important;
+        transform: none !important;
+    }
+
+    .sidebar.collapsed .nav {
+        padding: 4px 10px 10px !important;
+    }
+
+    .sidebar.collapsed .nav-item {
+        justify-content: flex-start !important;
+        padding: 8.5px 11px !important;
+        gap: 11px !important;
+    }
+
+    .sidebar.collapsed .nav-item > *:not(.nav-ico) {
+        display: revert !important;
+        opacity: 1 !important;
+        max-width: none !important;
+        max-height: none !important;
+        width: auto !important;
+        visibility: visible !important;
+        transform: none !important;
+        pointer-events: auto !important;
+    }
+
     .sidebar.collapsed .nav-item .lbl {
         display: inline !important;
+        opacity: 1 !important;
+        max-width: 160px !important;
+        visibility: visible !important;
+        transform: none !important;
     }
 
     .sidebar.collapsed .nav-count {
         display: inline-flex !important;
     }
 
-    .sidebar.collapsed .nav-item {
+    .sidebar.collapsed .nav-item.active::before {
+        left: -10px !important;
+    }
+
+    .sidebar.collapsed .sb-head {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 16px 14px 10px !important;
+        gap: 10px !important;
+    }
+
+    .sidebar.collapsed .sb-close-btn {
+        display: flex !important;
+    }
+
+    .sidebar.collapsed .logo-plate {
+        width: auto !important;
+        min-height: 48px !important;
+        height: auto !important;
+        padding: 9px 11px !important;
+        margin: 0 !important;
+    }
+
+    .sidebar.collapsed .logo-plate img {
+        height: 26px !important;
+        max-width: none !important;
+        object-fit: cover !important;
+        object-position: 9% !important;
+    }
+
+    .sidebar.collapsed .sb-foot {
+        padding: 12px 14px 14px !important;
+    }
+
+    .sidebar.collapsed .me {
+        flex-direction: row !important;
+        align-items: center !important;
         justify-content: flex-start !important;
-        padding: 8px 12px !important;
+        gap: 10px !important;
+        padding: 6px !important;
+        margin: -6px !important;
+    }
+
+    .sidebar.collapsed .me button {
+        justify-content: flex-start !important;
+        gap: 10px !important;
+        width: auto !important;
+    }
+
+    .sidebar.collapsed .me .avatar {
+        margin: 0 !important;
+    }
+
+    .sidebar.collapsed .me-txt {
+        display: block !important;
+        opacity: 1 !important;
+        max-width: 140px !important;
+        visibility: visible !important;
+        transform: none !important;
+        pointer-events: auto !important;
+    }
+
+    .sidebar.collapsed #sidebar-logout-form {
+        display: inline !important;
+        width: auto !important;
     }
 
     .sidebar.open {

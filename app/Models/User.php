@@ -50,6 +50,11 @@ class User extends Authenticatable
         return ($this->role ?? '') === 'Admin';
     }
 
+    public function isTakePerson(): bool
+    {
+        return in_array($this->role ?? '', ['TakePerson', 'Take Person'], true);
+    }
+
     public function hasPermission(string $moduleOrAbility, ?string $action = null): bool
     {
         if ($action === null && str_contains($moduleOrAbility, '.')) {
@@ -114,6 +119,11 @@ class User extends Authenticatable
     public function salesProjects(): HasMany
     {
         return $this->hasMany(Project::class, 'sales_person_id');
+    }
+
+    public function takenProjects(): HasMany
+    {
+        return $this->hasMany(Project::class, 'take_person_id');
     }
 
     /**

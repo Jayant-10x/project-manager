@@ -5,6 +5,7 @@ namespace App\Livewire\Projects;
 use App\Models\Milestone;
 use App\Models\Project;
 use App\Services\AuditNotificationService;
+use Carbon\Carbon;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -31,25 +32,40 @@ class ProjectMilestoneModal extends Component
         if ($dbItems->isEmpty()) {
             $deliveryDate = $project->delivery_date?->toDateString() ?? '';
             $this->items = [
-                ['id' => null, 'name' => 'Kickoff & requirement gathering', 'dueDate' => '', 'status' => 'Pending', 'done' => false],
-                ['id' => null, 'name' => 'Design approval', 'dueDate' => '', 'status' => 'Pending', 'done' => false],
-                ['id' => null, 'name' => 'Development complete', 'dueDate' => '', 'status' => 'Pending', 'done' => false],
-                ['id' => null, 'name' => 'UAT & sign-off', 'dueDate' => '', 'status' => 'Pending', 'done' => false],
-                ['id' => null, 'name' => 'Live / delivery', 'dueDate' => $deliveryDate, 'status' => 'Pending', 'done' => false],
+                ['id' => null, 'name' => 'Kickoff & requirement gathering', 'dueDate' => '', 'status' => 'Pending', 'done' => false, 'chase_notes' => null, 'next_chase_date' => null],
+                ['id' => null, 'name' => 'Design approval', 'dueDate' => '', 'status' => 'Pending', 'done' => false, 'chase_notes' => null, 'next_chase_date' => null],
+                ['id' => null, 'name' => 'Development complete', 'dueDate' => '', 'status' => 'Pending', 'done' => false, 'chase_notes' => null, 'next_chase_date' => null],
+                ['id' => null, 'name' => 'UAT & sign-off', 'dueDate' => '', 'status' => 'Pending', 'done' => false, 'chase_notes' => null, 'next_chase_date' => null],
+                ['id' => null, 'name' => 'Live / delivery', 'dueDate' => $deliveryDate, 'status' => 'Pending', 'done' => false, 'chase_notes' => null, 'next_chase_date' => null],
             ];
         } else {
             $this->items = $dbItems->map(fn ($m) => [
                 'id' => $m->id,
                 'name' => $m->name,
                 'dueDate' => $m->due_date?->toDateString() ?? '',
-                'status' => $m->status ?? 'Pending',
+                'status' => $m->status,
                 'done' => (bool) $m->done,
-                'chase_notes' => $m->chase_notes ?? '',
-                'next_chase_date' => $m->next_chase_date?->toDateString() ?? '',
+                'done_on' => $m->done_on?->toDateString(),
+                'chase_notes' => $m->chase_notes,
+                'next_chase_date' => $m->next_chase_date?->toDateString(),
             ])->toArray();
         }
 
         $this->dispatch('open-modal', 'project-milestone-modal');
+    }
+
+    public function loadStandardTemplate(): void
+    {
+        $project = Project::find($this->projectId);
+        $deliveryDate = $project?->delivery_date?->toDateString() ?? '';
+        $this->items = [
+            ['id' => null, 'name' => 'Kickoff & requirement gathering', 'dueDate' => '', 'status' => 'Pending', 'done' => false, 'done_on' => null],
+            ['id' => null, 'name' => 'Design approval', 'dueDate' => '', 'status' => 'Pending', 'done' => false, 'done_on' => null],
+            ['id' => null, 'name' => 'Development complete', 'dueDate' => '', 'status' => 'Pending', 'done' => false, 'done_on' => null],
+            ['id' => null, 'name' => 'UAT & sign-off', 'dueDate' => '', 'status' => 'Pending', 'done' => false, 'done_on' => null],
+            ['id' => null, 'name' => 'Live / delivery', 'dueDate' => $deliveryDate, 'status' => 'Pending', 'done' => false, 'done_on' => null],
+        ];
+        $this->resetValidation();
     }
 
     public function addRow(): void
@@ -60,6 +76,7 @@ class ProjectMilestoneModal extends Component
             'dueDate' => '',
             'status' => 'Pending',
             'done' => false,
+            'done_on' => null,
         ];
     }
 
@@ -99,7 +116,7 @@ class ProjectMilestoneModal extends Component
             $parts = explode('.', $propertyName);
             $idx = $parts[1] ?? null;
             if ($idx !== null && isset($this->items[$idx])) {
-                $this->items[$idx]['status'] = $this->items[$idx]['done'] ? 'Done' : 'In Progress';
+                $this->items[$idx]['status'] = $this->items[$idx]['done'] ? 'Done' : 'Pending';
             }
         } elseif (str_ends_with($propertyName, '.status')) {
             $parts = explode('.', $propertyName);
@@ -118,6 +135,12 @@ class ProjectMilestoneModal extends Component
         foreach ($this->items as $idx => $m) {
             $this->items[$idx]['dueDate'] = ! empty($m['dueDate']) ? $m['dueDate'] : null;
             $this->items[$idx]['name'] = trim($m['name'] ?? '');
+            if (array_key_exists('next_chase_date', $m)) {
+                $this->items[$idx]['next_chase_date'] = ! empty($m['next_chase_date']) ? $m['next_chase_date'] : null;
+            }
+            if (array_key_exists('chase_notes', $m)) {
+                $this->items[$idx]['chase_notes'] = ! empty($m['chase_notes']) ? trim($m['chase_notes']) : null;
+            }
         }
 
         $this->validate();
@@ -131,20 +154,32 @@ class ProjectMilestoneModal extends Component
             $done = ! empty($m['done']) || ($m['status'] === 'Done');
             $status = $done ? 'Done' : ($m['status'] ?? 'Pending');
 
+            $doneOn = null;
+            if ($done) {
+                if (! empty($m['done_on'])) {
+                    $doneOn = $m['done_on'];
+                } elseif (! empty($m['id']) && $existingMilestones->has($m['id'])) {
+                    $prev = $existingMilestones->get($m['id']);
+                    $doneOn = $prev->done_on ? Carbon::parse($prev->done_on)->toDateString() : now()->toDateString();
+                } else {
+                    $doneOn = now()->toDateString();
+                }
+            }
+
             $payload = [
                 'name' => $m['name'],
                 'due_date' => $m['dueDate'],
                 'status' => $status,
                 'done' => $done,
-                'done_on' => $done ? now()->toDateString() : null,
+                'done_on' => $doneOn,
                 'sort_order' => $idx + 1,
             ];
 
             if (array_key_exists('chase_notes', $m)) {
-                $payload['chase_notes'] = $m['chase_notes'];
+                $payload['chase_notes'] = ! empty($m['chase_notes']) ? trim($m['chase_notes']) : null;
             }
             if (array_key_exists('next_chase_date', $m)) {
-                $payload['next_chase_date'] = $m['next_chase_date'];
+                $payload['next_chase_date'] = ! empty($m['next_chase_date']) ? $m['next_chase_date'] : null;
             }
 
             if (! empty($m['id'])) {
