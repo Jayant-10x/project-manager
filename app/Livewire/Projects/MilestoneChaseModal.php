@@ -136,16 +136,14 @@ class MilestoneChaseModal extends Component
                 "Logged chase note for milestone '{$milestone->name}': {$validated['chase_notes']}"
             );
 
-            if ($milestone->project->coordinator_id && $milestone->project->coordinator_id !== auth()->id()) {
-                app(AuditNotificationService::class)->notify(
-                    $milestone->project->coordinator_id,
-                    'Chase Note Logged',
-                    "Chase note logged for {$milestone->name}",
-                    $validated['chase_notes'],
-                    'project',
-                    $milestone->project->id
-                );
-            }
+            app(AuditNotificationService::class)->notifyProjectStakeholders(
+                $milestone->project,
+                'Chase Note Logged',
+                "Collection Chase: {$milestone->name}",
+                auth()->user()->name." logged a collection chase note on project {$milestone->project->name}: {$validated['chase_notes']}",
+                'project',
+                $milestone->project->id
+            );
         }
 
         $this->reset(['milestoneId', 'termId', 'milestoneName', 'projectCode', 'projectName', 'chase_notes', 'next_chase_date']);

@@ -70,6 +70,22 @@ class NotificationDetail extends Component
             return $this->redirect(route('settings.index', $params), navigate: true);
         }
 
+        if ($this->notification->link_type === 'team') {
+            return $this->redirect(route('team.index'), navigate: true);
+        }
+
+        if ($this->notification->link_type === 'tasks') {
+            return $this->redirect(route('tasks.index'), navigate: true);
+        }
+
+        if ($this->notification->link_type === 'payments') {
+            return $this->redirect(route('payments.index'), navigate: true);
+        }
+
+        if ($this->notification->link_type === 'followups') {
+            return $this->redirect(route('followups.index'), navigate: true);
+        }
+
         return $this->redirect(route('notifications.index'), navigate: true);
     }
 

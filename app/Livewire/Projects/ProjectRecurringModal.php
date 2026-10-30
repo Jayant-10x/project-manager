@@ -5,6 +5,7 @@ namespace App\Livewire\Projects;
 use App\Models\Payment;
 use App\Models\PaymentTerm;
 use App\Models\Project;
+use App\Services\AuditNotificationService;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -87,6 +88,25 @@ class ProjectRecurringModal extends Component
                 'notes' => 'Auto-generated recurring retainer',
             ]);
         }
+
+        $auditService = app(AuditNotificationService::class);
+        $auditService->log(
+            auth()->id(),
+            'Generated Recurring Schedule',
+            'PaymentTerm',
+            $project->id,
+            $project->code,
+            "Generated {$this->months} recurring installments of ₹".number_format((float) $this->amount, 2)." each for project {$project->name}"
+        );
+
+        $auditService->notifyProjectStakeholders(
+            $project,
+            'Recurring Schedule Generated',
+            "Recurring Schedule: {$project->name}",
+            "Generated {$this->months} recurring installments of ₹".number_format((float) $this->amount, 2)." each for {$project->name} by ".auth()->user()->name.'.',
+            'project',
+            $project->id
+        );
 
         $this->dispatch('close-modal', 'project-recurring-modal');
         $this->dispatch('project-saved');

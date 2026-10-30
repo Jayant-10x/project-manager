@@ -46,7 +46,7 @@ class CustomerDetail extends Component
 
     public function updatedActiveTab(string $value): void
     {
-        if (auth()->user()?->role === 'Sales' && $value === 'payments') {
+        if ((! auth()->user()?->hasPermission('payments', 'view') || auth()->user()?->role === 'Sales') && $value === 'payments') {
             $this->activeTab = 'overview';
         }
         if ($value === 'followups') {
@@ -57,8 +57,8 @@ class CustomerDetail extends Component
     public function mount(Customer $customer): void
     {
         $user = auth()->user();
-        if (! $user) {
-            abort(403, 'Unauthorized.');
+        if (! $user || $user->isTechPerson() || ! $user->hasPermission('customers', 'view')) {
+            abort(403, 'Unauthorized access to customer module.');
         }
 
         if ($user->role !== 'Admin') {
@@ -68,7 +68,7 @@ class CustomerDetail extends Component
             }
         }
 
-        if ($user->role === 'Sales' && $this->activeTab === 'payments') {
+        if ((! $user->hasPermission('payments', 'view') || $user->role === 'Sales') && $this->activeTab === 'payments') {
             $this->activeTab = 'overview';
         }
 
@@ -96,6 +96,9 @@ class CustomerDetail extends Component
 
         // Clean up files on disk
         foreach ($this->customer->documents as $doc) {
+            if (Storage::disk('uploads')->exists($doc->stored_as)) {
+                Storage::disk('uploads')->delete($doc->stored_as);
+            }
             Storage::disk('public')->delete($doc->stored_as);
         }
 
@@ -103,9 +106,19 @@ class CustomerDetail extends Component
         $company = $this->customer->display_name;
         $id = $this->customer->id;
 
+        $auditService = app(AuditNotificationService::class);
+        $auditService->notifyCustomerStakeholders(
+            $this->customer,
+            'Customer Deleted',
+            "Customer Deleted: {$company}",
+            "Customer {$company} ({$code}) was permanently deleted by ".auth()->user()->name.'.',
+            'customer',
+            $id
+        );
+
         $this->customer->delete();
 
-        app(AuditNotificationService::class)->log(
+        $auditService->log(
             auth()->id(),
             'Deleted Customer',
             'Customer',
@@ -117,12 +130,100 @@ class CustomerDetail extends Component
         $this->redirect(route('customers.index'), navigate: true);
     }
 
+    public function approveCustomer(): void
+    {
+        $user = auth()->user();
+        if (! $this->customer->canBeApprovedBy($user)) {
+            abort(403, 'Unauthorized to approve this customer.');
+        }
+
+        $this->customer->update([
+            'approval_status' => 'Approved',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'rejection_reason' => null,
+        ]);
+
+        $auditService = app(AuditNotificationService::class);
+        $label = $this->customer->company ?: ($this->customer->contact_name ?: $this->customer->customer_code);
+
+        $auditService->log(
+            $user->id,
+            'Approved Customer',
+            'Customer',
+            $this->customer->id,
+            $this->customer->customer_code,
+            "Approved customer {$label}"
+        );
+
+        $creatorId = $this->customer->created_by ?: $this->customer->sales_person_id;
+        if ($creatorId && (int) $creatorId !== (int) $user->id) {
+            $auditService->notify(
+                $creatorId,
+                'Customer Approved',
+                "Customer Approved: {$label}",
+                "Your submitted customer {$label} ({$this->customer->customer_code}) was approved by {$user->name}.",
+                'customer',
+                $this->customer->id
+            );
+        }
+
+        $this->refreshDetails();
+        $this->dispatch('toast', ['msg' => 'Customer approved successfully.', 'type' => 'ok']);
+    }
+
+    public function rejectCustomer(?string $reason = null): void
+    {
+        $user = auth()->user();
+        if (! $this->customer->canBeApprovedBy($user)) {
+            abort(403, 'Unauthorized to reject this customer.');
+        }
+
+        $cleanReason = trim((string) $reason);
+
+        $this->customer->update([
+            'approval_status' => 'Rejected',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'rejection_reason' => $cleanReason !== '' ? $cleanReason : null,
+        ]);
+
+        $auditService = app(AuditNotificationService::class);
+        $label = $this->customer->company ?: ($this->customer->contact_name ?: $this->customer->customer_code);
+        $reasonText = $cleanReason !== '' ? " (Reason: {$cleanReason})" : '';
+
+        $auditService->log(
+            $user->id,
+            'Rejected Customer',
+            'Customer',
+            $this->customer->id,
+            $this->customer->customer_code,
+            "Rejected customer {$label}{$reasonText}"
+        );
+
+        $creatorId = $this->customer->created_by ?: $this->customer->sales_person_id;
+        if ($creatorId && (int) $creatorId !== (int) $user->id) {
+            $auditService->notify(
+                $creatorId,
+                'Customer Rejected',
+                "Customer Rejected: {$label}",
+                "Your submitted customer {$label} ({$this->customer->customer_code}) was rejected by {$user->name}.".($cleanReason !== '' ? " Reason: {$cleanReason}" : ''),
+                'customer',
+                $this->customer->id
+            );
+        }
+
+        $this->refreshDetails();
+        $this->dispatch('toast', ['msg' => 'Customer rejected.', 'type' => 'warning']);
+    }
+
     public function deletePayment(int $paymentId): void
     {
-        $pay = Payment::where('customer_id', $this->customer->id)->findOrFail($paymentId);
+        $pay = Payment::with('project')->where('customer_id', $this->customer->id)->findOrFail($paymentId);
         $termId = $pay->term_id;
         $payCode = $pay->code;
         $payAmt = $pay->amount;
+        $project = $pay->project;
         $pay->delete();
 
         if ($termId) {
@@ -137,7 +238,8 @@ class CustomerDetail extends Component
             }
         }
 
-        app(AuditNotificationService::class)->log(
+        $auditService = app(AuditNotificationService::class);
+        $auditService->log(
             auth()->id(),
             'Deleted Payment',
             'Payment',
@@ -145,6 +247,26 @@ class CustomerDetail extends Component
             $payCode ?: '',
             "Deleted payment receipt {$payCode} of ₹".number_format($payAmt, 2)." from customer {$this->customer->display_name}"
         );
+
+        if ($project) {
+            $auditService->notifyProjectStakeholders(
+                $project,
+                'Payment Deleted',
+                "Payment Deleted: {$payCode}",
+                "Payment receipt {$payCode} of ₹".number_format($payAmt, 2)." for project {$project->name} was deleted by ".auth()->user()->name.'.',
+                'project',
+                $project->id
+            );
+        } else {
+            $auditService->notifyCustomerStakeholders(
+                $this->customer,
+                'Payment Deleted',
+                "Payment Deleted: {$payCode}",
+                "Payment receipt {$payCode} of ₹".number_format($payAmt, 2).' was deleted by '.auth()->user()->name.'.',
+                'customer',
+                $this->customer->id
+            );
+        }
 
         $this->dispatch('payment-deleted');
     }

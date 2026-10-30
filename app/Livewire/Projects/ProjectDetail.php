@@ -27,6 +27,7 @@ class ProjectDetail extends Component
     #[On('document-saved')]
     public function refreshProjectData(): void
     {
+        $this->project->refresh();
         $this->project->load(['payments', 'terms', 'milestones', 'documents']);
     }
 
@@ -44,11 +45,12 @@ class ProjectDetail extends Component
             $downlineIds = $user->getDownlineUserIds();
             $allowed = ($project->coordinator_id && in_array($project->coordinator_id, $downlineIds, true))
                 || ($project->sales_person_id && in_array($project->sales_person_id, $downlineIds, true))
-                || ($project->take_person_id && in_array($project->take_person_id, $downlineIds, true));
+                || ($project->tech_person_id && in_array($project->tech_person_id, $downlineIds, true))
+                || ($project->created_by && in_array($project->created_by, $downlineIds, true));
         } elseif ($user->role === 'Sales') {
-            $allowed = ($project->sales_person_id === $user->id);
-        } elseif ($user->isTakePerson()) {
-            $allowed = ($project->take_person_id === $user->id);
+            $allowed = ($project->sales_person_id === $user->id || $project->created_by === $user->id);
+        } elseif ($user->isTechPerson()) {
+            $allowed = ($project->tech_person_id === $user->id);
         } else {
             $allowed = ($project->coordinator_id === $user->id);
         }
@@ -57,7 +59,11 @@ class ProjectDetail extends Component
             abort(403, 'Unauthorized access to unassigned project.');
         }
 
-        if ($user->role === 'Sales' && in_array($this->activeTab, ['schedule', 'payments'])) {
+        if ((! $user->hasPermission('schedules', 'view') || $user->role === 'Sales') && $this->activeTab === 'schedule') {
+            $this->activeTab = 'overview';
+        }
+
+        if ((! $user->hasPermission('payments', 'view') || $user->role === 'Sales') && $this->activeTab === 'payments') {
             $this->activeTab = 'overview';
         }
 
@@ -66,8 +72,14 @@ class ProjectDetail extends Component
 
     public function updatedActiveTab(string $value): void
     {
-        if (auth()->user()?->role === 'Sales' && in_array($value, ['schedule', 'payments'])) {
-            $this->activeTab = 'overview';
+        $user = auth()->user();
+        if ($user) {
+            if ((! $user->hasPermission('schedules', 'view') || $user->role === 'Sales') && $value === 'schedule') {
+                $this->activeTab = 'overview';
+            }
+            if ((! $user->hasPermission('payments', 'view') || $user->role === 'Sales') && $value === 'payments') {
+                $this->activeTab = 'overview';
+            }
         }
     }
 
@@ -91,7 +103,7 @@ class ProjectDetail extends Component
 
         $this->project->load('milestones');
 
-        if ($milestone->done && auth()->user()?->role !== 'Sales') {
+        if ($milestone->done && auth()->user()?->hasPermission('payments', 'add')) {
             $pendingTerm = PaymentTerm::where('project_id', $this->project->id)
                 ->where('status', '!=', 'Paid')
                 ->orderBy('seq')
@@ -113,7 +125,7 @@ class ProjectDetail extends Component
 
     public function deleteTerm(int $termId): void
     {
-        if (auth()->user()?->role === 'Sales') {
+        if (! auth()->user()?->hasPermission('schedules', 'delete')) {
             abort(403, 'Unauthorized.');
         }
 
@@ -142,7 +154,7 @@ class ProjectDetail extends Component
 
     public function deletePayment(int $paymentId): void
     {
-        if (auth()->user()?->role === 'Sales') {
+        if (! auth()->user()?->hasPermission('payments', 'delete')) {
             abort(403, 'Unauthorized.');
         }
 
@@ -213,9 +225,19 @@ class ProjectDetail extends Component
         $code = $this->project->code;
         $id = $this->project->id;
 
+        $auditService = app(AuditNotificationService::class);
+        $auditService->notifyProjectStakeholders(
+            $this->project,
+            'Project Deleted',
+            "Project Deleted: {$name}",
+            "Project {$name} ({$code}) was deleted by ".auth()->user()->name.'.',
+            'project',
+            $id
+        );
+
         $this->project->delete();
 
-        app(AuditNotificationService::class)->log(
+        $auditService->log(
             auth()->id(),
             'Deleted Project',
             'Project',
@@ -225,6 +247,91 @@ class ProjectDetail extends Component
         );
 
         $this->redirect(route('projects.index'), navigate: true);
+    }
+
+    public function approveProject(): void
+    {
+        $user = auth()->user();
+        if (! $this->project->canBeApprovedBy($user)) {
+            abort(403, 'Unauthorized to approve this project.');
+        }
+
+        $this->project->update([
+            'approval_status' => 'Approved',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'rejection_reason' => null,
+        ]);
+
+        $auditService = app(AuditNotificationService::class);
+
+        $auditService->log(
+            $user->id,
+            'Approved Project',
+            'Project',
+            $this->project->id,
+            $this->project->code,
+            "Approved project {$this->project->name}"
+        );
+
+        $creatorId = $this->project->created_by ?: $this->project->sales_person_id;
+        if ($creatorId && (int) $creatorId !== (int) $user->id) {
+            $auditService->notify(
+                $creatorId,
+                'Project Approved',
+                "Project Approved: {$this->project->name}",
+                "Your submitted project {$this->project->name} ({$this->project->code}) was approved by {$user->name}.",
+                'project',
+                $this->project->id
+            );
+        }
+
+        $this->refreshProjectData();
+        $this->dispatch('toast', ['msg' => 'Project approved successfully.', 'type' => 'ok']);
+    }
+
+    public function rejectProject(?string $reason = null): void
+    {
+        $user = auth()->user();
+        if (! $this->project->canBeApprovedBy($user)) {
+            abort(403, 'Unauthorized to reject this project.');
+        }
+
+        $cleanReason = trim((string) $reason);
+
+        $this->project->update([
+            'approval_status' => 'Rejected',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'rejection_reason' => $cleanReason !== '' ? $cleanReason : null,
+        ]);
+
+        $auditService = app(AuditNotificationService::class);
+        $reasonText = $cleanReason !== '' ? " (Reason: {$cleanReason})" : '';
+
+        $auditService->log(
+            $user->id,
+            'Rejected Project',
+            'Project',
+            $this->project->id,
+            $this->project->code,
+            "Rejected project {$this->project->name}{$reasonText}"
+        );
+
+        $creatorId = $this->project->created_by ?: $this->project->sales_person_id;
+        if ($creatorId && (int) $creatorId !== (int) $user->id) {
+            $auditService->notify(
+                $creatorId,
+                'Project Rejected',
+                "Project Rejected: {$this->project->name}",
+                "Your submitted project {$this->project->name} ({$this->project->code}) was rejected by {$user->name}.".($cleanReason !== '' ? " Reason: {$cleanReason}" : ''),
+                'project',
+                $this->project->id
+            );
+        }
+
+        $this->refreshProjectData();
+        $this->dispatch('toast', ['msg' => 'Project rejected.', 'type' => 'warning']);
     }
 
     public function render()

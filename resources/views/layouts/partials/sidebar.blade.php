@@ -26,7 +26,7 @@
                         d="M3 13h8V3H3v10zm10 8h8V11h-8v10zM3 21h8v-6H3v6zm10-12h8V3h-8v6z"/></svg></span>
             <span class="lbl">Dashboard</span>
         </a>
-        @if(auth()->user()->hasPermission('today', 'view'))
+        @if(has_permission('today', 'view'))
             <a href="{{ route('today.index') }}" wire:navigate
                class="nav-item {{ request()->routeIs('today.*') ? 'active' : '' }}" title="Today's Work">
                 <span class="nav-ico"><svg viewBox="0 0 24 24"><path
@@ -36,10 +36,10 @@
             </a>
         @endif
 
-        <!-- 2. Clients & Projects -->
-        @if(auth()->user()->hasPermission('customers', 'view') || auth()->user()->hasPermission('projects', 'view'))
-            <div class="nav-label">Clients & Projects</div>
-            @if(auth()->user()->hasPermission('customers', 'view'))
+        <!-- 2. Customers & Projects -->
+        @if((!is_tech_person() && has_permission('customers', 'view')) || has_permission('projects', 'view'))
+            <div class="nav-label">Customers & Projects</div>
+            @if(!is_tech_person() && has_permission('customers', 'view'))
                 <a href="{{ route('customers.index') }}" wire:navigate
                    class="nav-item {{ request()->routeIs('customers.*') ? 'active' : '' }}" title="Customers">
                     <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle
@@ -48,7 +48,7 @@
                     <livewire:components.dynamic-counter type="customers" />
                 </a>
             @endif
-            @if(auth()->user()->hasPermission('projects', 'view'))
+            @if(has_permission('projects', 'view'))
                 <a href="{{ route('projects.index') }}" wire:navigate
                    class="nav-item {{ request()->routeIs('projects.*') ? 'active' : '' }}" title="Projects">
                     <span class="nav-ico"><svg viewBox="0 0 24 24"><path
@@ -60,7 +60,7 @@
         @endif
 
         <!-- Team & Hierarchy -->
-        @if(auth()->user()->hasPermission('users', 'view'))
+        @if(has_permission('users', 'view'))
             <div class="nav-label">Team & Access</div>
             <a href="{{ route('users.index') }}" wire:navigate
                class="nav-item {{ request()->routeIs('users.*') ? 'active' : '' }}" title="Users">
@@ -69,7 +69,7 @@
                 </span>
                 <span class="lbl">Users</span>
             </a>
-        @elseif(auth()->user()->hasPermission('team', 'view'))
+        @elseif(!is_tech_person() && has_permission('team', 'view'))
             <div class="nav-label">Team & Access</div>
             <a href="{{ route('team.index') }}" wire:navigate
                class="nav-item {{ request()->routeIs('team.*') ? 'active' : '' }}" title="Team Members">
@@ -81,9 +81,9 @@
         @endif
 
         <!-- Money (Module 3: Payment Schedule & Module 4: Payments) -->
-        @if(auth()->user()->hasPermission('payments', 'view') || auth()->user()->hasPermission('schedules', 'view') || auth()->user()->hasPermission('reports', 'view'))
+        @if(has_permission('payments', 'view') || has_permission('schedules', 'view') || has_permission('reports', 'view'))
             <div class="nav-label">Money</div>
-            @if(auth()->user()->hasPermission('payments', 'view'))
+            @if(has_permission('payments', 'view'))
                 <a href="{{ route('payments.index') }}" wire:navigate
                    class="nav-item {{ request()->routeIs('payments.*') ? 'active' : '' }}" title="Payments">
                     <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle
@@ -91,7 +91,7 @@
                     <span class="lbl">Payments</span>
                 </a>
             @endif
-            @if(auth()->user()->hasPermission('schedules', 'view'))
+            @if(has_permission('schedules', 'view'))
                 <a href="{{ route('schedule.index') }}" wire:navigate
                    class="nav-item {{ request()->routeIs('schedule.*') ? 'active' : '' }}" title="Payment Schedule">
                     <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path
@@ -99,14 +99,14 @@
                     <span class="lbl">Payment Schedule</span>
                 </a>
             @endif
-            @if(auth()->user()->hasPermission('payments', 'view') || auth()->user()->hasPermission('schedules', 'view'))
+            @if(has_permission('payments', 'view') || has_permission('schedules', 'view'))
                 <a href="{{ route('calendar.index') }}" wire:navigate
                    class="nav-item {{ request()->routeIs('calendar.*') ? 'active' : '' }}" title="Payment Calendar">
                     <span class="nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
                     <span class="lbl">Payment Calendar</span>
                 </a>
             @endif
-            @if(auth()->user()->hasPermission('reports', 'view'))
+            @if(has_permission('reports', 'view'))
                 <a href="{{ route('reports.index') }}" wire:navigate
                    class="nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}" title="Reports & Analytics">
                     <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg></span>
@@ -129,12 +129,14 @@
                         d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
             <span class="lbl">Follow-ups</span>
         </a>
-        <a href="{{ route('sales.index') }}" wire:navigate
-           class="nav-item {{ request()->routeIs('sales.*') ? 'active' : '' }}" title="Sales Team">
-            <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle
-                        cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg></span>
-            <span class="lbl">Sales Team</span>
-        </a>
+        @if(!is_sales() && !is_tech_person() && (is_admin() || has_permission('team', 'view')))
+            <a href="{{ route('sales.index') }}" wire:navigate
+               class="nav-item {{ request()->routeIs('sales.*') ? 'active' : '' }}" title="Sales Team">
+                <span class="nav-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle
+                            cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg></span>
+                <span class="lbl">Sales Team</span>
+            </a>
+        @endif
 
         <!-- 5. System -->
         <div class="nav-label">System</div>
@@ -151,7 +153,7 @@
             <span class="nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
             <span class="lbl">Activity Log</span>
         </a>
-        @if(auth()->user()->hasPermission('settings', 'view') || auth()->user()->role === 'Admin')
+        @if(has_permission('settings', 'view') || is_admin())
             <a href="{{ route('settings.index') }}" wire:navigate
                class="nav-item {{ request()->routeIs('settings.*') ? 'active' : '' }}" title="Settings">
                 <span class="nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path

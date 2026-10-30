@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Today;
 
+use App\Models\Customer;
 use App\Models\Followup;
 use App\Models\PaymentTerm;
 use App\Models\Project;
@@ -48,6 +49,7 @@ class TodayWorkIndex extends Component
         // Scope to current coordinator unless Admin
         $projectsQuery = Project::query()->forUser($user);
         $projectIds = (clone $projectsQuery)->pluck('id');
+        $customerIds = Customer::query()->forUser($user)->pluck('id');
 
         // 1. Overdue payments
         $overdue = PaymentTerm::query()
@@ -67,12 +69,16 @@ class TodayWorkIndex extends Component
             ->orderBy('due_date')
             ->get();
 
-        // 3. Follow-up calls due within 7 days
+        // 3. Follow-up calls due within 7 days (scoped to assigned projects & customers)
         $followups = Followup::query()
             ->whereNotNull('next_date')
             ->where('next_date', '<=', $followupSoon)
-            ->where(function ($q) use ($projectIds) {
-                $q->whereIn('project_id', $projectIds)->orWhereNull('project_id');
+            ->where(function ($q) use ($projectIds, $customerIds) {
+                $q->whereIn('project_id', $projectIds)
+                    ->orWhere(function ($subQuery) use ($customerIds) {
+                        $subQuery->whereNull('project_id')
+                            ->whereIn('customer_id', $customerIds);
+                    });
             })
             ->with(['customer', 'project'])
             ->orderBy('next_date')

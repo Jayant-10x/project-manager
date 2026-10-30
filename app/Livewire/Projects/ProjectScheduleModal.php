@@ -218,8 +218,9 @@ class ProjectScheduleModal extends Component
     {
         // Pre-normalize types
         foreach ($this->terms as $idx => $t) {
-            $this->terms[$idx]['amount'] = ($t['amount'] === '' || $t['amount'] === null) ? 0.0 : (float) $t['amount'];
-            $this->terms[$idx]['graceDays'] = ($t['graceDays'] === '' || $t['graceDays'] === null) ? 0 : (int) $t['graceDays'];
+            $this->terms[$idx]['amount'] = (! isset($t['amount']) || $t['amount'] === '' || $t['amount'] === null) ? 0.0 : (float) $t['amount'];
+            $graceDaysVal = $t['graceDays'] ?? ($t['grace_days'] ?? 0);
+            $this->terms[$idx]['graceDays'] = ($graceDaysVal === '' || $graceDaysVal === null) ? 0 : (int) $graceDaysVal;
             $this->terms[$idx]['milestoneId'] = ! empty($t['milestoneId']) ? (int) $t['milestoneId'] : null;
             $this->terms[$idx]['dueDate'] = ! empty($t['dueDate']) ? $t['dueDate'] : null;
         }
@@ -305,6 +306,15 @@ class ProjectScheduleModal extends Component
             $project->id,
             $project->code,
             "Updated payment schedule for project {$project->name}"
+        );
+
+        app(AuditNotificationService::class)->notifyProjectStakeholders(
+            $project,
+            'Schedule Updated',
+            "Payment Schedule Updated: {$project->name}",
+            "Payment schedule for project {$project->name} ({$project->code}) was updated by ".auth()->user()->name.'.',
+            'project',
+            $project->id
         );
 
         $this->dispatch('close-modal', 'project-schedule-modal');

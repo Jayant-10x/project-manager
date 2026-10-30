@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\AuditNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,13 +27,35 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $auditService = app(AuditNotificationService::class);
+        $user = $request->user();
+        $user->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $structuredChanges = $auditService->computeChanges($user, ['updated_at', 'created_at', 'password', 'remember_token']);
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $user->save();
+
+        if (! empty($structuredChanges)) {
+            $details = [];
+            foreach ($structuredChanges as $f => $d) {
+                $details[] = "{$f}: {$d['old']} -> {$d['new']}";
+            }
+            $diffText = ! empty($details) ? ' ('.implode(', ', $details).')' : '';
+
+            $auditService->log(
+                $user->id,
+                'Updated Profile',
+                'User',
+                $user->id,
+                (string) $user->id,
+                "User {$user->name} updated profile information{$diffText}",
+                $structuredChanges
+            );
+        }
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
@@ -47,6 +70,18 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+        $userId = $user->id;
+        $userName = $user->name;
+        $userEmail = $user->email;
+
+        app(AuditNotificationService::class)->log(
+            $userId,
+            'Deleted Account',
+            'User',
+            $userId,
+            (string) $userId,
+            "User {$userName} ({$userEmail}) deleted their account"
+        );
 
         Auth::logout();
 

@@ -242,7 +242,9 @@
                                         <a href="tel:{{ $f->customer->phone }}"
                                            class="text-xs text-blue-600 hover:underline flex items-center gap-1 font-medium"
                                            title="Call {{ $f->customer->phone }}">
-                                            <span>📞</span>
+                                            <svg viewBox="0 0 24 24" class="w-3 h-3 fill-none stroke-current stroke-2">
+                                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                            </svg>
                                             <span>{{ $f->customer->phone }}</span>
                                         </a>
                                     @endif
@@ -251,13 +253,13 @@
                                     <span class="badge {{ $isOverdueFup ? 'b-red' : 'b-navy' }}">
                                         {{ $fDate ? $fDate->format('d M') : '—' }}
                                     </span>
-                                    <button type="button" class="btn btn-outline-primary btn-xs whitespace-nowrap"
+                                    <button type="button" class="btn btn-outline-primary btn-xs whitespace-nowrap inline-flex items-center gap-1"
                                             title="Log Follow-up"
                                             @click.stop="Livewire.dispatch('open-followup-modal', { customerId: {{ $f->customer_id }}, projectId: {{ $f->project_id ?? 'null' }} })">
                                         <svg viewBox="0 0 24 24" class="w-3 h-3">
                                             <path d="M12 5v14M5 12h14"/>
                                         </svg>
-                                        Follow-up
+                                        <span>Follow-up</span>
                                     </button>
                                 </div>
                             </div>

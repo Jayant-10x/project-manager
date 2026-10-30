@@ -386,11 +386,22 @@ class SettingIndex extends Component
                 'is_online' => false,
                 'last_seen' => now(),
             ]);
+
+            app(AuditNotificationService::class)->log(
+                $user->id,
+                'User Logout',
+                'Auth',
+                $user->id,
+                '',
+                "User {$user->name} logged out"
+            );
         }
 
         Auth::logout();
-        request()->session()->invalidate();
-        request()->session()->regenerateToken();
+        if (request()->hasSession()) {
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+        }
         $this->redirect(route('login'), navigate: true);
     }
 

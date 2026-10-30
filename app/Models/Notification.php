@@ -56,18 +56,23 @@ class Notification extends Model
                 $downlineIds = $user->getDownlineUserIds();
 
                 return ($project->coordinator_id && in_array($project->coordinator_id, $downlineIds, true))
-                    || ($project->sales_person_id && in_array($project->sales_person_id, $downlineIds, true));
+                    || ($project->sales_person_id && in_array($project->sales_person_id, $downlineIds, true))
+                    || ($project->tech_person_id && in_array($project->tech_person_id, $downlineIds, true));
             }
 
             if ($user->role === 'Sales') {
                 return (int) $project->sales_person_id === (int) $user->id;
             }
 
+            if ($user->isTechPerson()) {
+                return (int) $project->tech_person_id === (int) $user->id;
+            }
+
             return (int) $project->coordinator_id === (int) $user->id;
         }
 
         if ($this->link_type === 'customer') {
-            if (! $user->hasPermission('customers', 'view')) {
+            if ($user->isTechPerson() || ! $user->hasPermission('customers', 'view')) {
                 return false;
             }
 
@@ -85,6 +90,24 @@ class Notification extends Model
 
         if ($this->link_type === 'settings') {
             return $user->hasPermission('settings', 'view') || $user->role === 'Admin';
+        }
+
+        if ($this->link_type === 'team') {
+            return in_array($user->role, ['Admin', 'Manager'], true);
+        }
+
+        if ($this->link_type === 'tasks') {
+            return $user->hasPermission('tasks', 'view');
+        }
+
+        if ($this->link_type === 'payments') {
+            return in_array($user->role, ['Admin', 'Manager', 'Coordinator'], true)
+                && ! $user->isTechPerson()
+                && $user->hasPermission('payments', 'view');
+        }
+
+        if ($this->link_type === 'followups') {
+            return $user->hasPermission('followups', 'view');
         }
 
         return false;

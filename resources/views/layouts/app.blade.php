@@ -402,12 +402,23 @@
     <livewire:settings.user-modal/>
 @endif
 
-<livewire:customers.customer-modal/>
-<livewire:projects.project-modal/>
-<livewire:payments.payment-modal/>
-<livewire:projects.milestone-chase-modal/>
-<livewire:documents.document-preview-modal/>
+@if(auth()->check() && (auth()->user()->hasPermission('customers', 'add') || auth()->user()->hasPermission('customers', 'edit')))
+    <livewire:customers.customer-modal/>
+@endif
 
+@if(auth()->check() && (auth()->user()->hasPermission('projects', 'add') || auth()->user()->hasPermission('projects', 'edit')))
+    <livewire:projects.project-modal/>
+@endif
+
+@if(auth()->check() && (auth()->user()->hasPermission('payments', 'add') || auth()->user()->hasPermission('payments', 'edit')))
+    <livewire:payments.payment-modal/>
+@endif
+
+@if(auth()->check() && auth()->user()->hasPermission('payments', 'view'))
+    <livewire:projects.milestone-chase-modal/>
+@endif
+
+<livewire:documents.document-preview-modal/>
 <livewire:followups.followup-modal/>
 <x-confirm-modal/>
 

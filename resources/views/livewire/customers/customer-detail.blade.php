@@ -11,6 +11,96 @@
         </button>
     </div>
 
+    @if($customer->isPendingApproval())
+        <div class="mb-4 p-4 rounded-xl border border-amber-200 bg-amber-50/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5 fill-none stroke-current stroke-2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-amber-900">Pending Approval</h4>
+                    <p class="text-xs text-amber-700 mt-0.5">
+                        This customer was submitted by <strong>{{ $customer->salesPerson?->name ?? 'Sales' }}</strong> and is awaiting approval.
+                    </p>
+                </div>
+            </div>
+            @if($customer->canBeApprovedBy(auth()->user()))
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button"
+                            @click="$dispatch('confirm-dialog', {
+                                title: 'Approve Customer?',
+                                message: 'Are you sure you want to approve customer \'{{ addslashes($customer->display_name) }}\'? This will mark the customer as approved.',
+                                confirmText: 'Approve Customer',
+                                cancelText: 'Cancel',
+                                type: 'success',
+                                wire: $wire,
+                                action: 'approveCustomer'
+                            })"
+                            wire:loading.attr="disabled"
+                            class="btn btn-sm btn-outline-green inline-flex items-center gap-1.5 font-medium">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4 fill-none stroke-current stroke-2"><path d="M20 6L9 17l-5-5"/></svg>
+                        <span>Approve Customer</span>
+                    </button>
+                    <button type="button"
+                            @click="$dispatch('confirm-dialog', {
+                                title: 'Reject Customer?',
+                                message: 'Please provide a reason for rejecting customer \'{{ addslashes($customer->display_name) }}\':',
+                                confirmText: 'Reject Customer',
+                                cancelText: 'Cancel',
+                                type: 'danger',
+                                hasInput: true,
+                                inputPlaceholder: 'Enter rejection reason (optional)...',
+                                onConfirm: (reason) => {
+                                    $wire.rejectCustomer(reason);
+                                }
+                            })"
+                            wire:loading.attr="disabled"
+                            class="btn btn-sm btn-outline-danger inline-flex items-center gap-1.5 font-medium">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4 fill-none stroke-current stroke-2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        <span>Reject Customer</span>
+                    </button>
+                </div>
+            @endif
+        </div>
+    @elseif($customer->isRejected())
+        <div class="mb-4 p-4 rounded-xl border border-rose-200 bg-rose-50/80 flex items-center justify-between gap-3 shadow-xs">
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5 fill-none stroke-current stroke-2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M15 9l-6 6M9 9l6 6"/>
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-rose-900">Customer Rejected</h4>
+                    <p class="text-xs text-rose-700 mt-0.5">
+                        This customer was rejected by <strong>{{ $customer->approvedBy?->name ?? 'Management / Supervisor' }}</strong>.
+                        @if($customer->rejection_reason)
+                            <span class="block mt-0.5 font-medium">Reason: {{ $customer->rejection_reason }}</span>
+                        @endif
+                    </p>
+                    <p class="text-[11px] text-rose-600 mt-1">
+                        You can update the customer details to re-submit for review and approval.
+                    </p>
+                </div>
+            </div>
+            @if(auth()->user()->hasPermission('customers', 'edit'))
+                <button type="button"
+                        class="btn btn-sm btn-primary inline-flex items-center gap-1.5 shrink-0"
+                        @click="$dispatch('open-customer-modal', { id: {{ $customer->id }} })">
+                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                    </svg>
+                    <span>Edit & Resubmit</span>
+                </button>
+            @endif
+        </div>
+    @endif
+
     <!-- Customer Identity & Financial Header -->
     <div class="card mb-4">
         <div class="card-body">
@@ -38,6 +128,11 @@
                             class="badge {{ $customer->status === 'Active' ? 'b-green' : ($customer->status === 'Churned' ? 'b-red' : 'b-grey') }}">
                             {{ $customer->status }}
                         </span>
+                        @if($customer->isPendingApproval())
+                            <span class="badge bg-amber-50 text-amber-700 border border-amber-300">Pending Approval</span>
+                        @elseif($customer->isRejected())
+                            <span class="badge bg-rose-50 text-rose-700 border border-rose-300">Rejected</span>
+                        @endif
                         @if($customer->source)
                             <span class="pill">{{ $customer->source }}</span>
                         @endif
@@ -550,7 +645,6 @@
                                 <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
                                 <circle cx="12" cy="12" r="3"/>
                             </svg>
-                            <span>Preview</span>
                         </button>
                         <a href="{{ route('documents.download', $doc->id, absolute: false) }}"
                            download="{{ $doc->file_name }}"
@@ -558,7 +652,6 @@
                             <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                             </svg>
-                            <span>Download</span>
                         </a>
                         <button type="button" class="btn btn-outline-danger btn-xs"
                                 @click="$dispatch('confirm-dialog', {
@@ -576,7 +669,6 @@
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                             </svg>
-                            <span>Remove</span>
                         </button>
                     </div>
                 @empty

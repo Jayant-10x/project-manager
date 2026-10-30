@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('email', 160)->unique('email');
             $table->timestamp('email_verified_at')->nullable()->default(null);
             $table->string('phone', 30)->nullable()->default(null)->unique('phone');
-            $table->enum('role', ['Admin', 'Manager', 'Coordinator', 'Sales', 'TakePerson'])->default('Sales');
+            $table->enum('role', ['Admin', 'Manager', 'Coordinator', 'Sales', 'TechPerson'])->default('Sales');
             $table->enum('status', ['Active', 'Inactive'])->default('Inactive');
             $table->string('designation', 60)->nullable()->default(null);
             $table->string('city', 60)->nullable()->default(null);

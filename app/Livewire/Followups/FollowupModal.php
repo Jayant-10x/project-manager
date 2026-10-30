@@ -101,7 +101,8 @@ class FollowupModal extends Component
         ]);
 
         $cust = Customer::find($validated['customer_id']);
-        app(AuditNotificationService::class)->log(
+        $auditService = app(AuditNotificationService::class);
+        $auditService->log(
             auth()->id(),
             'Logged Follow-up',
             'Followup',
@@ -109,6 +110,35 @@ class FollowupModal extends Component
             $cust?->customer_code ?? '',
             "Logged {$validated['type']} for {$cust?->company}: {$validated['summary']}"
         );
+
+        $customerName = $cust?->display_name ?? 'Customer';
+        if ($fu->project) {
+            $auditService->notifyProjectStakeholders(
+                $fu->project,
+                'Follow-up Logged',
+                "Follow-up: {$validated['summary']}",
+                auth()->user()->name." logged a {$validated['type']} on project {$fu->project->name}: {$validated['summary']}",
+                'project',
+                $fu->project->id
+            );
+        } elseif ($cust) {
+            $auditService->notifyCustomerStakeholders(
+                $cust,
+                'Follow-up Logged',
+                "Follow-up: {$validated['summary']}",
+                auth()->user()->name." logged a {$validated['type']} for {$customerName}: {$validated['summary']}",
+                'customer',
+                $cust->id
+            );
+        } else {
+            $auditService->notifyUplines(
+                auth()->user(),
+                'Follow-up Logged',
+                "Follow-up: {$validated['summary']}",
+                auth()->user()->name." logged a {$validated['type']}: {$validated['summary']}",
+                'followups'
+            );
+        }
 
         $this->reset(['customer_id', 'project_id', 'summary', 'detail', 'next_date', 'next_note', 'happened_on']);
         $this->type = 'Call';

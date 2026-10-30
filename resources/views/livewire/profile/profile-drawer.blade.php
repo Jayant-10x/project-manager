@@ -106,7 +106,7 @@
                     @if ($avatarFile || $existingAvatarUrl)
                         <button type="button"
                                 wire:click="markRemoveAvatar"
-                                class="btn btn-ghost !py-1 !px-2.5 !text-xs text-red-600 hover:text-red-700 hover:bg-red-50">
+                                class="btn btn-outline-danger btn-xs">
                             Remove
                         </button>
                     @endif
@@ -319,9 +319,10 @@
             <button type="button"
                     wire:click="save"
                     wire:loading.attr="disabled"
-                    class="btn btn-primary inline-flex items-center gap-2">
-                <span wire:loading.remove wire:target="save">Save Profile</span>
-                <span wire:loading wire:target="save" class="inline-flex items-center gap-1.5">
+                    wire:target="save"
+                    class="btn btn-primary min-w-[140px] justify-center inline-flex items-center gap-2">
+                <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">Save Profile</span>
+                <span wire:loading.inline-flex wire:target="save" class="items-center justify-center gap-1.5">
                     <svg class="animate-spin w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10"/>
                     </svg>

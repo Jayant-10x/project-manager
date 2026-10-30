@@ -95,7 +95,7 @@ class NewOpenIssuesFixesTest extends TestCase
         ]);
 
         Livewire::test(CustomerIndex::class)
-            ->assertSee('Deepak Suri (Client)')
+            ->assertSee('Deepak Suri (Customer)')
             ->assertDontSee('· Deepak Suri')
             ->assertSee('Hyderabad');
     }

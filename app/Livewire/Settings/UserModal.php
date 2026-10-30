@@ -205,7 +205,7 @@ class UserModal extends Component
         $allowedRoles = match ($this->role) {
             'Admin' => ['Admin'],
             'Manager' => ['Admin'],
-            'Coordinator', 'TakePerson', 'Take Person' => ['Manager', 'Admin'],
+            'Coordinator', 'TechPerson' => ['Manager', 'Admin'],
             'Sales' => ['Coordinator'],
             default => ['Admin', 'Manager', 'Coordinator'],
         };
@@ -224,7 +224,7 @@ class UserModal extends Component
             'name' => 'required|string|min:2|max:200',
             'email' => ['required', 'email', 'min:2', 'max:160', Rule::unique('users', 'email')->ignore($this->userId)],
             'phone' => ['nullable', 'string', 'max:30', Rule::unique('users', 'phone')->ignore($this->userId)],
-            'role' => 'required|string|in:Admin,Manager,Coordinator,Sales,TakePerson,Take Person',
+            'role' => 'required|string|in:Admin,Manager,Coordinator,Sales,TechPerson',
             'reporting_to' => 'nullable|integer|exists:users,id',
             'designation' => 'nullable|string|min:2|max:60',
             'city' => 'nullable|string|min:2|max:60',
@@ -280,10 +280,6 @@ class UserModal extends Component
         }
 
         $validated = $this->validate();
-
-        if ($validated['role'] === 'Take Person') {
-            $validated['role'] = 'TakePerson';
-        }
 
         $validated['phone'] = ! empty($validated['phone']) ? $validated['phone'] : null;
         $validated['city'] = ! empty($validated['city']) ? $validated['city'] : null;
@@ -364,6 +360,17 @@ class UserModal extends Component
                 "Updated user {$user->name} ({$user->role}){$diffText}",
                 $structuredChanges
             );
+
+            if (isset($structuredChanges['reporting_to']) && $user->reporting_to && $user->reporting_to !== auth()->id()) {
+                app(AuditNotificationService::class)->notify(
+                    $user->reporting_to,
+                    'Team Member Assigned',
+                    "Team Member Assigned: {$user->name}",
+                    "{$user->name} ({$user->role}) has been reassigned to report to you.",
+                    'team',
+                    $user->id
+                );
+            }
         } else {
             $tempPass = ! empty($validated['password']) ? $validated['password'] : 'Welcome@10x';
             $validated['password'] = $tempPass;
@@ -381,6 +388,17 @@ class UserModal extends Component
                 '',
                 "Created user {$newUser->name} ({$newUser->role})"
             );
+
+            if ($newUser->reporting_to && $newUser->reporting_to !== auth()->id()) {
+                app(AuditNotificationService::class)->notify(
+                    $newUser->reporting_to,
+                    'Team Member Assigned',
+                    "New Team Member: {$newUser->name}",
+                    "{$newUser->name} ({$newUser->role}) has been added to your team.",
+                    'team',
+                    $newUser->id
+                );
+            }
         }
 
         $this->reset();

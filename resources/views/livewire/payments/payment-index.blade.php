@@ -135,23 +135,21 @@
                             <div class="row-actions flex items-center justify-end gap-1.5">
                                 @if($payment->document_id)
                                     <a href="{{ route('documents.download', $payment->document_id) }}"
-                                       class="btn btn-outline-secondary btn-xs inline-flex items-center gap-1" title="Download receipt attachment">
+                                       class="btn btn-outline-secondary btn-xs" title="Download receipt attachment">
                                         <svg viewBox="0 0 24 24" class="w-3 h-3">
                                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                                             <path d="M7 10l5 5 5-5"/>
                                             <path d="M12 15V3"/>
                                         </svg>
-                                        <span>Receipt</span>
                                     </a>
                                 @elseif($payment->attachment)
                                     <a href="{{ asset('storage/' . $payment->attachment) }}" target="_blank"
-                                       class="btn btn-outline-secondary btn-xs inline-flex items-center gap-1" title="View receipt attachment">
+                                       class="btn btn-outline-secondary btn-xs" title="View receipt attachment">
                                         <svg viewBox="0 0 24 24" class="w-3 h-3">
                                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                                             <path d="M7 10l5 5 5-5"/>
                                             <path d="M12 15V3"/>
                                         </svg>
-                                        <span>Receipt</span>
                                     </a>
                                 @endif
                                 @if($payment->project_id)
@@ -161,7 +159,6 @@
                                             <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
                                             <circle cx="12" cy="12" r="3"/>
                                         </svg>
-                                        <span>Project</span>
                                     </a>
                                 @endif
                                 <button type="button"

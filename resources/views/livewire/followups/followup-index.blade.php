@@ -151,7 +151,7 @@
                     </div>
 
                     <button type="button"
-                            class="mini-btn danger flex-shrink-0"
+                            class="btn btn-outline-danger btn-xs flex-shrink-0"
                             @click="$dispatch('confirm-dialog', {
                                 title: 'Remove Follow-up?',
                                 message: 'Are you sure you want to remove this follow-up entry?',

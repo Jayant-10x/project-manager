@@ -19,25 +19,26 @@
                             @case('Admin') Company-wide Executive Governance @break
                             @case('Manager') Operations & Team Delivery Overview @break
                             @case('Coordinator') My Active Projects & Delivery Schedule @break
-                            @case('TakePerson')
-                            @case('Take Person') My Assigned Projects & Delivery Schedule @break
-                            @case('Sales') My Deals Pipeline & Client Accounts @break
+                            @case('TechPerson') My Assigned Projects & Delivery Schedule @break
+                            @case('Sales') My Deals Pipeline & Customer Accounts @break
                         @endswitch
                     </span>
                 </p>
             </div>
             <div class="flex items-center gap-2">
-                <a href="{{ route('calendar.index') }}" wire:navigate
-                   class="btn btn-outline-primary btn-sm flex items-center gap-1.5 shadow-xs"
-                   title="Open Datewise Payment Calendar">
-                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                        <line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/>
-                        <line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    <span>Payment Calendar</span>
-                </a>
+                @if($user->hasPermission('payments', 'view') || $user->hasPermission('schedules', 'view'))
+                    <a href="{{ route('calendar.index') }}" wire:navigate
+                       class="btn btn-outline-primary btn-sm flex items-center gap-1.5 shadow-xs"
+                       title="Open Datewise Payment Calendar">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        <span>Payment Calendar</span>
+                    </a>
+                @endif
                 @if($user->hasPermission('today', 'view'))
                     <a href="{{ route('today.index') }}" wire:navigate
                        class="btn btn-outline-primary btn-sm flex items-center gap-1.5 shadow-xs"
@@ -75,28 +76,35 @@
     </div>
 
     @if($accessibleUsers->isNotEmpty())
-        <div class="card p-3 mb-6 bg-slate-50/70 border border-slate-200/80 flex items-center justify-between flex-wrap gap-3">
+        <div
+            class="card p-3 mb-6 bg-slate-50/70 border border-slate-200/80 flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-2.5 flex-wrap">
                 <span class="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
-                    <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                    <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path
+                            d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
                     </svg>
                     <span>Filter by Team Member:</span>
                 </span>
-                <select wire:model.live="selectedUserId" class="i text-xs py-1.5 px-3 rounded-lg border-slate-300 bg-white" style="width: auto; min-width: 220px;">
+                <select wire:model.live="selectedUserId"
+                        class="i text-xs py-1.5 px-3 rounded-lg border-slate-300 bg-white"
+                        style="width: auto; min-width: 220px;">
                     <option value="">Entire Organization / Team Portfolio</option>
                     @foreach($accessibleUsers as $au)
                         <option value="{{ $au->id }}">{{ $au->name }} ({{ $au->role }})</option>
                     @endforeach
                 </select>
                 @if($selectedUserId)
-                    <button type="button" wire:click="$set('selectedUserId', null)" class="btn btn-outline-danger btn-sm text-xs py-1 px-2.5">
+                    <button type="button" wire:click="$set('selectedUserId', null)"
+                            class="btn btn-outline-danger btn-sm text-xs py-1 px-2.5">
                         Reset Filter
                     </button>
                 @endif
             </div>
             @if($selectedUserId && $activeViewingUser && $activeViewingUser->id !== $user->id)
-                <div class="text-xs text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 font-medium flex items-center gap-1.5">
+                <div
+                    class="text-xs text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 font-medium flex items-center gap-1.5">
                     <span class="inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
                     <span>Filtered View: <strong>{{ $activeViewingUser->name }}</strong> ({{ $activeViewingUser->role }})</span>
                 </div>
@@ -107,30 +115,71 @@
     <!-- 1. Role-Tailored KPI Row -->
     @switch($role)
         @case('Admin')
-            <!-- Admin Financial Summary KPIs (5 Blocks) -->
-            <div class="kpis mb-6">
-                <x-kpi-card label="Total Receivable" :value="$m['scheduled']" sub="All portfolio projects" icon="cash"
-                            :ismoney="true" color="#0b3d91" bg="#e8eefc"
-                            :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : null"/>
-                <x-kpi-card label="Received" :value="$m['received']"
-                            :sub="$m['tds'] > 0
-                            ? ('Realized Revenue · ' . view('components.money', ['value' => $m['cash']])->render() . ' Cash + ' . view('components.money', ['value' => $m['tds']])->render() . ' TDS Credit (' . $m['collectionRate'] . '% settled)')
-                            : ('Realized Revenue · ' . $m['collectionRate'] . '% settled to date')"
-                            icon="check" :ismoney="true" color="#5aa236" bg="#eef7e8"
-                            :href="$user->hasPermission('payments', 'view') ? route('payments.index') : null"/>
-                <x-kpi-card label="Due" :value="$m['due']" sub="Balance Due · Net pending collection" icon="clock"
-                            color="#e0a13a"
-                            :ismoney="true" bg="#fdf3e2"
-                            :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : null"/>
-                <x-kpi-card label="Overdue" :value="$m['overdue']"
-                            :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount) . ' late'"
-                            icon="alert"
-                            :ismoney="true" color="#d94b4b" bg="#fdeaea"
-                            :href="$user->hasPermission('today', 'view') ? route('today.index') : null"/>
-                <x-kpi-card label="This Month" :value="$m['thisMonth']" sub="Realized this calendar month" icon="cal"
-                            color="#2e75b6"
-                            :ismoney="true" bg="#e8f1fa"
-                            :href="$user->hasPermission('payments', 'view') ? route('payments.index') : null"/>
+            <!-- Admin Financial Governance Section Card -->
+            <div class="card mb-6">
+                <div class="card-head flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-emerald-50 text-[#5aa236] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                                <circle cx="12" cy="12" r="2.5"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Payments &amp; Financial Governance</h3>
+                            <div class="text-xs text-[#8894ac]">Company-wide billing, realized revenue &amp; outstanding
+                                collections
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs">
+                        @if($user->hasPermission('schedules', 'view'))
+                            <a href="{{ route('schedule.index') }}" wire:navigate
+                               class="text-xs font-semibold text-[#0b3d91] hover:underline flex items-center gap-1">
+                                <span>All Schedules</span>
+                                <span>&rarr;</span>
+                            </a>
+                        @endif
+                        @if($user->hasPermission('payments', 'view'))
+                            <span class="text-slate-300">|</span>
+                            <a href="{{ route('payments.index') }}" wire:navigate
+                               class="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1">
+                                <span>All Receipts</span>
+                                <span>&rarr;</span>
+                            </a>
+                        @endif
+                    </div>
+                </div>
+                <div class="card-body p-4 sm:p-5 bg-slate-50/40">
+                    <div class="kpis mb-0">
+                        <x-kpi-card label="Total Receivable" :value="$m['scheduled']" sub="All portfolio projects"
+                                    icon="cash"
+                                    :ismoney="true" color="#0b3d91" bg="#e8eefc"
+                                    :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : null"/>
+                        <x-kpi-card label="Received" :value="$m['received']"
+                                    :sub="$m['tds'] > 0
+                                    ? ('Realized Revenue · ' . view('components.money', ['value' => $m['cash']])->render() . ' Cash + ' . view('components.money', ['value' => $m['tds']])->render() . ' TDS Credit (' . $m['collectionRate'] . '% settled)')
+                                    : ('Realized Revenue · ' . $m['collectionRate'] . '% settled to date')"
+                                    icon="check" :ismoney="true" color="#5aa236" bg="#eef7e8"
+                                    :href="$user->hasPermission('payments', 'view') ? route('payments.index') : null"/>
+                        <x-kpi-card label="Due" :value="$m['due']" sub="Balance Due · Net pending collection"
+                                    icon="clock"
+                                    color="#e0a13a"
+                                    :ismoney="true" bg="#fdf3e2"
+                                    :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : null"/>
+                        <x-kpi-card label="Overdue" :value="$m['overdue']"
+                                    :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount) . ' late'"
+                                    icon="alert"
+                                    :ismoney="true" color="#d94b4b" bg="#fdeaea"
+                                    :href="$user->hasPermission('today', 'view') ? route('today.index') : null"/>
+                        <x-kpi-card label="This Month" :value="$m['thisMonth']" sub="Realized this calendar month"
+                                    icon="cal"
+                                    color="#2e75b6"
+                                    :ismoney="true" bg="#e8f1fa"
+                                    :href="$user->hasPermission('payments', 'view') ? route('payments.index') : null"/>
+                    </div>
+                </div>
             </div>
             <!-- ADMIN VIEW: Macro Portfolio Health & Cash Realization -->
             <div class="grid-2 mb-6">
@@ -317,30 +366,72 @@
             </div>
             @break
         @case('Manager')
-            <!-- Manager Operational Delivery & Revenue KPIs (5 Blocks) -->
-            <div class="kpis mb-6">
-                <x-kpi-card label="Total Receivable" :value="$m['scheduled']" sub="Team Bookings · Total contract value"
-                            icon="cash"
-                            :ismoney="true" color="#0b3d91" bg="#e8eefc"
-                            :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : null"/>
-                <x-kpi-card label="Received" :value="$m['received']"
-                            :sub="$m['tds'] > 0
-                            ? ('Team Collections · ' . view('components.money', ['value' => $m['cash']])->render() . ' Cash + ' . view('components.money', ['value' => $m['tds']])->render() . ' TDS Credit (' . $m['collectionRate'] . '% settled)')
-                            : ('Team Collections · ' . $m['collectionRate'] . '% team realization')"
-                            icon="check" :ismoney="true" color="#5aa236" bg="#eef7e8"
-                            :href="$user->hasPermission('payments', 'view') ? route('payments.index') : null"/>
-                <x-kpi-card label="Due" :value="$m['due']" sub="Balance Due · Net pending collection" icon="clock"
-                            color="#e0a13a"
-                            :ismoney="true" bg="#fdf3e2"
-                            :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : null"/>
-                <x-kpi-card label="Overdue" :value="$m['overdue']"
-                            :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount) . ' late'"
-                            icon="alert"
-                            :ismoney="true" color="#d94b4b" bg="#fdeaea"
-                            :href="$user->hasPermission('today', 'view') ? route('today.index') : null"/>
-                <x-kpi-card label="Active Projects" :value="$totalProjectsCount" sub="Projects currently managed"
-                            icon="proj" color="#2e75b6"
-                            :ismoney="false" bg="#e8f1fa" :href="route('projects.index')"/>
+            <!-- Manager Revenue & Collections Section Card -->
+            <div class="card mb-6">
+                <div class="card-head flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-emerald-50 text-[#5aa236] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                                <circle cx="12" cy="12" r="2.5"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Team Revenue &amp; Collections</h3>
+                            <div class="text-xs text-[#8894ac]">Realized collections and pending contract dues across
+                                managed team
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs">
+                        @if($user->hasPermission('schedules', 'view'))
+                            <a href="{{ route('schedule.index') }}" wire:navigate
+                               class="text-xs font-semibold text-[#0b3d91] hover:underline flex items-center gap-1">
+                                <span>Team Schedules</span>
+                                <span>&rarr;</span>
+                            </a>
+                        @endif
+                        @if($user->hasPermission('payments', 'view'))
+                            <span class="text-slate-300">|</span>
+                            <a href="{{ route('payments.index') }}" wire:navigate
+                               class="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1">
+                                <span>Collections</span>
+                                <span>&rarr;</span>
+                            </a>
+                        @endif
+                    </div>
+                </div>
+                <div class="card-body p-4 sm:p-5 bg-slate-50/40">
+                    <div class="kpis mb-0">
+                        <x-kpi-card label="Total Receivable" :value="$m['scheduled']"
+                                    sub="Team Bookings · Total contract value"
+                                    icon="cash"
+                                    :ismoney="true" color="#0b3d91" bg="#e8eefc"
+                                    :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : route('projects.index')"/>
+                        <x-kpi-card label="Received" :value="$m['received']"
+                                    :sub="$m['tds'] > 0
+                                    ? ('Team Collections · ' . view('components.money', ['value' => $m['cash']])->render() . ' Cash + ' . view('components.money', ['value' => $m['tds']])->render() . ' TDS Credit (' . $m['collectionRate'] . '% settled)')
+                                    : ('Team Collections · ' . $m['collectionRate'] . '% team realization')"
+                                    icon="check" :ismoney="true" color="#5aa236" bg="#eef7e8"
+                                    :href="$user->hasPermission('payments', 'view') ? route('payments.index') : route('projects.index')"/>
+                        <x-kpi-card label="Due" :value="$m['due']" sub="Balance Due · Net pending collection"
+                                    icon="clock"
+                                    color="#e0a13a"
+                                    :ismoney="true" bg="#fdf3e2"
+                                    :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : route('projects.index')"/>
+                        <x-kpi-card label="Overdue" :value="$m['overdue']"
+                                    :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount) . ' late'"
+                                    icon="alert"
+                                    :ismoney="true" color="#d94b4b" bg="#fdeaea"
+                                    :href="$user->hasPermission('today', 'view') ? route('today.index') : route('projects.index')"/>
+                        <x-kpi-card label="This Month" :value="$m['thisMonth']" sub="Realized this calendar month"
+                                    icon="cal"
+                                    color="#2e75b6"
+                                    :ismoney="true" bg="#e8f1fa"
+                                    :href="$user->hasPermission('payments', 'view') ? route('payments.index') : route('projects.index')"/>
+                    </div>
+                </div>
             </div>
             <!-- MANAGER VIEW: Team Delivery & Coordinator Workload -->
             <div class="grid-2 mb-6">
@@ -539,26 +630,117 @@
             @endif
             @break
         @case('Coordinator')
-        @case('TakePerson')
-        @case('Take Person')
-            <!-- Coordinator / TakePerson Project Delivery & Milestone Health KPIs (5 Blocks) -->
-            <div class="kpis mb-6">
-                <x-kpi-card label="Active Projects" :value="$coordinatorData['activeProjectsCount']"
-                            sub="My Active Projects · In-progress" icon="proj"
-                            :ismoney="false" color="#0b3d91" bg="#e8eefc"
-                            :href="route('projects.index', ['status' => 'In Progress'])"/>
-                <x-kpi-card label="Milestones" :value="$coordinatorData['completedMilestones']"
-                            :sub="'Milestones Progress · ' . $coordinatorData['milestoneRate'] . '% completed (' . $coordinatorData['totalMilestones'] . ' total)'"
-                            icon="check"
-                            :ismoney="false" color="#5aa236" bg="#eef7e8" :href="route('schedule.index')"/>
-                <x-kpi-card label="Total Receivable" :value="$m['scheduled']" sub="Assigned project value" icon="cash"
-                            :ismoney="true" color="#2e75b6" bg="#e8f1fa" :href="route('projects.index')"/>
-                <x-kpi-card label="Due" :value="$m['due']" sub="Net Pending Collection · On my projects" icon="clock"
-                            color="#e0a13a"
-                            :ismoney="true" bg="#fdf3e2" :href="route('schedule.index')"/>
-                <x-kpi-card label="Overdue" :value="$m['overdue']" :sub="$overdueCount . ' late on my accounts'"
-                            icon="alert"
-                            :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
+            <!-- 1. Payments & Invoicing Overview Section Card -->
+            <div class="card mb-6">
+                <div class="card-head flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-emerald-50 text-[#5aa236] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                                <circle cx="12" cy="12" r="2.5"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Payments &amp; Invoicing Overview</h3>
+                            <div class="text-xs text-[#8894ac]">Payment milestones, realization rate &amp; pending dues
+                                on assigned accounts
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs">
+                        @if($user->hasPermission('schedules', 'view'))
+                            <a href="{{ route('schedule.index') }}" wire:navigate
+                               class="text-xs font-semibold text-[#0b3d91] hover:underline flex items-center gap-1">
+                                <span>View Schedules</span>
+                                <span>&rarr;</span>
+                            </a>
+                        @endif
+                        @if($user->hasPermission('payments', 'view'))
+                            <span class="text-slate-300">|</span>
+                            <a href="{{ route('payments.index') }}" wire:navigate
+                               class="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1">
+                                <span>Payments</span>
+                                <span>&rarr;</span>
+                            </a>
+                        @endif
+                    </div>
+                </div>
+                <div class="card-body p-4 sm:p-5 bg-slate-50/40">
+                    <div class="kpis mb-0">
+                        <x-kpi-card label="Total Receivable" :value="$m['scheduled']"
+                                    sub="Assigned projects · Contract value" icon="cash"
+                                    :ismoney="true" color="#0b3d91" bg="#e8eefc"
+                                    :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : route('projects.index')"/>
+                        <x-kpi-card label="Received" :value="$m['received']"
+                                    :sub="$m['tds'] > 0
+                                    ? ('Realized Revenue · ' . view('components.money', ['value' => $m['cash']])->render() . ' Cash + ' . view('components.money', ['value' => $m['tds']])->render() . ' TDS (' . $m['collectionRate'] . '% settled)')
+                                    : ('Realized Revenue · ' . $m['collectionRate'] . '% collected to date')"
+                                    icon="check" :ismoney="true" color="#5aa236" bg="#eef7e8"
+                                    :href="$user->hasPermission('payments', 'view') ? route('payments.index') : route('projects.index')"/>
+                        <x-kpi-card label="Due" :value="$m['due']" sub="Balance Due · Net pending collection"
+                                    icon="clock"
+                                    color="#e0a13a" :ismoney="true" bg="#fdf3e2"
+                                    :href="$user->hasPermission('schedules', 'view') ? route('schedule.index') : route('projects.index')"/>
+                        <x-kpi-card label="Overdue" :value="$m['overdue']"
+                                    :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount) . ' late on accounts'"
+                                    icon="alert" :ismoney="true" color="#d94b4b" bg="#fdeaea"
+                                    :href="$user->hasPermission('today', 'view') ? route('today.index') : route('projects.index')"/>
+                        <x-kpi-card label="This Month" :value="$m['thisMonth']" sub="Realized this calendar month"
+                                    icon="cal"
+                                    color="#2e75b6" :ismoney="true" bg="#e8f1fa"
+                                    :href="$user->hasPermission('payments', 'view') ? route('payments.index') : route('projects.index')"/>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Projects & Delivery Execution Section Card -->
+            <div class="card mb-6">
+                <div class="card-head flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-blue-50 text-[#0b3d91] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Projects &amp; Delivery Execution</h3>
+                            <div class="text-xs text-[#8894ac]">Active project status, health indicators &amp; milestone
+                                velocity
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('projects.index') }}" wire:navigate
+                           class="text-xs font-semibold text-[#0b3d91] hover:underline flex items-center gap-1">
+                            <span>All Projects</span>
+                            <span>&rarr;</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-4 sm:p-5 bg-slate-50/40">
+                    <div class="kpis four mb-0">
+                        <x-kpi-card label="Active Projects" :value="$coordinatorData['activeProjectsCount']"
+                                    sub="My Active Projects · In-progress" icon="proj"
+                                    :ismoney="false" color="#0b3d91" bg="#e8eefc"
+                                    :href="route('projects.index', ['status' => 'In Progress'])"/>
+                        <x-kpi-card label="Milestones"
+                                    :value="$coordinatorData['completedMilestones'] . ' / ' . $coordinatorData['totalMilestones']"
+                                    :sub="'Milestones Progress · ' . $coordinatorData['milestoneRate'] . '% completed'"
+                                    icon="check"
+                                    :ismoney="false" color="#5aa236" bg="#eef7e8" :href="route('schedule.index')"/>
+                        <x-kpi-card label="On Track" :value="$healthCounts['On Track']"
+                                    sub="Projects progressing on schedule"
+                                    icon="check" :ismoney="false" color="#5aa236" bg="#eef7e8"
+                                    :href="route('projects.index', ['health' => 'On Track'])"/>
+                        <x-kpi-card label="Delayed / At Risk"
+                                    :value="$healthCounts['Delayed'] + $healthCounts['At Risk']"
+                                    sub="Projects requiring attention" icon="alert"
+                                    :ismoney="false" color="#d94b4b" bg="#fdeaea"
+                                    :href="route('projects.index', ['health' => 'Delayed'])"/>
+                    </div>
+                </div>
             </div>
             <!-- COORDINATOR VIEW: Milestones & Project Deliveries -->
             <div class="grid-2 mb-6">
@@ -696,38 +878,58 @@
                 </div>
             </div>
             @break
-        @case('Sales')
-            <!-- Sales Deal Bookings & Performance KPIs (5 Blocks) -->
-            <div class="kpis mb-6">
-                <x-kpi-card label="Total Receivable" :value="$salesData['totalDealsValue']"
-                            :sub="'Total Closed Bookings · ' . $salesData['dealsCount'] . ' deals closed'" icon="cash"
-                            :ismoney="true" color="#0b3d91" bg="#e8eefc" :href="route('projects.index')"/>
-                @if($salesData['target'] > 0)
-                    <x-kpi-card label="Target" :value="$salesData['target']"
-                                :sub="$salesData['targetProgress'] . '% quota achieved'" icon="target"
-                                :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('projects.index')"/>
-                @else
-                    <x-kpi-card label="Avg Deal Value" :value="$salesData['avgDealSize']" sub="Per closed project"
-                                icon="chart"
-                                :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('projects.index')"/>
-                @endif
-                <x-kpi-card label="Received" :value="$salesData['grossRealized']"
-                            :sub="$salesData['tdsRealized'] > 0
-                            ? ('Cash Inflow Realized · ' . view('components.money', ['value' => $salesData['cashRealized']])->render() . ' Cash + ' . view('components.money', ['value' => $salesData['tdsRealized']])->render() . ' TDS Credit (' . $salesData['realizationRate'] . '% settled)')
-                            : ('Cash Inflow Realized · ' . $salesData['realizationRate'] . '% cash collected')"
-                            icon="cash" color="#2e75b6"
-                            :ismoney="true" bg="#e8f1fa"
-                            :href="auth()->user()->hasPermission('payments', 'view') ? route('payments.index') : route('projects.index')"/>
-                <x-kpi-card label="Customers" :value="$salesData['customersAcquired']" sub="Client accounts acquired"
-                            icon="cust" color="#e0a13a"
-                            :ismoney="false" bg="#fdf3e2" :href="route('customers.index')"/>
-                <x-kpi-card label="Projects" :value="$totalProjectsCount" sub="Active client projects" icon="proj"
-                            color="#0b3d91"
-                            :ismoney="false" bg="#e8eefc" :href="route('projects.index')"/>
+        @case('TechPerson')
+            <!-- Projects & Delivery Execution Section Card -->
+            <div class="card mb-6">
+                <div class="card-head flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-blue-50 text-[#0b3d91] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Project Execution &amp; Delivery Progress</h3>
+                            <div class="text-xs text-[#8894ac]">Active project assignments, health indicators &amp; milestone velocity
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('projects.index') }}" wire:navigate
+                           class="text-xs font-semibold text-[#0b3d91] hover:underline flex items-center gap-1">
+                            <span>My Projects</span>
+                            <span>&rarr;</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-4 sm:p-5 bg-slate-50/40">
+                    <div class="kpis four mb-0">
+                        <x-kpi-card label="Active Projects" :value="$coordinatorData['activeProjectsCount']"
+                                    sub="My Active Projects · In-progress" icon="proj"
+                                    :ismoney="false" color="#0b3d91" bg="#e8eefc"
+                                    :href="route('projects.index', ['status' => 'In Progress'])"/>
+                        <x-kpi-card label="Milestones Done"
+                                    :value="$coordinatorData['completedMilestones'] . ' / ' . $coordinatorData['totalMilestones']"
+                                    :sub="'Milestones Progress · ' . $coordinatorData['milestoneRate'] . '% completed'"
+                                    icon="check"
+                                    :ismoney="false" color="#5aa236" bg="#eef7e8" :href="route('projects.index')"/>
+                        <x-kpi-card label="On Track" :value="$healthCounts['On Track']"
+                                    sub="Projects progressing on schedule"
+                                    icon="check" :ismoney="false" color="#5aa236" bg="#eef7e8"
+                                    :href="route('projects.index', ['health' => 'On Track'])"/>
+                        <x-kpi-card label="Delayed / At Risk"
+                                    :value="$healthCounts['Delayed'] + $healthCounts['At Risk']"
+                                    sub="Projects requiring attention" icon="alert"
+                                    :ismoney="false" color="#d94b4b" bg="#fdeaea"
+                                    :href="route('projects.index', ['health' => 'Delayed'])"/>
+                    </div>
+                </div>
             </div>
-            <!-- SALES VIEW: Deal Origination, Quota Progress & Client Projects -->
+
+            <!-- TECH PERSON VIEW: Assigned Projects Health & Deliveries -->
             <div class="grid-2 mb-6">
-                <!-- Client Projects Fulfillment Status -->
+                <!-- My Projects Health -->
                 <div class="card">
                     <div class="card-head flex items-center gap-3">
                         <div
@@ -737,7 +939,248 @@
                             </svg>
                         </div>
                         <div>
-                            <h3 class="font-bold text-sm text-[#0d1b34]">Client Projects Fulfillment</h3>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Assigned Projects Health</h3>
+                            <div class="text-xs text-[#8894ac]">{{ $totalProjectsCount }} projects assigned to you for execution</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div style="display:flex;gap:14px;flex-wrap:wrap">
+                            @php
+                                $colors = ['On Track' => '#5aa236', 'At Risk' => '#e0a13a', 'Delayed' => '#d94b4b', 'Completed' => '#2e75b6'];
+                            @endphp
+                            @foreach($healthCounts as $label => $cnt)
+                                @php
+                                    $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
+                                    $colorCode = $colors[$label];
+                                @endphp
+                                <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
+                                   class="block p-3 rounded-xl transition hover:bg-gray-50 border border-gray-100 hover:border-gray-200 cursor-pointer"
+                                   style="flex:1;min-width:110px;text-decoration:none;color:inherit">
+                                    <div
+                                        style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:650;margin-bottom:6px">
+                                        <i style="width:8px;height:8px;border-radius:50%;background:{{ $colorCode }};display:inline-block"></i>
+                                        <span>{{ $label }}</span>
+                                    </div>
+                                    <div style="display:flex;align-items:baseline;justify-content:space-between">
+                                        <span
+                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
+                                        <span
+                                            style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
+                                    </div>
+                                    <div class="bar" style="height:5px;margin-top:8px">
+                                        <i style="width:{{ $percentage }}%;background:{{ $colorCode }}"></i>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Project Deliveries (Next 30 Days) -->
+                <div class="card">
+                    <div class="card-head flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-emerald-50 text-[#5aa236] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 14 14"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Upcoming Project Deadlines</h3>
+                            <div class="text-xs text-[#8894ac]">Projects scheduled for completion in next 30 days</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @forelse($coordinatorData['upcomingDeliveries'] as $proj)
+                            @php
+                                $delDate = $proj->delivery_date ? \Carbon\Carbon::parse($proj->delivery_date) : null;
+                                $daysLeft = $delDate ? (int) round(\Carbon\Carbon::today()->startOfDay()->diffInDays($delDate->startOfDay(), false)) : 0;
+                            @endphp
+                            <div
+                                class="mini-item clickable flex items-center justify-between p-2.5 rounded-xl border border-gray-100 hover:bg-gray-50/70 transition mb-2"
+                                @click="Livewire.navigate('{{ route('projects.show', $proj->id) }}')">
+                                <div class="flex-1 min-w-0 pr-3">
+                                    <div class="font-semibold text-sm text-[#0d1b34]">{{ $proj->name }}</div>
+                                    <div class="text-xs text-[#8894ac] flex items-center gap-1.5 mt-0.5">
+                                        <span>{{ $proj->customer?->display_name ?? '—' }}</span>
+                                        <span>&middot;</span>
+                                        <span>Due {{ $delDate ? $delDate->format('d M') : '—' }}</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span class="badge {{ $daysLeft <= 7 ? 'b-red' : 'b-amber' }}">
+                                        {{ $daysLeft == 0 ? 'Today' : ($daysLeft < 0 ? abs($daysLeft) . 'd late' : $daysLeft . 'd left') }}
+                                    </span>
+                                    <x-health-badge :health="$proj->health"/>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="empty py-6 text-center text-gray-400">
+                                <span class="flex items-center justify-center mb-1 text-emerald-500">
+                                    <svg viewBox="0 0 24 24" class="w-7 h-7 stroke-current fill-none"><path
+                                            d="M20 6L9 17l-5-5"/></svg>
+                                </span>
+                                <p class="text-xs font-semibold text-gray-500">No project deliveries due in next 30
+                                    days</p>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+            @break
+        @case('Sales')
+            @if($salesData['target'] > 0)
+                <!-- Quota Progress Card for Sales -->
+                <div class="card mb-6">
+                    <div class="card-head">
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Sales Quota Target</h3>
+                            <div class="text-xs text-[#8894ac]">Closed revenue vs assigned sales quota</div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="flex items-baseline justify-between mb-2">
+                            <div class="font-bold text-lg text-[#0d1b34]">
+                                <x-money :value="$salesData['totalDealsValue']"/>
+                                <span class="text-sm font-normal text-[#8894ac]">booked of</span>
+                                <x-money :value="$salesData['target']"/>
+                                <span class="text-sm font-normal text-[#8894ac]">quota</span>
+                            </div>
+                            <div
+                                class="font-bold text-base {{ $salesData['targetProgress'] >= 80 ? 'text-emerald-600' : 'text-blue-600' }}">
+                                {{ $salesData['targetProgress'] }}% Achieved
+                            </div>
+                        </div>
+                        <div class="bar" style="height:10px">
+                            <i style="width:{{ $salesData['targetProgress'] }}%;background:{{ $salesData['targetProgress'] >= 80 ? '#5aa236' : '#0b3d91' }}"></i>
+                        </div>
+                    </div>
+                </div>
+            @endif
+            <!-- 1. Revenue & Collections Section Card -->
+            <div class="card mb-6">
+                <div class="card-head flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-emerald-50 text-[#5aa236] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                                <circle cx="12" cy="12" r="2.5"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Revenue &amp; Collections</h3>
+                            <div class="text-xs text-[#8894ac]">Closed deal bookings, cash inflows &amp; balance dues
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('projects.index') }}" wire:navigate
+                           class="text-xs font-semibold text-[#0b3d91] hover:underline flex items-center gap-1">
+                            <span>My Deals</span>
+                            <span>&rarr;</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-4 sm:p-5 bg-slate-50/40">
+                    <div class="kpis mb-0">
+                        <x-kpi-card label="Total Receivable" :value="$salesData['totalDealsValue']"
+                                    :sub="'Total Closed Bookings · ' . $salesData['dealsCount'] . ' deals closed'"
+                                    icon="cash"
+                                    :ismoney="true" color="#0b3d91" bg="#e8eefc" :href="route('projects.index')"/>
+                        <x-kpi-card label="Received" :value="$salesData['grossRealized']"
+                                    :sub="$salesData['tdsRealized'] > 0
+                                    ? ('Cash Inflow Realized · ' . view('components.money', ['value' => $salesData['cashRealized']])->render() . ' Cash + ' . view('components.money', ['value' => $salesData['tdsRealized']])->render() . ' TDS Credit (' . $salesData['realizationRate'] . '% settled)')
+                                    : ('Cash Inflow Realized · ' . $salesData['realizationRate'] . '% cash collected')"
+                                    icon="check" color="#5aa236"
+                                    :ismoney="true" bg="#eef7e8"
+                                    :href="auth()->user()->hasPermission('payments', 'view') ? route('payments.index') : route('projects.index')"/>
+                        <x-kpi-card label="Due" :value="$salesData['dueAmount']"
+                                    sub="Balance Due · Pending collection on deals" icon="clock"
+                                    color="#e0a13a" :ismoney="true" bg="#fdf3e2"
+                                    :href="auth()->user()->hasPermission('schedules', 'view') ? route('schedule.index') : route('projects.index')"/>
+                        <x-kpi-card label="Overdue" :value="$salesData['overdueAmount']"
+                                    :sub="$salesData['overdueCount'] . ' late on customer accounts'" icon="alert"
+                                    :ismoney="true" color="#d94b4b" bg="#fdeaea"
+                                    :href="auth()->user()->hasPermission('today', 'view') ? route('today.index') : route('projects.index')"/>
+                        @if($salesData['target'] > 0)
+                            <x-kpi-card label="Target" :value="$salesData['target']"
+                                        :sub="'Quota Target · ' . $salesData['targetProgress'] . '% quota achieved'"
+                                        icon="target"
+                                        :ismoney="true" color="#2e75b6" bg="#e8f1fa" :href="route('projects.index')"/>
+                        @else
+                            <x-kpi-card label="Avg Deal Value" :value="$salesData['avgDealSize']"
+                                        sub="Per closed project contract"
+                                        icon="chart"
+                                        :ismoney="true" color="#2e75b6" bg="#e8f1fa" :href="route('projects.index')"/>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Customer Accounts & Portfolio Section Card -->
+            <div class="card mb-6">
+                <div class="card-head flex items-center justify-between flex-wrap gap-2">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-blue-50 text-[#0b3d91] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M22 21v-2a4 4 0 00-3-3.87"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Customer Accounts &amp; Portfolio</h3>
+                            <div class="text-xs text-[#8894ac]">Acquired customer accounts, execution pipeline &amp;
+                                monthly velocity
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('customers.index') }}" wire:navigate
+                            class="text-xs font-semibold text-[#0b3d91] hover:underline flex items-center gap-1">
+                            <span>All Customers</span>
+                            <span>&rarr;</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-4 sm:p-5 bg-slate-50/40">
+                    <div class="kpis four mb-0">
+                        <x-kpi-card label="Customers" :value="$salesData['customersAcquired']"
+                                    sub="Customer accounts acquired"
+                                    icon="cust" color="#0b3d91"
+                                    :ismoney="false" bg="#e8eefc" :href="route('customers.index')"/>
+                        <x-kpi-card label="Projects" :value="$totalProjectsCount" sub="Active customer projects"
+                                    icon="proj"
+                                    color="#2e75b6"
+                                    :ismoney="false" bg="#e8f1fa" :href="route('projects.index')"/>
+                        <x-kpi-card label="This Month" :value="$salesData['thisMonthCollections']"
+                                    sub="Collections this month"
+                                    icon="cal" color="#5aa236"
+                                    :ismoney="true" bg="#eef7e8"
+                                    :href="auth()->user()->hasPermission('payments', 'view') ? route('payments.index') : route('projects.index')"/>
+                        <x-kpi-card label="Avg Deal Value" :value="$salesData['avgDealSize']"
+                                    sub="Average contract size"
+                                    icon="chart" color="#7a5af8"
+                                    :ismoney="true" bg="#f0ecff" :href="route('projects.index')"/>
+                    </div>
+                </div>
+            </div>
+            <!-- SALES VIEW: Deal Origination, Quota Progress & Customer Projects -->
+            <div class="grid-2">
+                <!-- Customer Projects Fulfillment Status -->
+                <div class="card">
+                    <div class="card-head flex items-center gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-blue-50 text-[#0b3d91] flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-[#0d1b34]">Customer Projects Fulfillment</h3>
                             <div class="text-xs text-[#8894ac]">Execution status of projects sold by you</div>
                         </div>
                     </div>
@@ -787,7 +1230,7 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-sm text-[#0d1b34]">Recent Closed Deals</h3>
-                            <div class="text-xs text-[#8894ac]">Latest client accounts originated</div>
+                            <div class="text-xs text-[#8894ac]">Latest customer accounts originated</div>
                         </div>
                     </div>
                     <div class="card-body">
@@ -816,35 +1259,6 @@
                     </div>
                 </div>
             </div>
-
-            @if($salesData['target'] > 0)
-                <!-- Quota Progress Card for Sales -->
-                <div class="card">
-                    <div class="card-head">
-                        <div>
-                            <h3 class="font-bold text-sm text-[#0d1b34]">Sales Quota Target</h3>
-                            <div class="text-xs text-[#8894ac]">Closed revenue vs assigned sales quota</div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="flex items-baseline justify-between mb-2">
-                            <div class="font-bold text-lg text-[#0d1b34]">
-                                <x-money :value="$salesData['totalDealsValue']"/>
-                                <span class="text-sm font-normal text-[#8894ac]">booked of</span>
-                                <x-money :value="$salesData['target']"/>
-                                <span class="text-sm font-normal text-[#8894ac]">quota</span>
-                            </div>
-                            <div
-                                class="font-bold text-base {{ $salesData['targetProgress'] >= 80 ? 'text-emerald-600' : 'text-blue-600' }}">
-                                {{ $salesData['targetProgress'] }}% Achieved
-                            </div>
-                        </div>
-                        <div class="bar" style="height:10px">
-                            <i style="width:{{ $salesData['targetProgress'] }}%;background:{{ $salesData['targetProgress'] >= 80 ? '#5aa236' : '#0b3d91' }}"></i>
-                        </div>
-                    </div>
-                </div>
-            @endif
             @break
     @endswitch
 </div>

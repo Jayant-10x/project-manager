@@ -237,20 +237,34 @@ class ProjectMilestoneModal extends Component
             ! empty($auditChanges) ? $auditChanges : null
         );
 
-        // Notify coordinator and downline manager if any milestone marked Done
+        // Notify coordinator, tech person, sales, uplines, and admins if any milestone marked Done
+        $completedAny = false;
         foreach ($this->items as $m) {
             if (! empty($m['done']) || ($m['status'] ?? '') === 'Done') {
-                if ($project->coordinator_id && $project->coordinator_id !== auth()->id()) {
-                    app(AuditNotificationService::class)->notify(
-                        $project->coordinator_id,
+                $prevDone = ! empty($m['id']) && $existingMilestones->has($m['id']) && $existingMilestones->get($m['id'])->done;
+                if (! $prevDone) {
+                    $completedAny = true;
+                    app(AuditNotificationService::class)->notifyProjectStakeholders(
+                        $project,
                         'Milestone Completed',
                         "Milestone Done: {$m['name']}",
-                        "Milestone '{$m['name']}' on project {$project->name} was marked as completed.",
+                        "Milestone '{$m['name']}' on project {$project->name} was marked as completed by ".auth()->user()->name.'.',
                         'project',
                         $project->id
                     );
                 }
             }
+        }
+
+        if (! $completedAny && ! empty($diffs)) {
+            app(AuditNotificationService::class)->notifyProjectStakeholders(
+                $project,
+                'Milestones Updated',
+                "Milestones Updated: {$project->name}",
+                "Milestones for project {$project->name} ({$project->code}) were updated by ".auth()->user()->name.'.',
+                'project',
+                $project->id
+            );
         }
 
         $this->dispatch('close-modal', 'project-milestone-modal');

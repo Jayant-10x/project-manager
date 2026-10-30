@@ -80,6 +80,7 @@
      x-on:close.stop="if (typeof forceClose === 'function') { forceClose(); } else if (this._x_dataStack && typeof this._x_dataStack[0]?.forceClose === 'function') { this._x_dataStack[0].forceClose(); }"
      x-on:keydown.escape.window="if (typeof show !== 'undefined' && show && !window._confirmModalActive) confirmClose()"
      data-modal="{{ $name }}"
+     @click.self="confirmClose()"
      style="display: none; background-color: rgba(8, 20, 42, 0.60); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);"
      class="overlay fixed inset-0 flex items-start justify-center p-6 z-[120] overflow-y-auto overscroll-contain">
 
@@ -89,21 +90,21 @@
         @input="isDirty = true"
         @change="isDirty = true">
 
-        @if($title)
         <div class="modal-head flex items-center justify-between p-5 border-b border-[#eef2f9]">
             <div>
-                <h3 class="text-base font-bold text-[#0d1b34]">{{ $title }}</h3>
-                @if($sub)
-                    <p class="text-xs text-[#8894ac] mt-0.5">{{ $sub }}</p>
+                @if($title)
+                    <h3 class="text-base font-bold text-[#0d1b34]">{{ $title }}</h3>
+                    @if($sub)
+                        <p class="text-xs text-[#8894ac] mt-0.5">{{ $sub }}</p>
+                    @endif
                 @endif
             </div>
             <button type="button" @click="confirmClose()"
-                    class="w-9 h-9 flex items-center justify-center rounded-lg text-[#8894ac] hover:text-[#0d1b34] hover:bg-slate-100 text-lg font-bold transition"
+                    class="x ml-auto"
                     title="Close modal" aria-label="Close modal">
                 ✕
             </button>
         </div>
-        @endif
 
         <div class="modal-body p-6 max-h-[82vh] overflow-y-auto overscroll-contain">
             {{ $slot }}

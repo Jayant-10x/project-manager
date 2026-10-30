@@ -54,7 +54,7 @@ class CustomerDisplayNameAndFallbackTest extends TestCase
         $this->assertEquals('Acme Corporation Ltd', $customer->name);
     }
 
-    public function test_display_name_accessor_falls_back_to_contact_name_with_client_suffix(): void
+    public function test_display_name_accessor_falls_back_to_contact_name_with_customer_suffix(): void
     {
         $customer = Customer::create([
             'customer_code' => 'CUS-102',
@@ -63,8 +63,8 @@ class CustomerDisplayNameAndFallbackTest extends TestCase
             'status' => 'Active',
         ]);
 
-        $this->assertEquals('Bob Builder (Client)', $customer->display_name);
-        $this->assertEquals('Bob Builder (Client)', $customer->name);
+        $this->assertEquals('Bob Builder (Customer)', $customer->display_name);
+        $this->assertEquals('Bob Builder (Customer)', $customer->name);
     }
 
     public function test_customer_can_be_saved_without_company_name(): void
@@ -85,10 +85,10 @@ class CustomerDisplayNameAndFallbackTest extends TestCase
         $customer = Customer::where('contact_name', 'Rohan Sharma')->first();
         $this->assertNotNull($customer);
         $this->assertNull($customer->company);
-        $this->assertEquals('Rohan Sharma (Client)', $customer->display_name);
+        $this->assertEquals('Rohan Sharma (Customer)', $customer->display_name);
     }
 
-    public function test_global_search_displays_client_suffix_when_company_is_null(): void
+    public function test_global_search_displays_customer_suffix_when_company_is_null(): void
     {
         Customer::create([
             'customer_code' => 'CUS-103',
@@ -100,7 +100,7 @@ class CustomerDisplayNameAndFallbackTest extends TestCase
         Livewire::actingAs($this->admin)
             ->test(GlobalSearch::class)
             ->set('query', 'Sneha')
-            ->assertSee('Sneha Patel (Client)');
+            ->assertSee('Sneha Patel (Customer)');
     }
 
     public function test_project_modal_renders_customer_display_name_in_options(): void
@@ -115,6 +115,6 @@ class CustomerDisplayNameAndFallbackTest extends TestCase
         Livewire::actingAs($this->admin)
             ->test(ProjectModal::class)
             ->call('loadProject', null)
-            ->assertSee('Tanya Verma (Client)');
+            ->assertSee('Tanya Verma (Customer)');
     }
 }

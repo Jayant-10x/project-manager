@@ -167,7 +167,7 @@ class TeamIndex extends Component
         $query = User::query()
             ->whereIn('id', $teamMemberIds)
             ->with(['reportingTo', 'subordinates'])
-            ->withCount(['projects', 'salesProjects', 'takenProjects', 'subordinates'])
+            ->withCount(['projects', 'salesProjects', 'techProjects', 'subordinates'])
             ->withSum('salesProjects as total_sales_value', 'value');
 
         if ($this->search !== '') {
@@ -185,20 +185,22 @@ class TeamIndex extends Component
             $query->where('role', $this->roleFilter);
         }
 
-        $members = $query->orderByRaw("CASE role WHEN 'Manager' THEN 1 WHEN 'Coordinator' THEN 2 WHEN 'TakePerson' THEN 3 WHEN 'Sales' THEN 4 ELSE 5 END")
+        $members = $query->orderByRaw("CASE role WHEN 'Manager' THEN 1 WHEN 'Coordinator' THEN 2 WHEN 'TechPerson' THEN 3 WHEN 'Sales' THEN 4 ELSE 5 END")
             ->orderBy('name')
             ->paginate(12);
+
+        $techCount = User::whereIn('id', $teamMemberIds)->where('role', 'TechPerson')->count();
 
         $stats = [
             'total' => count($teamMemberIds),
             'coordinators' => User::whereIn('id', $teamMemberIds)->where('role', 'Coordinator')->count(),
-            'take_persons' => User::whereIn('id', $teamMemberIds)->whereIn('role', ['TakePerson', 'Take Person'])->count(),
+            'tech_persons' => $techCount,
             'sales' => User::whereIn('id', $teamMemberIds)->where('role', 'Sales')->count(),
         ];
 
         $viewingMember = $this->viewMemberId && in_array($this->viewMemberId, $teamMemberIds, true)
             ? User::with(['reportingTo', 'subordinates'])
-                ->withCount(['projects', 'salesProjects', 'takenProjects', 'subordinates'])
+                ->withCount(['projects', 'salesProjects', 'techProjects', 'subordinates'])
                 ->withSum('salesProjects as total_sales_value', 'value')
                 ->find($this->viewMemberId)
             : null;
@@ -216,7 +218,7 @@ class TeamIndex extends Component
             'currentUser' => $currentUser,
         ])->layoutData([
             'header' => 'Team Members',
-            'subtitle' => 'Team directory, reporting downline and member profiles',
+            'subtitle' => 'Team directory, reporting hierarchy and member profiles',
         ]);
     }
 }

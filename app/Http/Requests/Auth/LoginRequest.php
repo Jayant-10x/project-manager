@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -55,6 +56,24 @@ class LoginRequest extends FormRequest
                     $user->locked_until = now()->addMinutes(30);
                     $user->save();
 
+                    $auditService = app(AuditNotificationService::class);
+                    $auditService->log(
+                        $user->id,
+                        'Account Locked',
+                        'Auth',
+                        $user->id,
+                        '',
+                        "Account {$user->email} locked for 30 minutes after 5 failed login attempts from IP {$this->ip()}"
+                    );
+
+                    $auditService->notifyUplines(
+                        $user,
+                        'Account Locked Alert',
+                        "Account Locked: {$user->name}",
+                        "Account for {$user->name} ({$user->email}) was locked for 30 minutes after 5 consecutive failed login attempts from IP {$this->ip()}.",
+                        'settings'
+                    );
+
                     throw ValidationException::withMessages([
                         'email' => 'Account locked for 30 minutes due to 5 failed attempts.',
                     ]);
@@ -62,6 +81,15 @@ class LoginRequest extends FormRequest
 
                 $user->save();
                 $left = 5 - $user->fail_count;
+
+                app(AuditNotificationService::class)->log(
+                    $user->id,
+                    'Failed Login Attempt',
+                    'Auth',
+                    $user->id,
+                    '',
+                    "Failed login attempt for {$user->email} from IP {$this->ip()} ({$user->fail_count}/5 attempts)"
+                );
 
                 throw ValidationException::withMessages([
                     'email' => "Invalid email or password. {$left} attempt(s) left.",

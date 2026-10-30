@@ -31,6 +31,11 @@ class CustomerIndex extends Component
     #[Url]
     public string $status = '';
 
+    public function mount(): void
+    {
+        abort_if(! auth()->user() || auth()->user()->isTechPerson() || ! auth()->user()->hasPermission('customers', 'view'), 403, 'Unauthorized access to customer module.');
+    }
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -68,10 +73,98 @@ class CustomerIndex extends Component
         $this->resetPage();
     }
 
-    /* [Temporarily hidden - Export CSV feature]
+    public function approveCustomer(int $id): void
+    {
+        $customer = Customer::findOrFail($id);
+        $user = auth()->user();
+        if (! $customer->canBeApprovedBy($user)) {
+            abort(403, 'Unauthorized to approve this customer.');
+        }
+
+        $customer->update([
+            'approval_status' => 'Approved',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'rejection_reason' => null,
+        ]);
+
+        $auditService = app(AuditNotificationService::class);
+        $label = $customer->company ?: ($customer->contact_name ?: $customer->customer_code);
+
+        $auditService->log(
+            $user->id,
+            'Approved Customer',
+            'Customer',
+            $customer->id,
+            $customer->customer_code,
+            "Approved customer {$label}"
+        );
+
+        $creatorId = $customer->created_by ?: $customer->sales_person_id;
+        if ($creatorId && (int) $creatorId !== (int) $user->id) {
+            $auditService->notify(
+                $creatorId,
+                'Customer Approved',
+                "Customer Approved: {$label}",
+                "Your submitted customer {$label} ({$customer->customer_code}) was approved by {$user->name}.",
+                'customer',
+                $customer->id
+            );
+        }
+
+        $this->dispatch('toast', ['msg' => 'Customer approved successfully.', 'type' => 'ok']);
+    }
+
+    public function rejectCustomer(int $id, ?string $reason = null): void
+    {
+        $customer = Customer::findOrFail($id);
+        $user = auth()->user();
+        if (! $customer->canBeApprovedBy($user)) {
+            abort(403, 'Unauthorized to reject this customer.');
+        }
+
+        $cleanReason = trim((string) $reason);
+
+        $customer->update([
+            'approval_status' => 'Rejected',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'rejection_reason' => $cleanReason !== '' ? $cleanReason : null,
+        ]);
+
+        $auditService = app(AuditNotificationService::class);
+        $label = $customer->company ?: ($customer->contact_name ?: $customer->customer_code);
+        $reasonText = $cleanReason !== '' ? " (Reason: {$cleanReason})" : '';
+
+        $auditService->log(
+            $user->id,
+            'Rejected Customer',
+            'Customer',
+            $customer->id,
+            $customer->customer_code,
+            "Rejected customer {$label}{$reasonText}"
+        );
+
+        $creatorId = $customer->created_by ?: $customer->sales_person_id;
+        if ($creatorId && (int) $creatorId !== (int) $user->id) {
+            $auditService->notify(
+                $creatorId,
+                'Customer Rejected',
+                "Customer Rejected: {$label}",
+                "Your submitted customer {$label} ({$customer->customer_code}) was rejected by {$user->name}.".($cleanReason !== '' ? " Reason: {$cleanReason}" : ''),
+                'customer',
+                $customer->id
+            );
+        }
+
+        $this->dispatch('toast', ['msg' => 'Customer rejected.', 'type' => 'warning']);
+    }
+
     public function exportCsv()
     {
-        $user = auth()->user();
+        abort_if(! logged_in_user() || is_tech_person() || ! has_permission('customers', 'view'), 403, 'Unauthorized access to customer module.');
+
+        $user = logged_in_user();
         $query = Customer::query()
             ->forUser($user)
             ->with(['projects' => fn ($projectQuery) => $projectQuery->forUser($user)->with(['terms', 'payments']), 'salesPerson'])
@@ -115,8 +208,8 @@ class CustomerIndex extends Component
             });
         }
 
-        app(AuditNotificationService::class)->log(
-            auth()->id(),
+        audit_service()->log(
+            logged_in_user_id(),
             'Exported CSV',
             'Customer',
             null,
@@ -157,7 +250,6 @@ class CustomerIndex extends Component
             fclose($handle);
         }, $filename, ['Content-Type' => 'text/csv; charset=utf-8']);
     }
-    */
 
     public function render()
     {

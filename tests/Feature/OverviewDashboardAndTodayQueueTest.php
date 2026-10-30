@@ -228,7 +228,7 @@ class OverviewDashboardAndTodayQueueTest extends TestCase
         $response->assertSee('Total Closed Bookings');
         $response->assertSee('Quota Target');
         $response->assertSee('Cash Inflow Realized');
-        $response->assertSee('Client Projects Fulfillment');
+        $response->assertSee('Customer Projects Fulfillment');
         $response->assertSee('Recent Closed Deals');
         $response->assertSee('Sales Quota Target');
         $response->assertSee($this->project->name);

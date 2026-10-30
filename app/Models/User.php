@@ -50,9 +50,9 @@ class User extends Authenticatable
         return ($this->role ?? '') === 'Admin';
     }
 
-    public function isTakePerson(): bool
+    public function isTechPerson(): bool
     {
-        return in_array($this->role ?? '', ['TakePerson', 'Take Person'], true);
+        return ($this->role ?? '') === 'TechPerson';
     }
 
     public function hasPermission(string $moduleOrAbility, ?string $action = null): bool
@@ -121,9 +121,9 @@ class User extends Authenticatable
         return $this->hasMany(Project::class, 'sales_person_id');
     }
 
-    public function takenProjects(): HasMany
+    public function techProjects(): HasMany
     {
-        return $this->hasMany(Project::class, 'take_person_id');
+        return $this->hasMany(Project::class, 'tech_person_id');
     }
 
     /**
@@ -214,5 +214,53 @@ class User extends Authenticatable
         }
 
         return array_values(array_unique($ids));
+    }
+
+    /**
+     * Resolves direct upline supervisor.
+     */
+    public function getDirectUpline(): ?User
+    {
+        return $this->reporting_to ? self::find($this->reporting_to) : null;
+    }
+
+    /**
+     * Resolves all upline user IDs recursively (managers/supervisors in the reporting chain).
+     *
+     * @param  bool  $includeAdmins  If true, also includes active Admins even if not in direct reporting chain.
+     * @return array<int>
+     */
+    public function getUplineUserIds(bool $includeAdmins = false): array
+    {
+        $uplineIds = [];
+        $current = $this;
+        $visited = [$this->id];
+
+        while ($current && $current->reporting_to) {
+            $parentId = (int) $current->reporting_to;
+            if (in_array($parentId, $visited, true)) {
+                break; // Prevent circular hierarchy loops
+            }
+            $visited[] = $parentId;
+            $uplineIds[] = $parentId;
+            $current = self::find($parentId);
+        }
+
+        if ($includeAdmins) {
+            $adminIds = self::where('role', 'Admin')
+                ->where('status', 'Active')
+                ->where('id', '!=', $this->id)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            foreach ($adminIds as $adminId) {
+                if (! in_array($adminId, $uplineIds, true)) {
+                    $uplineIds[] = $adminId;
+                }
+            }
+        }
+
+        return array_values(array_unique($uplineIds));
     }
 }

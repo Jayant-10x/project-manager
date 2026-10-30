@@ -6,7 +6,6 @@ use App\Models\Document;
 use App\Models\Payment;
 use App\Models\PaymentTerm;
 use App\Models\Project;
-use App\Models\User;
 use App\Services\AuditNotificationService;
 use App\Services\CodeGeneratorService;
 use Illuminate\Support\Facades\Storage;
@@ -66,7 +65,7 @@ class PaymentModal extends Component
         $this->resetValidation();
         $this->reset(['project_id', 'term_id', 'amount', 'tds', 'reference', 'bank', 'note', 'customer_id', 'receipt_file']);
         $this->paid_on = now()->toDateString();
-        $this->mode = '';
+        $this->mode = 'NEFT';
         $this->tds = null;
 
         if ($termId) {
@@ -201,7 +200,9 @@ class PaymentModal extends Component
             }
 
             $this->receipt_file->storeAs('', $storedName, 'uploads');
-            $this->receipt_file->storeAs('', $storedName, 'public');
+            if (Storage::disk('uploads')->exists($storedName)) {
+                Storage::disk('public')->put($storedName, Storage::disk('uploads')->get($storedName));
+            }
 
             $doc = Document::create([
                 'customer_id' => $project->customer_id,
@@ -243,39 +244,28 @@ class PaymentModal extends Component
             "Received ₹{$validated['amount']} for {$project->name}"
         );
 
-        if ($project->coordinator_id && $project->coordinator_id !== auth()->id()) {
-            $auditService->notify(
-                $project->coordinator_id,
-                'Payment Received',
-                "Payment {$validated['code']} recorded",
-                '₹'.number_format($validated['amount'], 2)." received for {$project->name}",
-                'project',
-                $project->id
-            );
-        }
-
         if ($project->sales_person_id && $project->sales_person_id !== auth()->id()) {
             $auditService->notify(
                 $project->sales_person_id,
                 'Payment Received',
                 "Payment {$validated['code']} received",
-                '₹'.number_format($validated['amount'], 2)." collected from your client for {$project->name}",
+                '₹'.number_format($validated['amount'], 2)." collected from your customer for {$project->name}",
                 'project',
                 $project->id
             );
         }
 
-        $adminIds = User::where('role', 'Admin')->where('status', 'Active')->where('id', '!=', auth()->id())->pluck('id');
-        foreach ($adminIds as $adminId) {
-            $auditService->notify(
-                $adminId,
-                'Payment Received',
-                "Payment {$validated['code']} recorded",
-                '₹'.number_format($validated['amount'], 2)." received for {$project->name}",
-                'project',
-                $project->id
-            );
-        }
+        $auditService->notifyProjectStakeholders(
+            $project,
+            'Payment Received',
+            "Payment {$validated['code']} recorded",
+            '₹'.number_format($validated['amount'], 2)." received for {$project->name}",
+            'project',
+            $project->id,
+            includeUplines: true,
+            includeAdmins: true,
+            excludeUserIds: array_filter([$project->sales_person_id])
+        );
 
         $this->reset(['project_id', 'term_id', 'amount', 'tds', 'reference', 'bank', 'note', 'receipt_file']);
         $this->paid_on = now()->toDateString();

@@ -101,12 +101,12 @@
                     <input wire:model.live.debounce.300ms="search" placeholder="Search by name, email, city...">
                 </div>
 
-                <!-- Role Filter (Only show relevant roles for downline) -->
+                <!-- Role Filter (Only show relevant roles for reporting team) -->
                 @if($currentUser->role === 'Manager')
                     <select wire:model.live="roleFilter" class="i" style="width:auto">
                         <option value="">All Roles</option>
                         <option value="Coordinator">Coordinator</option>
-                        <option value="TakePerson">Take Person</option>
+                        <option value="TechPerson">Tech Person</option>
                         <option value="Sales">Sales</option>
                     </select>
                 @endif
@@ -148,7 +148,7 @@
                 @php
                     $roleColors = [
                         'Coordinator' => ['badge' => 'bg-amber-50 text-amber-700 border-amber-200', 'avatar' => '#d97706'],
-                        'TakePerson' => ['badge' => 'bg-cyan-50 text-cyan-700 border-cyan-200', 'avatar' => '#0891b2'],
+                        'TechPerson' => ['badge' => 'bg-cyan-50 text-cyan-700 border-cyan-200', 'avatar' => '#0891b2'],
                         'Sales' => ['badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200', 'avatar' => '#059669'],
                         'Manager' => ['badge' => 'bg-purple-50 text-purple-700 border-purple-200', 'avatar' => '#7e22ce'],
                     ];
@@ -430,10 +430,10 @@
                                         </div>
                                     @endif
                                 </div>
-                            @elseif($viewingMember->isTakePerson())
+                            @elseif($viewingMember->isTechPerson())
                                 <div class="flex items-center justify-between pt-2 border-t border-gray-200/60">
-                                    <span class="text-gray-500 font-medium">Assigned Projects (Take Person):</span>
-                                    <strong class="text-cyan-700 font-bold">{{ $viewingMember->taken_projects_count }} projects</strong>
+                                    <span class="text-gray-500 font-medium">Assigned Projects (Tech Person):</span>
+                                    <strong class="text-cyan-700 font-bold">{{ $viewingMember->tech_projects_count }} projects</strong>
                                 </div>
                             @elseif($viewingMember->subordinates_count > 0)
                                 <div class="flex items-center justify-between pt-2 border-t border-gray-200/60">

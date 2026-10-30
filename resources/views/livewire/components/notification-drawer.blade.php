@@ -50,7 +50,7 @@
                                 wire: $wire,
                                 action: 'markAllAsRead'
                             })"
-                            class="text-xs font-semibold text-[#0b3d91] hover:underline px-2 py-1 rounded">
+                            class="btn btn-outline-primary btn-xs">
                         Mark all as read
                     </button>
                 @endif
@@ -65,7 +65,7 @@
                                 wire: $wire,
                                 action: 'clearAll'
                             })"
-                            class="text-xs font-semibold text-[#8894ac] hover:text-[#d94b4b] px-2 py-1 rounded"
+                            class="btn btn-outline-danger btn-xs"
                             title="Clear all notifications">
                         Clear all
                     </button>

@@ -1,6 +1,6 @@
 <x-modal name="project-modal"
-         :title="$projectId ? 'Edit Project' : 'New Project'"
-         sub="Capture deliverable, timeline and margin settings"
+         :title="$projectId ? ($isRejected ? 'Edit & Resubmit Project' : 'Edit Project') : 'New Project'"
+         :sub="$projectId ? ($isRejected ? 'Update details to re-submit this project for review' : 'Capture deliverable, timeline and margin settings') : 'Capture deliverable, timeline and margin settings'"
          :wide="true">
     <form wire:submit="save" novalidate>
         <div class="form-grid">
@@ -51,7 +51,7 @@
                        class="i @error('cost') border-red-500! bg-red-50/20! @enderror">
                 @error('cost') <span
                     class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
-                <div class="hint">For margin tracking — not visible to client</div>
+                <div class="hint">For margin tracking — not visible to customer</div>
             </label>
 
             @if(auth()->user()->role === 'Sales')
@@ -95,15 +95,15 @@
             @endif
 
             <label class="f">
-                <span>Take Person <span class="text-red-500"> *</span></span>
-                <select wire:model.blur="take_person_id"
-                        class="i @error('take_person_id') border-red-500! bg-red-50/20! @enderror">
-                    <option value="" selected>*** Select Take Person ***</option>
-                    @foreach($takePersons as $tp)
+                <span>Tech Person</span>
+                <select wire:model.blur="tech_person_id"
+                        class="i @error('tech_person_id') border-red-500! bg-red-50/20! @enderror">
+                    <option value="" selected>*** Select Tech Person ***</option>
+                    @foreach($techPersons as $tp)
                         <option value="{{ $tp->id }}">{{ $tp->name }} ({{ $tp->designation }})</option>
                     @endforeach
                 </select>
-                @error('take_person_id')
+                @error('tech_person_id')
                 <span class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span>
                 @enderror
             </label>
@@ -142,7 +142,7 @@
                     <span>Delay reason</span>
                     <input wire:model.blur="delay_reason"
                            class="i @error('delay_reason') border-red-500! bg-red-50/20! @enderror"
-                           placeholder="e.g. Client approval pending">
+                           placeholder="e.g. Customer approval pending">
                     @error('delay_reason') <span
                         class="text-xs text-red-500! mt-1 font-medium block">{{ $message }}</span> @enderror
                 </label>
@@ -237,16 +237,16 @@
 
         <div class="mt-6 flex justify-end gap-3">
             <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
-            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled" wire:target="save">
-                <span wire:loading.remove wire:target="save">{{ $projectId ? 'Save changes' : 'Create project' }}</span>
-                <span wire:loading wire:target="save" class="inline-flex items-center gap-1.5">
-                    <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <button type="submit" class="btn btn-primary min-w-[150px] justify-center" wire:loading.attr="disabled" wire:target="save">
+                <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">{{ $projectId ? ($isRejected ? 'Update & Resubmit' : 'Save changes') : 'Create project' }}</span>
+                <span wire:loading.inline-flex wire:target="save" class="items-center justify-center gap-1.5">
+                    <svg class="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                                 stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor"
                               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Saving...
+                    <span>Saving...</span>
                 </span>
             </button>
         </div>

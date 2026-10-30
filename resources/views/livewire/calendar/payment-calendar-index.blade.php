@@ -42,7 +42,7 @@
                 class="inline-flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-0.5 shadow-xs">
                 <button type="button"
                         wire:click="prevMonth"
-                        class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-300"
+                        class="btn btn-ghost btn-xs p-1"
                         title="Previous Month">
                     <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M15 18l-6-6 6-6"/>
@@ -51,14 +51,14 @@
 
                 <button type="button"
                         wire:click="goToToday"
-                        class="px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                        class="btn btn-outline-primary btn-xs"
                         title="Jump to Current Month">
                     Today
                 </button>
 
                 <button type="button"
                         wire:click="nextMonth"
-                        class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-600 dark:text-slate-300"
+                        class="btn btn-ghost btn-xs p-1"
                         title="Next Month">
                     <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 18l6-6-6-6"/>
@@ -108,7 +108,7 @@
         </div>
     </div>
 
-    <!-- Filter Bar: Type Filter & Downline Person Filter -->
+    <!-- Filter Bar: Type Filter & Team Member Filter -->
     <div class="card p-3 shadow-xs">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <!-- Type Filter Tabs -->
@@ -143,7 +143,7 @@
                 @endif
             </div>
 
-            <!-- Downline Team Member Selector -->
+            <!-- Reporting Team Member Selector -->
             @if($accessibleUsers->isNotEmpty())
                 <div class="flex items-center gap-2">
                     <label for="calendar-user-filter"

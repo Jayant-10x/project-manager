@@ -18,29 +18,35 @@ class GlobalSearch extends Component
             $user = auth()->user();
             $term = '%'.trim($this->query).'%';
 
-            $customers = Customer::query()
-                ->where(function ($q) use ($term) {
-                    $q->where('company', 'like', $term)
-                        ->orWhere('customer_code', 'like', $term)
-                        ->orWhere('contact_name', 'like', $term);
-                })
-                ->limit(5)
-                ->get();
+            if ($user && $user->hasPermission('customers', 'view') && ! $user->isTechPerson()) {
+                $customers = Customer::query()
+                    ->forUser($user)
+                    ->where(function ($q) use ($term) {
+                        $q->where('company', 'like', $term)
+                            ->orWhere('customer_code', 'like', $term)
+                            ->orWhere('contact_name', 'like', $term);
+                    })
+                    ->limit(5)
+                    ->get();
 
-            $projects = Project::query()
-                ->forUser($user)
-                ->where(function ($q) use ($term) {
-                    $q->where('name', 'like', $term)
-                        ->orWhere('project_code', 'like', $term);
-                })
-                ->limit(5)
-                ->get();
-
-            foreach ($customers as $c) {
-                $results[] = ['type' => 'Customer', 'title' => $c->display_name, 'sub' => $c->customer_code, 'url' => route('customers.show', $c)];
+                foreach ($customers as $c) {
+                    $results[] = ['type' => 'Customer', 'title' => $c->display_name, 'sub' => $c->customer_code, 'url' => route('customers.show', $c)];
+                }
             }
-            foreach ($projects as $p) {
-                $results[] = ['type' => 'Project', 'title' => $p->name, 'sub' => $p->project_code.' ('.$p->health.')', 'url' => route('projects.show', $p)];
+
+            if ($user && $user->hasPermission('projects', 'view')) {
+                $projects = Project::query()
+                    ->forUser($user)
+                    ->where(function ($q) use ($term) {
+                        $q->where('name', 'like', $term)
+                            ->orWhere('project_code', 'like', $term);
+                    })
+                    ->limit(5)
+                    ->get();
+
+                foreach ($projects as $p) {
+                    $results[] = ['type' => 'Project', 'title' => $p->name, 'sub' => $p->project_code.' ('.$p->health.')', 'url' => route('projects.show', $p)];
+                }
             }
         }
 

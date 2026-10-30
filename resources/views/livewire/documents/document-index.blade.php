@@ -124,7 +124,6 @@
                                 <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
                                 <circle cx="12" cy="12" r="3"/>
                             </svg>
-                            <span>Preview</span>
                         </button>
 
                         <a class="btn btn-outline-secondary btn-xs" href="{{ route('documents.download', $doc->id, absolute: false) }}" download="{{ $doc->file_name }}"
@@ -132,7 +131,6 @@
                             <svg viewBox="0 0 24 24" class="w-3 h-3">
                                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                             </svg>
-                            <span>Download</span>
                         </a>
 
                         <button type="button"
@@ -152,7 +150,6 @@
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                             </svg>
-                            <span>Delete</span>
                         </button>
                     </div>
                 </div>

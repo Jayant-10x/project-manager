@@ -60,8 +60,8 @@
                         <th class="py-2.5 px-3 whitespace-nowrap w-44">User</th>
                         <th class="py-2.5 px-3 whitespace-nowrap w-36">Action</th>
                         <th class="py-2.5 px-3 whitespace-nowrap w-40">Affected Item</th>
-                        <th class="py-2.5 px-3 min-w-[200px]">Details</th>
-                        <th class="py-2.5 px-3 text-right whitespace-nowrap w-32">Action</th>
+                        <th class="py-2.5 px-3 min-w-50">Details</th>
+                        <th class="py-2.5 px-3 whitespace-nowrap w-32" style="text-align:center">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[#eef2f9] text-[#0d1b34]">
@@ -138,7 +138,7 @@
                             </td>
 
                             <!-- Additional Info Button -->
-                            <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                            <td class="py-2.5 px-3 text-center whitespace-nowrap">
                                 <button type="button"
                                         @click="activeLog = {{ json_encode([
                                             'id' => $activityLog->id,
@@ -153,12 +153,11 @@
                                             'detail' => $activityLog->detail,
                                             'changes' => $activityLog->changes,
                                         ]) }}; showDrawer = true;"
-                                        class="btn btn-outline-secondary btn-xs py-1 px-2.5 text-[11px] inline-flex items-center gap-1.5 cursor-pointer hover:border-blue-300 hover:text-blue-700"
-                                        title="View additional audit details and changes">
-                                    <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        class="btn btn-outline-primary"
+                                        title="View audit details and field transitions">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
                                     </svg>
-                                    <span>Additional Info</span>
                                 </button>
                             </td>
                         </tr>

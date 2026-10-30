@@ -33,7 +33,7 @@
                     'Admin' => ['badge' => 'bg-indigo-50 text-indigo-700 border-indigo-200', 'avatar' => '#4338ca'],
                     'Manager' => ['badge' => 'bg-purple-50 text-purple-700 border-purple-200', 'avatar' => '#7e22ce'],
                     'Coordinator' => ['badge' => 'bg-amber-50 text-amber-700 border-amber-200', 'avatar' => '#d97706'],
-                    'TakePerson' => ['badge' => 'bg-cyan-50 text-cyan-700 border-cyan-200', 'avatar' => '#0891b2'],
+                    'TechPerson' => ['badge' => 'bg-cyan-50 text-cyan-700 border-cyan-200', 'avatar' => '#0891b2'],
                     'Sales' => ['badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200', 'avatar' => '#059669'],
                 ];
                 $cfg = $roleColors[array_rand($roleColors)];
@@ -107,16 +107,15 @@
 
                 @if(auth()->user()->role === 'Admin')
                     <div class="row-actions mt-3 justify-start flex gap-2">
-                        <button type="button" class="btn btn-outline-secondary btn-xs inline-flex items-center gap-1"
+                        <button type="button" class="btn btn-outline-secondary btn-xs"
                                 @click="Livewire.dispatch('open-user-modal', { id: {{ $sp->id }} })"
                                 title="Edit Salesperson">
                             <svg viewBox="0 0 24 24" class="w-3 h-3">
                                 <path d="M12 20h9"/>
                                 <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
                             </svg>
-                            <span>Edit</span>
                         </button>
-                        <button type="button" class="btn btn-outline-danger btn-xs inline-flex items-center gap-1"
+                        <button type="button" class="btn btn-outline-danger btn-xs"
                                 @click="$dispatch('confirm-dialog', {
                                     title: 'Remove Salesperson?',
                                     message: 'Remove {{ addslashes($sp->name) }}? Past attributed customers and projects will remain intact.',
@@ -132,7 +131,6 @@
                                 <path
                                     d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                             </svg>
-                            <span>Remove</span>
                         </button>
                     </div>
                 @endif

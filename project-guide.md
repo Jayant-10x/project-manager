@@ -44,7 +44,7 @@ Your agency uses five standard roles. Each role automatically sees the tools and
 | **Administrator** | Overall business management, staff provisioning, system configuration, executive reporting. | **Full unrestricted access** across all clients, projects, payments, staff accounts, permissions, and system settings. |
 | **Manager** | Delivery leadership, team supervision, coordinator workload allocation, client escalation. | Global view of projects, milestones, payments, and reports for all team members reporting to them. |
 | **Project Coordinator** | End-to-end client project management, delivery milestone tracking, payment chasing. | Assigned projects, client details, payment terms, follow-ups, documents, and Today's Work queue. Sensitive executive reports and user administration remain hidden. |
-| **Take Person** | Project intake lead, scope validation, technical deliverable oversight, and handover. | Assigned projects (`take_person_id`), customer records, payment terms, schedules, documents, and operational queue. |
+| **Tech Person** | Technical executor, development milestones, deliverable oversight, and handover. | Assigned projects (`tech_person_id`), milestones, tasks, documents, and technical delivery queue. Customer records and financial terms are excluded. |
 | **Sales Representative** | Client onboarding, pipeline closing, basic project initiation, sales target tracking. | Onboard new customers, initiate new projects, view self-attributed accounts, and track personal sales targets. Financial collection ledgers and internal staff lists remain hidden. |
 
 ---
@@ -179,7 +179,7 @@ The **Projects** module is the operational core of the agency. It tracks what yo
 5. Enter **Project Value** (Total contract price in ₹) and **Estimated Cost** (Internal budget/expense).
 6. Pick **Start Date** and **Target Delivery Date**.
 7. Assign the **Project Coordinator** (responsible for project delivery leadership).
-8. Assign the **Take Person** *(Required)*: Select the staff member responsible for project intake, technical scope validation, and deliverable sign-off.
+8. Assign the **Tech Person** *(Optional/Required)*: Select the technical lead responsible for project development execution, milestone validation, and deliverable sign-off.
 9. If originating from a commercial lead, assign the **Salesperson**.
 10. If the project includes recurring maintenance, check **"Include AMC (Annual Maintenance Contract)"** and enter the annual renewal amount.
 11. Click **"Create Project"**.
@@ -289,7 +289,7 @@ Directly above the calendar grid, you see 4 real-time monthly indicators:
   - **Scheduled Dues Only**: Hides receipts to focus solely on upcoming collection deadlines.
   - **Received Payments Only**: Focuses strictly on incoming cash receipts logged by date.
 - **Team Member Filter (Admins & Managers)**:
-  - Filter the entire calendar down to a specific coordinator, manager, or take person to inspect their individual portfolio.
+  - Filter the entire calendar down to a specific coordinator, manager, or salesperson to inspect their individual portfolio.
 
 #### 4. Day Cells & Color Coding
 - **Blue Due Badge**: Indicates scheduled installments due on that day, showing the aggregated total ₹ amount.
@@ -422,7 +422,7 @@ Available at `/users` (for Administrators) and `/team` (for Managers & Coordinat
 #### 1. Adding a New Staff Member (`+ Add User`)
 1. Navigate to `/users` and click **"+ Add User"**.
 2. Enter their **Full Name**, **Work Email**, **Phone Number**, **City**, and **Job Designation** (e.g., *Senior UI/UX Designer*).
-3. Select their **Role** (*Admin*, *Manager*, *Coordinator*, *Take Person*, *Sales*).
+3. Select their **Role** (*Admin*, *Manager*, *Coordinator*, *Tech Person*, *Sales*).
 4. Select their **Reporting Manager** from the dropdown to establish the team hierarchy.
 5. Enter an initial password or generate a secure temporary password.
 6. Check **"Require password change on first login"** so the staff member sets their own private password upon logging in.

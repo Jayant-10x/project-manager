@@ -50,14 +50,14 @@
         </div>
 
         <div class="card p-3.5 flex items-center justify-between cursor-pointer transition hover:border-cyan-400"
-             wire:click="$set('roleFilter', 'TakePerson')"
-             style="{{ $roleFilter === 'TakePerson' ? 'border-color:#0891b2;background:#ecfeff' : '' }}">
+             wire:click="$set('roleFilter', 'TechPerson')"
+             style="{{ $roleFilter === 'TechPerson' ? 'border-color:#0891b2;background:#ecfeff' : '' }}">
             <div>
-                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Take Persons</div>
-                <div class="text-xl font-bold text-cyan-700 mt-0.5">{{ $stats['take_persons'] ?? 0 }}</div>
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tech Persons</div>
+                <div class="text-xl font-bold text-cyan-700 mt-0.5">{{ $stats['tech_persons'] ?? 0 }}</div>
             </div>
             <div class="w-9 h-9 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center font-bold text-xs">
-                TKP
+                TCP
             </div>
         </div>
 
@@ -93,7 +93,7 @@
                     <option value="Admin">Admin</option>
                     <option value="Manager">Manager</option>
                     <option value="Coordinator">Coordinator</option>
-                    <option value="TakePerson">Take Person</option>
+                    <option value="TechPerson">Tech Person</option>
                     <option value="Sales">Sales</option>
                 </select>
 
@@ -151,7 +151,7 @@
                         'Admin' => ['badge' => 'bg-indigo-50 text-indigo-700 border-indigo-200', 'avatar' => '#4338ca'],
                         'Manager' => ['badge' => 'bg-purple-50 text-purple-700 border-purple-200', 'avatar' => '#7e22ce'],
                         'Coordinator' => ['badge' => 'bg-amber-50 text-amber-700 border-amber-200', 'avatar' => '#d97706'],
-                        'TakePerson' => ['badge' => 'bg-cyan-50 text-cyan-700 border-cyan-200', 'avatar' => '#0891b2'],
+                        'TechPerson' => ['badge' => 'bg-cyan-50 text-cyan-700 border-cyan-200', 'avatar' => '#0891b2'],
                         'Sales' => ['badge' => 'bg-emerald-50 text-emerald-700 border-emerald-200', 'avatar' => '#059669'],
                     ];
                     $cfg = $roleColors[$user->role] ?? ['badge' => 'bg-gray-50 text-gray-700 border-gray-200', 'avatar' => '#0b3d91'];

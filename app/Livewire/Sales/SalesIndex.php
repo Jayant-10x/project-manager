@@ -12,6 +12,14 @@ use Livewire\Component;
 #[Layout('layouts.app')]
 class SalesIndex extends Component
 {
+    public function mount(): void
+    {
+        $user = auth()->user();
+        if (! $user || $user->role === 'Sales' || $user->isTechPerson() || (! $user->isAdmin() && ! $user->hasPermission('team', 'view'))) {
+            abort(403, 'Unauthorized access to Sales Team module.');
+        }
+    }
+
     #[On('sales-saved')]
     public function refreshList(): void
     {
@@ -72,13 +80,52 @@ class SalesIndex extends Component
         }
 
         $salesPerson = User::where('role', 'Sales')->findOrFail($id);
+        $auditService = app(AuditNotificationService::class);
 
         if (Customer::where('sales_person_id', $id)->exists()) {
             $salesPerson->status = 'Inactive';
             $salesPerson->save();
+
+            $auditService->log(
+                auth()->id(),
+                'Deactivated Salesperson',
+                'User',
+                $salesPerson->id,
+                (string) $salesPerson->id,
+                "Salesperson {$salesPerson->name} marked Inactive to preserve customer attribution"
+            );
+
+            $auditService->notifyUplines(
+                $salesPerson,
+                'Salesperson Deactivated',
+                "Salesperson Deactivated: {$salesPerson->name}",
+                "Salesperson {$salesPerson->name} ({$salesPerson->email}) was marked Inactive by ".auth()->user()->name.'.',
+                'sales'
+            );
+
             $this->dispatch('toast', ['msg' => 'Salesperson marked Inactive to preserve customer attribution', 'type' => 'ok']);
         } else {
+            $salesName = $salesPerson->name;
+            $salesEmail = $salesPerson->email;
             $salesPerson->delete();
+
+            $auditService->log(
+                auth()->id(),
+                'Deleted Salesperson',
+                'User',
+                $id,
+                (string) $id,
+                "Deleted salesperson {$salesName} ({$salesEmail})"
+            );
+
+            $auditService->notifyUplines(
+                $salesPerson,
+                'Salesperson Deleted',
+                "Salesperson Deleted: {$salesName}",
+                "Salesperson {$salesName} ({$salesEmail}) was deleted by ".auth()->user()->name.'.',
+                'sales'
+            );
+
             $this->dispatch('toast', ['msg' => 'Salesperson removed', 'type' => 'ok']);
         }
     }

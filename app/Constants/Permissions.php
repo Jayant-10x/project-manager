@@ -210,7 +210,7 @@ class Permissions
                 'edit' => false,
             ],
         ],
-        'TakePerson' => [
+        'TechPerson' => [
             'users' => [
                 'view' => false,
                 'add' => false,
@@ -218,86 +218,37 @@ class Permissions
                 'delete' => false,
             ],
             'team' => [
-                'view' => true,
-                'add' => false,
-                'edit' => false,
-                'delete' => false,
-            ],
-            'customers' => [
-                'view' => true,
-                'add' => true,
-                'edit' => true,
-                'delete' => false,
-            ],
-            'projects' => [
-                'view' => true,
-                'add' => true,
-                'edit' => true,
-                'delete' => false,
-            ],
-            'schedules' => [
-                'view' => true,
-                'add' => true,
-                'edit' => true,
-                'delete' => false,
-            ],
-            'payments' => [
-                'view' => true,
-                'add' => true,
-                'edit' => true,
-                'delete' => false,
-            ],
-            'today' => [
-                'view' => true,
-            ],
-            'reports' => [
-                'view' => true,
-                'export' => false,
-            ],
-            'settings' => [
-                'view' => false,
-                'edit' => false,
-            ],
-        ],
-        'Take Person' => [
-            'users' => [
                 'view' => false,
                 'add' => false,
                 'edit' => false,
                 'delete' => false,
             ],
-            'team' => [
-                'view' => true,
+            'customers' => [
+                'view' => false,
                 'add' => false,
                 'edit' => false,
                 'delete' => false,
             ],
-            'customers' => [
-                'view' => true,
-                'add' => true,
-                'edit' => true,
-                'delete' => false,
-            ],
             'projects' => [
                 'view' => true,
-                'add' => true,
+                'add' => false,
                 'edit' => true,
                 'delete' => false,
             ],
             'schedules' => [
-                'view' => true,
-                'add' => true,
-                'edit' => true,
+                'view' => false,
+                'add' => false,
+                'edit' => false,
                 'delete' => false,
             ],
             'payments' => [
-                'view' => true,
-                'add' => true,
-                'edit' => true,
+                'view' => false,
+                'add' => false,
+                'edit' => false,
                 'delete' => false,
             ],
             'today' => [
-                'view' => true,
+                'view' => false,
             ],
             'reports' => [
                 'view' => true,

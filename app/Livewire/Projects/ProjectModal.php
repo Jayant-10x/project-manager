@@ -5,7 +5,6 @@ namespace App\Livewire\Projects;
 use App\Models\Customer;
 use App\Models\Project;
 use App\Models\User;
-use App\Services\AuditNotificationService;
 use App\Services\CodeGeneratorService;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
@@ -14,6 +13,8 @@ use Livewire\Component;
 class ProjectModal extends Component
 {
     public ?int $projectId = null;
+
+    public bool $isRejected = false;
 
     public bool $isSaving = false;
 
@@ -29,15 +30,15 @@ class ProjectModal extends Component
 
     public ?int $coordinator_id = null;
 
-    public ?int $take_person_id = null;
+    public ?int $tech_person_id = null;
 
     public ?string $start_date = null;
 
     public ?string $delivery_date = null;
 
-    public string $status = '';
+    public string $status = 'Onboarding';
 
-    public string $health = '';
+    public string $health = 'On Track';
 
     public string $delay_reason = '';
 
@@ -68,13 +69,15 @@ class ProjectModal extends Component
     public function mount(): void
     {
         $this->start_date = now()->toDateString();
+        $this->status = 'Onboarding';
+        $this->health = 'On Track';
         if (auth()->check() && auth()->user()->role === 'Sales') {
             $this->sales_person_id = auth()->id();
             $this->coordinator_id = auth()->user()->reporting_to;
         } elseif (auth()->check() && auth()->user()->role === 'Coordinator') {
             $this->coordinator_id = auth()->id();
-        } elseif (auth()->check() && auth()->user()->role === 'TakePerson') {
-            $this->take_person_id = auth()->id();
+        } elseif (auth()->check() && auth()->user()->isTechPerson()) {
+            $this->tech_person_id = auth()->id();
         }
     }
 
@@ -102,13 +105,14 @@ class ProjectModal extends Component
 
         if ($id) {
             $project = Project::findOrFail($id);
+            $this->isRejected = $project->isRejected();
             $this->customer_id = $project->customer_id;
             $this->name = $project->name ?? '';
             $this->project_type = $project->project_type ?? 'Website';
             $this->value = $project->value !== null ? (float) $project->value : null;
             $this->cost = $project->cost !== null ? (float) $project->cost : null;
             $this->coordinator_id = $project->coordinator_id;
-            $this->take_person_id = $project->take_person_id ?: null;
+            $this->tech_person_id = $project->tech_person_id ?: null;
             $this->start_date = $project->start_date instanceof Carbon ? $project->start_date->toDateString() : ($project->start_date ? substr((string) $project->start_date, 0, 10) : null);
             $this->delivery_date = $project->delivery_date instanceof Carbon ? $project->delivery_date->toDateString() : ($project->delivery_date ? substr((string) $project->delivery_date, 0, 10) : null);
             $this->status = $project->status ?? 'Onboarding';
@@ -126,6 +130,8 @@ class ProjectModal extends Component
             $this->sales_person_id = $project->sales_person_id;
         } else {
             $this->start_date = now()->toDateString();
+            $this->status = 'Onboarding';
+            $this->health = 'On Track';
             $this->cost = null;
             $this->amc_amount = null;
             $this->renew_alert_days = 7;
@@ -134,8 +140,8 @@ class ProjectModal extends Component
                 $this->coordinator_id = auth()->user()->reporting_to;
             } elseif (auth()->check() && auth()->user()->role === 'Coordinator') {
                 $this->coordinator_id = auth()->id();
-            } elseif (auth()->check() && auth()->user()->role === 'TakePerson') {
-                $this->take_person_id = auth()->id();
+            } elseif (auth()->check() && auth()->user()->isTechPerson()) {
+                $this->tech_person_id = auth()->id();
             }
         }
 
@@ -151,7 +157,7 @@ class ProjectModal extends Component
             'value' => 'required|numeric|min:0',
             'cost' => 'nullable|numeric|min:0',
             'coordinator_id' => (auth()->check() && in_array(auth()->user()->role, ['Coordinator', 'Sales'])) ? 'nullable|integer' : 'required|integer|exists:users,id',
-            'take_person_id' => 'nullable|integer|exists:users,id',
+            'tech_person_id' => 'nullable|integer|exists:users,id',
             'start_date' => 'required|date',
             'delivery_date' => 'nullable|date|after_or_equal:start_date',
             'status' => 'required|in:Onboarding,In Progress,On Hold,Delivered,Cancelled',
@@ -177,7 +183,7 @@ class ProjectModal extends Component
             'customer_id' => 'customer',
             'sales_person_id' => 'salesperson',
             'coordinator_id' => 'coordinator',
-            'take_person_id' => 'take person',
+            'tech_person_id' => 'tech person',
         ];
     }
 
@@ -202,7 +208,7 @@ class ProjectModal extends Component
         try {
             $this->customer_id = $this->customer_id ? (int) $this->customer_id : null;
             $this->coordinator_id = $this->coordinator_id ? (int) $this->coordinator_id : null;
-            $this->take_person_id = $this->take_person_id ? (int) $this->take_person_id : null;
+            $this->tech_person_id = $this->tech_person_id ? (int) $this->tech_person_id : null;
             $this->cost = ($this->cost === null || $this->cost === '') ? 0.0 : (float) $this->cost;
             $this->start_date = ! empty($this->start_date) ? $this->start_date : null;
             $this->delivery_date = ! empty($this->delivery_date) ? $this->delivery_date : null;
@@ -247,8 +253,8 @@ class ProjectModal extends Component
                 $validated['coordinator_id'] = $this->coordinator_id ?: auth()->id();
             }
 
-            if (auth()->check() && auth()->user()->role === 'TakePerson') {
-                $validated['take_person_id'] = $this->take_person_id ?: auth()->id();
+            if (auth()->check() && auth()->user()->isTechPerson()) {
+                $validated['tech_person_id'] = $this->tech_person_id ?: auth()->id();
             }
 
             if (auth()->check() && auth()->user()->role === 'Sales') {
@@ -260,11 +266,21 @@ class ProjectModal extends Component
             $codeService = app(CodeGeneratorService::class);
             $isEdit = (bool) $this->projectId;
 
-            $auditService = app(AuditNotificationService::class);
+            $auditService = audit_service();
 
             if ($this->projectId) {
                 $project = Project::findOrFail($this->projectId);
+                $wasRejected = $project->isRejected();
+
                 $project->fill($validated);
+
+                if ($wasRejected) {
+                    $project->approval_status = 'Pending';
+                    $project->rejection_reason = null;
+                    $project->approved_by = null;
+                    $project->approved_at = null;
+                }
+
                 $structuredChanges = $auditService->computeChanges($project);
                 $project->save();
 
@@ -274,36 +290,62 @@ class ProjectModal extends Component
                 }
                 $diffText = ! empty($diffSummaries) ? ' ('.implode(', ', $diffSummaries).')' : '';
 
-                $auditService->log(
-                    auth()->id(),
-                    'Updated Project',
-                    'Project',
-                    $project->id,
-                    $project->code,
-                    "Updated project {$project->name}{$diffText}",
-                    $structuredChanges
-                );
+                if ($wasRejected) {
+                    $auditService->log(
+                        auth()->id(),
+                        'Resubmitted Project',
+                        'Project',
+                        $project->id,
+                        $project->code,
+                        'Salesperson '.auth()->user()->name." updated and resubmitted project {$project->name} for approval{$diffText}",
+                        $structuredChanges
+                    );
 
-                // Notify if health worsened
-                if (isset($structuredChanges['health']) && in_array($project->health, ['At Risk', 'Delayed'], true)) {
-                    if ($project->coordinator_id && $project->coordinator_id !== auth()->id()) {
-                        $auditService->notify(
-                            $project->coordinator_id,
+                    // Notify uplines for re-approval
+                    $auditService->notifyUplines(
+                        $project->sales_person_id ? User::find($project->sales_person_id) : auth()->user(),
+                        'Project Approval Required',
+                        "Project Resubmitted for Approval: {$project->name}",
+                        'Salesperson '.auth()->user()->name." updated details and resubmitted project {$project->name} ({$project->code}) for review.",
+                        'project',
+                        $project->id
+                    );
+                } else {
+                    $auditService->log(
+                        auth()->id(),
+                        'Updated Project',
+                        'Project',
+                        $project->id,
+                        $project->code,
+                        "Updated project {$project->name}{$diffText}",
+                        $structuredChanges
+                    );
+
+                    // Notify if health worsened
+                    if (isset($structuredChanges['health']) && in_array($project->health, ['At Risk', 'Delayed'], true)) {
+                        $auditService->notifyProjectStakeholders(
+                            $project,
                             'Project Health Alert',
                             "Project {$project->name} is {$project->health}",
-                            "Status changed to {$project->health}. Reason: ".($project->delay_reason ?: 'No reason specified'),
+                            "Alert: {$project->name} marked {$project->health}. Reason: ".($project->delay_reason ?: 'No reason specified'),
                             'project',
                             $project->id
                         );
-                    }
-
-                    $adminIds = User::where('role', 'Admin')->where('status', 'Active')->where('id', '!=', auth()->id())->pluck('id');
-                    foreach ($adminIds as $adminId) {
-                        $auditService->notify(
-                            $adminId,
-                            'Project Health Alert',
-                            "Project {$project->name} is {$project->health}",
-                            "Alert: {$project->name} marked {$project->health}.",
+                    } elseif (isset($structuredChanges['status'])) {
+                        $auditService->notifyProjectStakeholders(
+                            $project,
+                            'Project Status Changed',
+                            "Project {$project->name}: {$project->status}",
+                            "Status of project {$project->name} ({$project->code}) changed to {$project->status} by ".auth()->user()->name.'.',
+                            'project',
+                            $project->id
+                        );
+                    } elseif (! empty($structuredChanges)) {
+                        $auditService->notifyProjectStakeholders(
+                            $project,
+                            'Project Updated',
+                            "Project Updated: {$project->name}",
+                            "Project {$project->name} ({$project->code}) details were updated by ".auth()->user()->name.'.',
                             'project',
                             $project->id
                         );
@@ -322,13 +364,15 @@ class ProjectModal extends Component
                     );
                 }
 
-                // Notify if take person reassigned
-                if (isset($structuredChanges['take_person_id']) && $project->take_person_id && $project->take_person_id !== auth()->id()) {
+                // Notify if tech person reassigned
+                $assignedTechId = $project->tech_person_id;
+                $techChanged = isset($structuredChanges['tech_person_id']);
+                if ($techChanged && $assignedTechId && $assignedTechId !== auth()->id()) {
                     $auditService->notify(
-                        $project->take_person_id,
+                        $assignedTechId,
                         'Project Assignment',
                         "Assigned to {$project->name}",
-                        "You have been assigned as Take Person for project {$project->name} ({$project->code})",
+                        "You have been assigned as Tech Person for project {$project->name} ({$project->code})",
                         'project',
                         $project->id
                     );
@@ -336,43 +380,82 @@ class ProjectModal extends Component
             } else {
                 $validated['project_code'] = $codeService->generate('project', 'PJT-');
                 $validated['created_by'] = auth()->id();
+                $isSales = auth()->check() && auth()->user()->role === 'Sales';
+                $validated['approval_status'] = $isSales ? 'Pending' : 'Approved';
                 if (auth()->check() && auth()->user()->role !== 'Admin' && empty($validated['coordinator_id'])) {
-                    $validated['coordinator_id'] = (auth()->user()->role === 'Sales' && auth()->user()->reporting_to)
+                    $validated['coordinator_id'] = ($isSales && auth()->user()->reporting_to)
                         ? auth()->user()->reporting_to
                         : auth()->id();
                 }
                 $project = Project::create($validated);
-                $auditService->log(auth()->id(), 'Created Project', 'Project', $project->id, $project->code, "Created project {$project->name} with value ₹".number_format($project->value, 2));
 
-                // Notify assigned coordinator
-                if ($project->coordinator_id && $project->coordinator_id !== auth()->id()) {
-                    $auditService->notify(
-                        $project->coordinator_id,
-                        'Project Assignment',
-                        "New Project: {$project->name}",
-                        "You have been assigned to project {$project->name} ({$project->code})",
+                if ($isSales) {
+                    $auditService->log(
+                        auth()->id(),
+                        'Submitted Project',
+                        'Project',
+                        $project->id,
+                        $project->code,
+                        'Salesperson '.auth()->user()->name." submitted project {$project->name} for approval"
+                    );
+
+                    // Notify uplines for approval
+                    $auditService->notifyUplines(
+                        auth()->user(),
+                        'Project Approval Required',
+                        "New Project Approval: {$project->name}",
+                        'Salesperson '.auth()->user()->name." submitted project {$project->name} ({$project->code}). approval required.",
                         'project',
                         $project->id
                     );
-                }
+                } else {
+                    $auditService->log(auth()->id(), 'Created Project', 'Project', $project->id, $project->code, "Created project {$project->name} with value ₹".number_format($project->value, 2));
 
-                // Notify assigned take person
-                if ($project->take_person_id && $project->take_person_id !== auth()->id()) {
-                    $auditService->notify(
-                        $project->take_person_id,
-                        'Project Assignment',
-                        "New Project (Take Person): {$project->name}",
-                        "You have been assigned as Take Person for project {$project->name} ({$project->code})",
+                    // Notify assigned coordinator
+                    if ($project->coordinator_id && $project->coordinator_id !== auth()->id()) {
+                        $auditService->notify(
+                            $project->coordinator_id,
+                            'Project Assignment',
+                            "New Project: {$project->name}",
+                            "You have been assigned to project {$project->name} ({$project->code})",
+                            'project',
+                            $project->id
+                        );
+                    }
+
+                    // Notify assigned tech person
+                    $assignedTechPersonId = $project->tech_person_id;
+                    if ($assignedTechPersonId && $assignedTechPersonId !== auth()->id()) {
+                        $auditService->notify(
+                            $assignedTechPersonId,
+                            'Project Assignment',
+                            "New Project (Tech Person): {$project->name}",
+                            "You have been assigned as Tech Person for project {$project->name} ({$project->code})",
+                            'project',
+                            $project->id
+                        );
+                    }
+
+                    // Notify stakeholders and uplines
+                    $auditService->notifyProjectStakeholders(
+                        $project,
+                        'Project Created',
+                        "New Project: {$project->name}",
+                        "Project {$project->name} ({$project->code}) with value ₹".number_format($project->value, 2).' was initiated by '.auth()->user()->name.'.',
                         'project',
-                        $project->id
+                        $project->id,
+                        includeUplines: true,
+                        includeAdmins: true,
+                        excludeUserIds: array_filter([$project->coordinator_id, $assignedTechPersonId])
                     );
                 }
             }
 
+            $wasRejectedAction = $isEdit && isset($wasRejected) && $wasRejected;
             $this->reset();
             $this->dispatch('project-saved');
             $this->dispatch('close-modal', 'project-modal');
-            $this->dispatch('toast', ['msg' => 'Project saved successfully', 'type' => 'ok']);
+            $this->dispatch('toast', ['msg' => $wasRejectedAction ? 'Project updated and resubmitted for review' : 'Project saved successfully', 'type' => 'ok']);
 
             if (! $isEdit) {
                 $this->redirect(route('projects.show', $project->id), navigate: true);
@@ -391,11 +474,11 @@ class ProjectModal extends Component
             $assignedCoordinator = auth()->user()->reportingTo;
         }
 
-        $takePersonQuery = User::where('role', 'TakePerson')->where('status', 'Active');
-        if ($this->take_person_id) {
-            $takePersonQuery->orWhere('id', $this->take_person_id);
+        $techPersonQuery = User::where('role', 'TechPerson')->where('status', 'Active');
+        if ($this->tech_person_id) {
+            $techPersonQuery->orWhere('id', $this->tech_person_id);
         }
-        $takePersons = $takePersonQuery->orderBy('name')->get();
+        $techPersons = $techPersonQuery->orderBy('name')->get();
 
         return view('livewire.projects.project-modal', [
             'customers' => Customer::query()
@@ -409,7 +492,7 @@ class ProjectModal extends Component
                 ->get(),
             'salesUsers' => User::where('role', 'Sales')->where('status', 'Active')->orderBy('name')->get(),
             'coordinators' => User::where('role', 'Coordinator')->where('status', 'Active')->orderBy('name')->get(),
-            'takePersons' => $takePersons,
+            'techPersons' => $techPersons,
             'assignedCoordinator' => $assignedCoordinator,
         ]);
     }

@@ -30,7 +30,7 @@ class PaymentCalendarIndex extends Component
     public function mount(): void
     {
         $user = auth()->user();
-        if (! $user || (! $user->hasPermission('payments', 'view') && ! $user->hasPermission('schedules', 'view') && ! $user->hasPermission('projects', 'view'))) {
+        if (! $user || (! $user->hasPermission('payments', 'view') && ! $user->hasPermission('schedules', 'view'))) {
             abort(403, 'Unauthorized access to payment calendar.');
         }
 

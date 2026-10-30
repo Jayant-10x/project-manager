@@ -93,6 +93,7 @@ class PaymentIndex extends Component
         }
 
         $termId = $payment->term_id;
+        $project = $payment->project;
         $payment->delete();
 
         if ($termId) {
@@ -116,7 +117,8 @@ class PaymentIndex extends Component
             }
         }
 
-        app(AuditNotificationService::class)->log(
+        $auditService = app(AuditNotificationService::class);
+        $auditService->log(
             auth()->id(),
             'Deleted Payment',
             'Payment',
@@ -124,6 +126,17 @@ class PaymentIndex extends Component
             $payment->code,
             "Deleted payment receipt {$payment->code} of ₹".number_format($payment->amount, 2)
         );
+
+        if ($project) {
+            $auditService->notifyProjectStakeholders(
+                $project,
+                'Payment Deleted',
+                "Payment Deleted: {$payment->code}",
+                "Payment receipt {$payment->code} of ₹".number_format($payment->amount, 2)." for project {$project->name} was deleted by ".auth()->user()->name.'.',
+                'project',
+                $project->id
+            );
+        }
 
         $this->dispatch('payment-deleted');
     }

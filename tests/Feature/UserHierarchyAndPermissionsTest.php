@@ -7,8 +7,10 @@ use App\Livewire\Settings\UserModal;
 use App\Livewire\Team\TeamIndex;
 use App\Livewire\Users\UserIndex;
 use App\Models\Customer;
+use App\Models\Notification;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use App\Services\PasswordGeneratorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -423,5 +425,267 @@ class UserHierarchyAndPermissionsTest extends TestCase
             $this->assertMatchesRegularExpression('/[0-9]/', $password);
             $this->assertMatchesRegularExpression('/[*#@!$%&?~+=^]/', $password);
         }
+    }
+
+    public function test_tech_person_and_sales_cannot_access_team_and_sales_team_modules(): void
+    {
+        $techPerson = User::factory()->create([
+            'name' => 'Executor TechPerson',
+            'email' => 'techperson@test.com',
+            'role' => 'TechPerson',
+            'status' => 'Active',
+            'must_change' => false,
+        ]);
+
+        // Sales person cannot access team or sales-team
+        $this->actingAs($this->sales)->get('/team')->assertStatus(403);
+        $this->actingAs($this->sales)->get('/sales-team')->assertStatus(403);
+
+        // Tech person cannot access team or sales-team
+        $this->actingAs($techPerson)->get('/team')->assertStatus(403);
+        $this->actingAs($techPerson)->get('/sales-team')->assertStatus(403);
+
+        // Neither sees Team Members or Sales Team links in sidebar
+        $salesSidebar = $this->actingAs($this->sales)->get('/dashboard');
+        $salesSidebar->assertDontSee(route('team.index'));
+        $salesSidebar->assertDontSee(route('sales.index'));
+
+        $techSidebar = $this->actingAs($techPerson)->get('/dashboard');
+        $techSidebar->assertDontSee(route('team.index'));
+        $techSidebar->assertDontSee(route('sales.index'));
+    }
+
+    public function test_tech_person_cannot_access_financial_and_customer_modules(): void
+    {
+        $techPerson = User::factory()->create([
+            'name' => 'Executor TechPerson 2',
+            'email' => 'techperson2@test.com',
+            'role' => 'TechPerson',
+            'status' => 'Active',
+            'must_change' => false,
+        ]);
+
+        $customer = Customer::create([
+            'customer_code' => 'CUS-TP-PERM',
+            'company' => 'Customer Restricted Corp',
+            'status' => 'Active',
+        ]);
+
+        // Financial modules blocked
+        $this->actingAs($techPerson)->get('/payments')->assertStatus(403);
+        $this->actingAs($techPerson)->get('/schedules')->assertStatus(403);
+        $this->actingAs($techPerson)->get('/calendar')->assertStatus(403);
+        $this->actingAs($techPerson)->get('/today-work')->assertStatus(403);
+
+        // Customer module blocked
+        $this->actingAs($techPerson)->get('/customers')->assertStatus(403);
+        $this->actingAs($techPerson)->get('/customer/'.$customer->id)->assertStatus(403);
+
+        // Sidebar does not show Customers link to Tech Person
+        $sidebar = $this->actingAs($techPerson)->get('/dashboard');
+        $sidebar->assertDontSee(route('customers.index'));
+    }
+
+    public function test_tech_person_only_sees_assigned_projects_and_no_financial_info(): void
+    {
+        $techPerson = User::factory()->create([
+            'name' => 'Executor TechPerson 3',
+            'email' => 'techperson3@test.com',
+            'role' => 'TechPerson',
+            'status' => 'Active',
+            'must_change' => false,
+        ]);
+
+        $otherTechPerson = User::factory()->create([
+            'name' => 'Other TechPerson',
+            'email' => 'othertechperson@test.com',
+            'role' => 'TechPerson',
+            'status' => 'Active',
+            'must_change' => false,
+        ]);
+
+        $customer = Customer::create([
+            'customer_code' => 'CUS-TP-01',
+            'company' => 'TechPerson Test Corp',
+            'status' => 'Active',
+        ]);
+
+        $assignedProject = Project::create([
+            'project_code' => 'PRJ-TP-01',
+            'name' => 'Assigned Execution Project',
+            'customer_id' => $customer->id,
+            'tech_person_id' => $techPerson->id,
+            'value' => 500000.0,
+            'status' => 'In Progress',
+        ]);
+
+        $unassignedProject = Project::create([
+            'project_code' => 'PRJ-TP-02',
+            'name' => 'Unassigned Execution Project',
+            'customer_id' => $customer->id,
+            'tech_person_id' => $otherTechPerson->id,
+            'value' => 800000.0,
+            'status' => 'In Progress',
+        ]);
+
+        // In Projects list: TechPerson only sees assigned project and no financial columns
+        $response = $this->actingAs($techPerson)->get('/projects');
+        $response->assertStatus(200);
+        $response->assertSee('Assigned Execution Project');
+        $response->assertDontSee('Unassigned Execution Project');
+        $response->assertDontSee('₹5,00,000');
+        $response->assertDontSee('₹8,00,000');
+
+        // Accessing unassigned project details gives 403
+        $this->actingAs($techPerson)->get('/project/'.$unassignedProject->id)->assertStatus(403);
+
+        // Viewing assigned project detail displays project info & milestones, but NO financial grid / tabs
+        $detailResponse = $this->actingAs($techPerson)->get('/project/'.$assignedProject->id);
+        $detailResponse->assertStatus(200);
+        $detailResponse->assertSee('Assigned Execution Project');
+        $detailResponse->assertDontSee('Total Receivable');
+        $detailResponse->assertDontSee('Payment schedule');
+        $detailResponse->assertDontSee('Receipts');
+        $detailResponse->assertDontSee('Record Payment');
+
+        // Customer name is shown as plain text without link to customer details
+        $detailResponse->assertSee($customer->display_name);
+        $detailResponse->assertDontSee(route('customers.show', $customer->id));
+    }
+
+    public function test_tech_person_dashboard_and_reports_render_pure_execution_metrics(): void
+    {
+        $techPerson = User::factory()->create([
+            'name' => 'Executor TechPerson 4',
+            'email' => 'techperson4@test.com',
+            'role' => 'TechPerson',
+            'status' => 'Active',
+            'must_change' => false,
+        ]);
+
+        $customer = Customer::create([
+            'customer_code' => 'CUS-TP-04',
+            'company' => 'TechPerson Exec Corp',
+            'status' => 'Active',
+        ]);
+
+        Project::create([
+            'project_code' => 'PRJ-TP-04',
+            'name' => 'TechPerson Exec Project',
+            'customer_id' => $customer->id,
+            'tech_person_id' => $techPerson->id,
+            'value' => 950000.0,
+            'status' => 'In Progress',
+            'health' => 'On Track',
+        ]);
+
+        // Dashboard should have Execution cards and NO Payments / Receivable / Trend
+        $dashResponse = $this->actingAs($techPerson)->get('/dashboard');
+        $dashResponse->assertStatus(200);
+        $dashResponse->assertSee('Project Execution & Delivery Progress');
+        $dashResponse->assertSee('Active Projects');
+        $dashResponse->assertSee('Milestones Done');
+        $dashResponse->assertDontSee('Payments & Invoicing Overview');
+        $dashResponse->assertDontSee('Total Receivable');
+        $dashResponse->assertDontSee('Project Cash Flow Trend');
+
+        // Reports should have Execution cards and NO Total Receivable / Due / Overdue
+        $reportResponse = $this->actingAs($techPerson)->get('/reports');
+        $reportResponse->assertStatus(200);
+        $reportResponse->assertSee('Execution & Milestone Delivery Summary');
+        $reportResponse->assertSee('Active Projects');
+        $reportResponse->assertSee('Milestones Done');
+        $reportResponse->assertDontSee('Total Receivable');
+        $reportResponse->assertDontSee('Balance Due');
+        $reportResponse->assertDontSee('Overdue on Projects');
+    }
+
+    public function test_unrelated_notifications_are_suppressed_for_tech_person(): void
+    {
+        $techPerson = User::factory()->create([
+            'name' => 'Tech Executor',
+            'email' => 'techexec@test.com',
+            'role' => 'TechPerson',
+            'status' => 'Active',
+            'must_change' => false,
+        ]);
+
+        $customer = Customer::create([
+            'customer_code' => 'CUS-TP-NOTIF',
+            'company' => 'Tech Notif Corp',
+            'status' => 'Active',
+        ]);
+
+        $project = Project::create([
+            'project_code' => 'PRJ-TP-NOTIF',
+            'name' => 'Notification Test Project',
+            'customer_id' => $customer->id,
+            'coordinator_id' => $this->coordinator->id,
+            'tech_person_id' => $techPerson->id,
+            'value' => 300000.0,
+            'status' => 'In Progress',
+        ]);
+
+        $auditService = app(AuditNotificationService::class);
+
+        // 1. Payment notification on project should NOT reach Tech Person
+        $auditService->notifyProjectStakeholders(
+            $project,
+            'Payment Received',
+            'Payment received: ₹50,000',
+            'Payment of ₹50,000 was received on project',
+            'payments',
+            $project->id
+        );
+
+        $techNotifCount = Notification::where('user_id', $techPerson->id)
+            ->where('type', 'Payment Received')
+            ->count();
+        $this->assertEquals(0, $techNotifCount, 'Payment notification was wrongly sent to Tech Person.');
+
+        // 2. Schedule notification on project should NOT reach Tech Person
+        $auditService->notifyProjectStakeholders(
+            $project,
+            'Schedule Updated',
+            'Milestone payment scheduled',
+            'Installment scheduled for next week',
+            'schedules',
+            $project->id
+        );
+
+        $scheduleNotifCount = Notification::where('user_id', $techPerson->id)
+            ->where('type', 'Schedule Updated')
+            ->count();
+        $this->assertEquals(0, $scheduleNotifCount, 'Schedule notification was wrongly sent to Tech Person.');
+
+        // 3. Customer notification should NOT reach Tech Person
+        $auditService->notifyCustomerStakeholders(
+            $customer,
+            'Customer Profile Updated',
+            'Customer details modified',
+            'Profile information was updated',
+            'customer',
+            $customer->id
+        );
+
+        $custNotifCount = Notification::where('user_id', $techPerson->id)
+            ->where('type', 'Customer Profile Updated')
+            ->count();
+        $this->assertEquals(0, $custNotifCount, 'Customer notification was wrongly sent to Tech Person.');
+
+        // 4. Milestone / technical execution notification SHOULD reach Tech Person
+        $auditService->notifyProjectStakeholders(
+            $project,
+            'Milestone Completed',
+            'Milestone Alpha Delivered',
+            'Milestone Alpha has been delivered and signed off.',
+            'project',
+            $project->id
+        );
+
+        $milestoneNotifCount = Notification::where('user_id', $techPerson->id)
+            ->where('type', 'Milestone Completed')
+            ->count();
+        $this->assertEquals(1, $milestoneNotifCount, 'Milestone delivery notification was not delivered to Tech Person.');
     }
 }

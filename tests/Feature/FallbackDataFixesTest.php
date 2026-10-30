@@ -187,8 +187,8 @@ class FallbackDataFixesTest extends TestCase
 
     public function test_project_modal_assigns_salesperson_supervisor_as_coordinator(): void
     {
-        $takePerson = User::factory()->create([
-            'role' => 'TakePerson',
+        $techPerson = User::factory()->create([
+            'role' => 'TechPerson',
             'status' => 'Active',
             'must_change' => false,
         ]);
@@ -199,7 +199,7 @@ class FallbackDataFixesTest extends TestCase
             ->set('name', 'Sales Attributed Project')
             ->set('customer_id', $this->customer->id)
             ->set('value', 90000)
-            ->set('take_person_id', $takePerson->id)
+            ->set('tech_person_id', $techPerson->id)
             ->call('save')
             ->assertHasNoErrors();
 
@@ -298,7 +298,7 @@ class FallbackDataFixesTest extends TestCase
     {
         $this->actingAs($this->admin);
 
-        $takePerson = User::factory()->create(['role' => 'TakePerson', 'status' => 'Active']);
+        $techPerson = User::factory()->create(['role' => 'TechPerson', 'status' => 'Active']);
 
         $project = Project::create([
             'project_code' => 'PJT-FIX-006',
@@ -308,7 +308,7 @@ class FallbackDataFixesTest extends TestCase
             'start_date' => Carbon::today()->subMonths(1)->toDateString(),
             'sales_person_id' => $this->sales->id,
             'coordinator_id' => $this->coordinator->id,
-            'take_person_id' => $takePerson->id,
+            'tech_person_id' => $techPerson->id,
             'status' => 'In Progress',
             'health' => 'Delayed',
             'delay_reason' => 'Client API credentials took 2 weeks',

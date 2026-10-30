@@ -8,6 +8,7 @@ use App\Livewire\Tasks\TaskIndex;
 use App\Livewire\Today\TodayWorkIndex;
 use App\Models\Customer;
 use App\Models\Followup;
+use App\Models\Milestone;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -118,7 +119,101 @@ class FollowupMessageAndKpiCardsTest extends TestCase
         Livewire::actingAs($coordinator)
             ->test(ReportIndex::class)
             ->assertSee(route('schedule.index'))
+            ->assertSee(route('payments.index'))
             ->assertSee(route('projects.index'))
             ->assertSee(route('today.index'));
+    }
+
+    public function test_coordinator_dashboard_has_payment_cards_with_clickable_links(): void
+    {
+        $coordinator = User::factory()->create(['role' => 'Coordinator']);
+        $customer = Customer::create([
+            'customer_code' => 'CUS-COORD-01',
+            'company' => 'Starlight Media',
+            'contact_name' => 'Sara Connor',
+            'status' => 'Active',
+            'created_by' => $coordinator->id,
+        ]);
+
+        $project = Project::create([
+            'project_code' => 'PRJ-COORD-01',
+            'name' => 'Streaming Platform',
+            'customer_id' => $customer->id,
+            'coordinator_id' => $coordinator->id,
+            'contract_value' => 80000.0,
+            'status' => 'In Progress',
+            'health' => 'On Track',
+            'created_by' => $coordinator->id,
+        ]);
+
+        Livewire::actingAs($coordinator)
+            ->test(DashboardIndex::class)
+            ->assertSee('Total Receivable')
+            ->assertSee('Received')
+            ->assertSee('Due')
+            ->assertSee('Overdue')
+            ->assertSee('Active Projects')
+            ->assertSee(route('schedule.index'))
+            ->assertSee(route('payments.index'))
+            ->assertSee(route('today.index'))
+            ->assertSee(route('projects.index'));
+    }
+
+    public function test_sales_dashboard_has_due_and_overdue_cards_with_clickable_links(): void
+    {
+        $sales = User::factory()->create([
+            'role' => 'Sales',
+            'target' => 500000,
+        ]);
+
+        Livewire::actingAs($sales)
+            ->test(DashboardIndex::class)
+            ->assertSee('Total Receivable')
+            ->assertSee('Received')
+            ->assertSee('Due')
+            ->assertSee('Overdue')
+            ->assertSee('Customers')
+            ->assertSee(route('projects.index'))
+            ->assertSee(route('customers.index'));
+    }
+
+    public function test_my_tasks_displays_overdue_card_and_milestone_chases(): void
+    {
+        $coordinator = User::factory()->create(['role' => 'Coordinator']);
+        $customer = Customer::create([
+            'customer_code' => 'CUS-COORD-02',
+            'company' => 'Apex Global',
+            'contact_name' => 'David Miller',
+            'status' => 'Active',
+            'created_by' => $coordinator->id,
+        ]);
+
+        $project = Project::create([
+            'project_code' => 'PRJ-COORD-02',
+            'name' => 'Logistics Tracking',
+            'customer_id' => $customer->id,
+            'coordinator_id' => $coordinator->id,
+            'contract_value' => 60000.0,
+            'status' => 'In Progress',
+            'health' => 'On Track',
+            'created_by' => $coordinator->id,
+        ]);
+
+        Milestone::create([
+            'project_id' => $project->id,
+            'name' => 'API Integration Phase',
+            'done' => false,
+            'next_chase_date' => now()->addDays(3)->toDateString(),
+            'chase_notes' => 'Awaiting API keys from client security team.',
+        ]);
+
+        Livewire::actingAs($coordinator)
+            ->test(TaskIndex::class)
+            ->assertSee('Pending Tasks')
+            ->assertSee('Completed')
+            ->assertSee('Overdue Tasks')
+            ->assertSee('Upcoming Milestone Chases')
+            ->assertSee('API Integration Phase')
+            ->assertSee('Awaiting API keys from client security team.');
     }
 }

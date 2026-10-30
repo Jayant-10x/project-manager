@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Auth;
 
+use App\Services\AuditNotificationService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Attributes\Layout;
@@ -65,6 +66,15 @@ class ForcePasswordChange extends Component
         $user->locked_until = null;
         $user->save();
 
+        app(AuditNotificationService::class)->log(
+            $user->id,
+            'Force Changed Password',
+            'User',
+            $user->id,
+            (string) $user->id,
+            "User {$user->name} completed mandatory password change"
+        );
+
         session()->flash('status', 'Password set successfully.');
 
         return $this->redirect(route('dashboard'), navigate: true);
@@ -72,9 +82,23 @@ class ForcePasswordChange extends Component
 
     public function logout()
     {
+        $user = Auth::user();
+        if ($user) {
+            app(AuditNotificationService::class)->log(
+                $user->id,
+                'User Logout',
+                'Auth',
+                $user->id,
+                '',
+                "User {$user->name} logged out from force password change screen"
+            );
+        }
+
         Auth::logout();
-        request()->session()->invalidate();
-        request()->session()->regenerateToken();
+        if (request()->hasSession()) {
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+        }
 
         return $this->redirect(route('login'), navigate: true);
     }

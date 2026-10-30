@@ -174,14 +174,15 @@ class ReportIndex extends Component
                 ->get();
         }
 
-        // Coordinator: Milestone Velocity & Upcoming Deadlines
+        // Coordinator & Tech Person: Milestone Velocity & Upcoming Deadlines
         $coordinatorData = [];
-        if ($role === 'Coordinator') {
+        if ($role === 'Coordinator' || $user->isTechPerson()) {
+            $isTechPerson = $user->isTechPerson();
             $totalMilestones = Milestone::whereIn('project_id', $projectIds)->count();
             $completedMilestones = Milestone::whereIn('project_id', $projectIds)->where('done', true)->count();
             $milestoneRate = $totalMilestones > 0 ? round(($completedMilestones / $totalMilestones) * 100) : 0;
 
-            $upcomingDeliveries = Project::where('coordinator_id', $user->id)
+            $upcomingDeliveries = Project::where($isTechPerson ? 'tech_person_id' : 'coordinator_id', $user->id)
                 ->where('status', 'In Progress')
                 ->whereNotNull('delivery_date')
                 ->whereBetween('delivery_date', [$today, Carbon::parse($today)->addDays(60)->toDateString()])
@@ -198,7 +199,7 @@ class ReportIndex extends Component
             ];
         }
 
-        // Sales: Deal Origination, Quota Target & Client Fulfillment
+        // Sales: Deal Origination, Quota Target & Customer Fulfillment
         $salesData = [];
         if ($role === 'Sales') {
             $salesProjects = Project::where('sales_person_id', $user->id);
@@ -212,6 +213,7 @@ class ReportIndex extends Component
             $tdsRealized = (float) Payment::whereIn('project_id', $projectIds)->sum('tds');
             $grossRealized = round($cashRealized + $tdsRealized, 2);
             $realizationRate = $totalDealsValue > 0 ? min(100, round(($grossRealized / $totalDealsValue) * 100)) : 0;
+            $dueAmount = round(max(0, $totalDealsValue - $grossRealized), 2);
             $customersAcquired = Customer::where('sales_person_id', $user->id)->count();
 
             $deals = (clone $salesProjects)
@@ -229,6 +231,9 @@ class ReportIndex extends Component
                 'tdsRealized' => $tdsRealized,
                 'grossRealized' => $grossRealized,
                 'realizationRate' => $realizationRate,
+                'dueAmount' => $dueAmount,
+                'overdueAmount' => $overdueAmt,
+                'overdueCount' => $overdueCount,
                 'customersAcquired' => $customersAcquired,
                 'deals' => $deals,
             ];

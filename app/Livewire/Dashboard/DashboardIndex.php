@@ -45,7 +45,7 @@ class DashboardIndex extends Component
         if ($role === 'Admin') {
             $accessibleUsers = User::where('status', 'Active')
                 ->where('id', '!=', $user->id)
-                ->where('role', '!=', 'TakePerson')
+                ->where('role', '!=', 'TechPerson')
                 ->orderBy('role')
                 ->orderBy('name', 'asc')
                 ->get();
@@ -53,7 +53,7 @@ class DashboardIndex extends Component
             $downlineIds = array_diff($user->getDownlineUserIds(), [$user->id]);
             $accessibleUsers = User::whereIn('id', $downlineIds)
                 ->where('status', 'Active')
-                ->where('role', '!=', 'TakePerson')
+                ->where('role', '!=', 'TechPerson')
                 ->orderBy('role')
                 ->orderBy('name')
                 ->get();
@@ -110,7 +110,7 @@ class DashboardIndex extends Component
 
         // 6-Month Collection Trend (for Admin, Manager, Coordinator)
         $trend = [];
-        if ($role !== 'Sales') {
+        if ($role !== 'Sales' && ! $user->isTechPerson()) {
             for ($i = 5; $i >= 0; $i--) {
                 $monthObj = Carbon::now()->subMonths($i);
                 $startM = $monthObj->copy()->startOfMonth()->toDateString();
@@ -199,11 +199,11 @@ class DashboardIndex extends Component
                 ->get();
         }
 
-        // Coordinator & TakePerson Highlights: Upcoming Delivery Deadlines & Milestones Completion
+        // Coordinator & Tech Person Highlights: Upcoming Delivery Deadlines & Milestones Completion
         $coordinatorData = [];
-        if ($role === 'Coordinator' || $role === 'TakePerson' || $role === 'Take Person') {
-            $isTakePerson = in_array($role, ['TakePerson', 'Take Person'], true);
-            $activeProjectsCount = Project::where($isTakePerson ? 'take_person_id' : 'coordinator_id', $user->id)
+        if ($role === 'Coordinator' || $user->isTechPerson()) {
+            $isTechPerson = $user->isTechPerson();
+            $activeProjectsCount = Project::where($isTechPerson ? 'tech_person_id' : 'coordinator_id', $user->id)
                 ->where('status', 'In Progress')
                 ->count();
 
@@ -214,7 +214,7 @@ class DashboardIndex extends Component
                 })->count();
             $milestoneRate = $totalMilestones > 0 ? round(($completedMilestones / $totalMilestones) * 100) : 0;
 
-            $upcomingDeliveries = Project::where($isTakePerson ? 'take_person_id' : 'coordinator_id', $user->id)
+            $upcomingDeliveries = Project::where($isTechPerson ? 'tech_person_id' : 'coordinator_id', $user->id)
                 ->where('status', 'In Progress')
                 ->whereNotNull('delivery_date')
                 ->whereBetween('delivery_date', [$today, Carbon::parse($today)->addDays(30)->toDateString()])
@@ -254,6 +254,18 @@ class DashboardIndex extends Component
                 ->limit(4)
                 ->get();
 
+            $dueAmount = round(max(0, $totalDealsValue - $grossRealized), 2);
+
+            $salesOverdueTerms = PaymentTerm::query()
+                ->whereIn('project_id', $projectIds)
+                ->where('status', 'Overdue');
+            $salesOverdueSum = (float) (clone $salesOverdueTerms)->selectRaw('COALESCE(SUM(amount - received - tds), 0) as val')->value('val');
+            $salesOverdueCount = (clone $salesOverdueTerms)->count();
+
+            $thisMonthCollections = (float) Payment::whereIn('project_id', $projectIds)
+                ->where('paid_on', '>=', Carbon::now()->startOfMonth()->toDateString())
+                ->sum('amount');
+
             $salesData = [
                 'totalDealsValue' => $totalDealsValue,
                 'dealsCount' => $dealsCount,
@@ -264,6 +276,10 @@ class DashboardIndex extends Component
                 'tdsRealized' => $tdsRealized,
                 'grossRealized' => $grossRealized,
                 'realizationRate' => $realizationRate,
+                'dueAmount' => $dueAmount,
+                'overdueAmount' => $salesOverdueSum,
+                'overdueCount' => $salesOverdueCount,
+                'thisMonthCollections' => $thisMonthCollections,
                 'customersAcquired' => $customersAcquired,
                 'recentDeals' => $recentDeals,
             ];
@@ -301,7 +317,8 @@ class DashboardIndex extends Component
                 'Admin' => 'Executive Company Overview & Financial Governance',
                 'Manager' => 'Operations, Team Delivery & Revenue Execution',
                 'Coordinator' => 'Project Milestones & Delivery Management',
-                'Sales' => 'Sales Performance & Client Portfolio',
+                'TechPerson' => 'Project Execution & Milestone Delivery',
+                'Sales' => 'Sales Performance & Customer Portfolio',
                 default => 'Executive Portfolio & Financial Overview',
             },
         ]);

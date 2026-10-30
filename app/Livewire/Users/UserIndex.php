@@ -247,6 +247,17 @@ class UserIndex extends Component
             "Changed status of {$target->name} to {$newStatus}"
         );
 
+        if ($target->reporting_to && $target->reporting_to !== auth()->id()) {
+            app(AuditNotificationService::class)->notify(
+                $target->reporting_to,
+                'User Status Changed',
+                "Team Member {$target->name}: {$newStatus}",
+                "Account status for {$target->name} was changed to {$newStatus} by ".auth()->user()->name.'.',
+                'team',
+                $target->id
+            );
+        }
+
         $this->dispatch('toast', ['msg' => "Status of {$target->name} changed to {$newStatus}.", 'type' => 'ok']);
     }
 
@@ -254,7 +265,7 @@ class UserIndex extends Component
     {
         $query = User::query()
             ->with(['reportingTo', 'subordinates'])
-            ->withCount(['projects', 'salesProjects', 'takenProjects', 'subordinates'])
+            ->withCount(['projects', 'salesProjects', 'techProjects', 'subordinates'])
             ->withSum('salesProjects as total_sales_value', 'value');
 
         if ($this->search !== '') {
@@ -276,16 +287,18 @@ class UserIndex extends Component
             $query->where('status', $this->statusFilter);
         }
 
-        $users = $query->orderByRaw("CASE role WHEN 'Admin' THEN 1 WHEN 'Manager' THEN 2 WHEN 'Coordinator' THEN 3 WHEN 'Sales' THEN 4 ELSE 5 END")
+        $users = $query->orderByRaw("CASE role WHEN 'Admin' THEN 1 WHEN 'Manager' THEN 2 WHEN 'Coordinator' THEN 3 WHEN 'TechPerson' THEN 4 WHEN 'Sales' THEN 5 ELSE 6 END")
             ->orderBy('name')
             ->paginate(12);
+
+        $techCount = User::where('role', 'TechPerson')->count();
 
         $stats = [
             'total' => User::count(),
             'admins' => User::where('role', 'Admin')->count(),
             'managers' => User::where('role', 'Manager')->count(),
             'coordinators' => User::where('role', 'Coordinator')->count(),
-            'take_persons' => User::where('role', 'TakePerson')->count(),
+            'tech_persons' => $techCount,
             'sales' => User::where('role', 'Sales')->count(),
         ];
 

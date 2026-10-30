@@ -184,10 +184,10 @@ class UsersSeeder extends Seeder
                 ]
             );
         }
-        $takePersons = [
+        $techPersons = [
             [
                 'name' => 'Sahil Khan',
-                'email' => 'take1@the10xagency.in',
+                'email' => 'tech1@the10xagency.in',
                 'phone' => '123123123123',
                 'designation' => 'Wordpress Developer',
                 'city' => 'Noida',
@@ -196,7 +196,7 @@ class UsersSeeder extends Seeder
             ],
             [
                 'name' => 'Abdurrahman Ansari',
-                'email' => 'take2@the10xagency.in',
+                'email' => 'tech2@the10xagency.in',
                 'phone' => '6655447788',
                 'designation' => 'Full Stack Developer',
                 'city' => 'Kerala',
@@ -205,7 +205,7 @@ class UsersSeeder extends Seeder
             ],
             [
                 'name' => 'Utkarsh Shukla',
-                'email' => 'take3@the10xagency.in',
+                'email' => 'tech3@the10xagency.in',
                 'phone' => '6655112233',
                 'designation' => 'SEO Developer',
                 'city' => 'Ghaziabad',
@@ -214,22 +214,39 @@ class UsersSeeder extends Seeder
             ],
         ];
 
-        foreach ($takePersons as $takePerson) {
-            User::updateOrCreate(
-                ['email' => $takePerson['email']],
-                [
-                    'name' => $takePerson['name'],
-                    'phone' => $takePerson['phone'],
-                    'role' => 'TakePerson',
-                    'designation' => $takePerson['designation'],
-                    'city' => $takePerson['city'],
-                    'target' => $takePerson['target'],
+        foreach ($techPersons as $techPerson) {
+            $existing = User::where('email', $techPerson['email'])
+                ->orWhere('phone', $techPerson['phone'])
+                ->orWhere('email', str_replace('tech', 'take', $techPerson['email']))
+                ->first();
+
+            if ($existing) {
+                $existing->update([
+                    'email' => $techPerson['email'],
+                    'name' => $techPerson['name'],
+                    'phone' => $techPerson['phone'],
+                    'role' => 'TechPerson',
+                    'designation' => $techPerson['designation'],
+                    'city' => $techPerson['city'],
+                    'target' => $techPerson['target'],
+                    'status' => 'Active',
+                    'reporting_to' => $techPerson['reporting_to']->id,
+                ]);
+            } else {
+                User::create([
+                    'name' => $techPerson['name'],
+                    'email' => $techPerson['email'],
+                    'phone' => $techPerson['phone'],
+                    'role' => 'TechPerson',
+                    'designation' => $techPerson['designation'],
+                    'city' => $techPerson['city'],
+                    'target' => $techPerson['target'],
                     'status' => 'Active',
                     'password' => $passwordHash,
                     'must_change' => false,
-                    'reporting_to' => $takePerson['reporting_to']->id,
-                ]
-            );
+                    'reporting_to' => $techPerson['reporting_to']->id,
+                ]);
+            }
         }
     }
 }

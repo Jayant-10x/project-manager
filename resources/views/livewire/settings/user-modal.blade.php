@@ -75,7 +75,7 @@
                     <option value="Admin">Admin</option>
                     <option value="Manager">Manager</option>
                     <option value="Coordinator">Coordinator</option>
-                    <option value="TakePerson">Take Person</option>
+                    <option value="TechPerson">Tech Person</option>
                     <option value="Sales">Sales</option>
                 </select>
                 @error('role')
@@ -87,7 +87,7 @@
                 <span>
                     @if($role === 'Manager')
                         Reports To (Admin Supervisor)
-                    @elseif($role === 'Coordinator' || $role === 'TakePerson' || $role === 'Take Person')
+                    @elseif($role === 'Coordinator' || $role === 'TechPerson')
                         Reports To (Manager Supervisor)
                     @elseif($role === 'Sales')
                         Reports To (Coordinator Supervisor)
@@ -245,7 +245,7 @@
                     <div class="cursor-pointer select-none flex items-center gap-2"
                          wire:click="togglePermissionsDropdown">
                         <button type="button"
-                                class="w-6 h-6 rounded flex items-center justify-center bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+                                class="btn btn-ghost btn-xs w-6 h-6 p-0 flex items-center justify-center">
                             <svg class="w-3.5 h-3.5 transition-transform {{ $openPerms ? 'rotate-90' : '' }}"
                                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <path d="M9 18l6-6-6-6"/>
@@ -331,7 +331,18 @@
             <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
                 <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
                 <button type="submit"
-                        class="btn btn-primary">{{ $userId ? 'Save changes' : ($role === 'Sales' ? 'Add salesperson' : 'Add user') }}</button>
+                        class="btn btn-primary min-w-[150px] justify-center"
+                        wire:loading.attr="disabled"
+                        wire:target="save">
+                    <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">{{ $userId ? 'Save changes' : ($role === 'Sales' ? 'Add salesperson' : 'Add user') }}</span>
+                    <span wire:loading.inline-flex wire:target="save" class="items-center justify-center gap-1.5">
+                        <svg class="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Saving...</span>
+                    </span>
+                </button>
             </div>
         </div>
     </form>

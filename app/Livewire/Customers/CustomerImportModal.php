@@ -4,6 +4,7 @@ namespace App\Livewire\Customers;
 
 use App\Models\Customer;
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use App\Services\CodeGeneratorService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -69,6 +70,8 @@ class CustomerImportModal extends Component
                 continue;
             }
 
+            $isSales = auth()->check() && auth()->user()->role === 'Sales';
+
             Customer::create([
                 'customer_code' => $codeService->generate('customer', 'CUS-'),
                 'company' => ! empty($company) ? $company : null,
@@ -83,11 +86,43 @@ class CustomerImportModal extends Component
                 'industry' => trim($row[$headerMap['industry'] ?? -1] ?? '') ?: null,
                 'source' => trim($row[$headerMap['source'] ?? -1] ?? '') ?: null,
                 'internal_notes' => trim($row[$headerMap['internalnotes'] ?? $headerMap['notes'] ?? -1] ?? '') ?: null,
-                'sales_person_id' => $this->defaultSalesPersonId,
+                'sales_person_id' => $isSales ? (auth()->id() ?? $this->defaultSalesPersonId) : $this->defaultSalesPersonId,
                 'status' => 'Active',
+                'approval_status' => $isSales ? 'Pending' : 'Approved',
                 'created_by' => auth()->id(),
             ]);
             $created++;
+        }
+
+        if ($created > 0) {
+            $auditService = app(AuditNotificationService::class);
+            $auditService->log(
+                auth()->id(),
+                'Imported Customers',
+                'Customer',
+                null,
+                '',
+                "Imported {$created} customer(s) from CSV"
+            );
+
+            $isSales = auth()->check() && auth()->user()->role === 'Sales';
+            if ($isSales) {
+                $auditService->notifyUplines(
+                    auth()->user(),
+                    'Customer Approval Required',
+                    'Bulk Customers Approval Required',
+                    auth()->user()->name." imported {$created} customer(s) via CSV. Approval required.",
+                    'customer'
+                );
+            } else {
+                $auditService->notifyUplines(
+                    auth()->user(),
+                    'Customers Imported',
+                    'Bulk Customers Imported',
+                    auth()->user()->name." imported {$created} customer(s) via CSV.",
+                    'customer'
+                );
+            }
         }
 
         $this->reset();

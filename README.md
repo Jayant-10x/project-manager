@@ -11,10 +11,10 @@
 <p>
   <img src="https://img.shields.io/badge/Laravel-13.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13">
   <img src="https://img.shields.io/badge/Livewire-4.x-FB70A9?style=for-the-badge&logo=livewire&logoColor=white" alt="Livewire 4">
-  <img src="https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.2+">
+  <img src="https://img.shields.io/badge/PHP-8.4-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.4">
   <img src="https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL 8.0+">
   <img src="https://img.shields.io/badge/Frontend-Alpine.js%20%26%20Tailwind-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
-  <img src="https://img.shields.io/badge/Tests-228%20Passed-2ea44f?style=for-the-badge&logo=githubactions&logoColor=white" alt="228 Tests Passed">
+  <img src="https://img.shields.io/badge/Tests-285%20Passed-2ea44f?style=for-the-badge&logo=githubactions&logoColor=white" alt="285 Tests Passed">
   <img src="https://img.shields.io/badge/License-Proprietary-0B3D91?style=for-the-badge" alt="Proprietary License">
 </p>
 
@@ -52,17 +52,20 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 
 ## Key Features
 
-### 📊 1. Executive Dashboard & Real-Time Overview
+### 📊 1. Executive Dashboard & Role-Tailored Overview
 
-* **Top Financial Metric Cards:** Real-time agency financial health indicators:
-  * **Total Receivable** `(sum(Installment Amount) where Status != 'Cancelled')`: All active scheduled billing milestones across projects.
-  * **Received** `(sum(Payment Receipts))`: Total cash collected to date across all verified payments.
-  * **Due** `(max(0, Total Receivable - Received - TDS Deducted))`: Outstanding balance still to be collected.
-  * **Overdue** `(sum(Balance) where Status == 'Overdue')`: Delinquent installments requiring immediate follow-up.
-  * **This Month** `(sum(Payment Receipts) where Month == Current Month)`: Collections logged within the current calendar month.
+* **Thematic Section Metric Grouping:** Dashboard cards are cleanly merged into dedicated operational sections with 1-click drilldown navigation to their respective modules:
+  * **Financial Receivables Section (Admins, Managers & Coordinators):**
+    * **Total Receivable** `(sum(Installment Amount) where Status != 'Cancelled')`: All active scheduled billing milestones.
+    * **Received** `(sum(Payment Receipts))`: Total verified collections to date.
+    * **Due** `(max(0, Total Receivable - Received - TDS Deducted))`: Outstanding balance to collect.
+    * **Overdue** `(sum(Balance) where Status == 'Overdue')`: Delinquent installments requiring chase.
+    * **This Month** `(sum(Payment Receipts) where Month == Current Month)`: Collections logged within the current calendar month.
+  * **Project Operations & Execution Section (All Roles / Role-Tailored):**
+    * **Active Projects**, **On Track**, **At Risk**, **Delayed**, and **Completed** breakdown with direct filtering.
+    * **Delivery Velocity & Deadlines**: Upcoming milestones and delivery due dates tailored to Coordinators and Tech Persons.
 * **Downline Team Member Filter:** In-header filter dropdown allowing Administrators and Managers to isolate all dashboard financial metrics, project health charts, and triage items to a specific staff member's portfolio.
 * **Payment Calendar Switcher:** One-click quick link to switch directly from the Dashboard to the datewise Payment Calendar.
-* **Project Health Summary:** Real-time breakdown categorizing active projects into **On Track**, **At Risk**, **Delayed**, and **Completed**, with 1-click filtering to the Projects directory.
 * **Collection Trend Chart:** 6-month visual revenue sparkline tracking monthly collection totals over the last half year.
 * **Today's Work Quick List:** Fast daily triage widget displaying:
   * **Overdue Payments** `(late customer installments with 1-click navigation to project details)`
@@ -77,17 +80,18 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 
 * **Slide-Over Notification Drawer:** Accessible via the topbar bell icon, featuring real-time unread badges, filter tabs (**All** vs. **Unread**), 1-click single mark-as-read, and bulk **Mark all as read**.
 * **Native Desktop Browser Alerts:** Automatically checks for new reminders and delivers native operating system desktop notification banners every 30 seconds with direct deep-linking on click.
+* **Intelligent Notification Suppression:** Sensitive financial receipts, payment milestones, and customer onboarding alerts are strictly suppressed for technical execution staff (`Tech Person`).
 * **Notification Detail View:** Inspect full alert details, jump to linked customer or project dossiers, and toggle read status.
 * **Topbar Bell Counter:** Live unread notification counter updated automatically as activities occur.
 
-### 🔒 3. Team Governance, User Roles & Security
+### 🔒 3. Team Governance, Canonical Roles & Security
 
-* **Multi-Level Permissions & Role Matrix:**
-  * **Administrator (`Admin`)**: Unrestricted global governance over system settings, staff accounts, alert thresholds, customer deletions, and executive reports.
-  * **Manager (`Manager`)**: Supervisory oversight over assigned teams and reporting coordinators with full schedule, project, customer, and report visibility.
-  * **Project Coordinator (`Coordinator`)**: Scoped to assigned customer accounts, projects, schedules, receipts, tasks, and follow-ups; executive financial reports are restricted.
-  * **Take Person (`Take Person`)**: Operational lead responsible for technical intake, scope validation, and deliverable sign-offs; scoped to assigned projects (`take_person_id`) and their customer accounts.
-  * **Sales Representative (`Sales`)**: Client onboarding attribution and target monitoring; scoped strictly to self-attributed customer profiles and basic project overviews (financial ledgers, payment schedules, and money columns remain hidden).
+* **Multi-Level Permissions & Unified 5-Role Matrix:**
+  * **Administrator (`Admin`)**: Unrestricted global governance over system settings, staff accounts, alert thresholds, customer deletions, approval workflows, and executive reports.
+  * **Manager (`Manager`)**: Supervisory oversight over assigned teams, reporting coordinators, and tech persons via downline tree scoping, with full schedule, project, customer, and report visibility.
+  * **Project Coordinator (`Coordinator`)**: Scoped to assigned customer accounts, projects, schedules, receipts, tasks, and follow-ups; now equipped with dedicated financial receivable and delivery health KPI cards.
+  * **Tech Person (`Tech Person`)**: Technical project execution lead (the engineer/developer who completes technical milestones and deliverables). Scoped strictly to assigned projects (`tech_person_id`). Customer directories, financial ledgers, payment schedules, and money columns are completely concealed. Has no direct team, so Team Management is disabled.
+  * **Sales Representative (`Sales`)**: Client onboarding attribution and target monitoring; scoped strictly to self-attributed customer profiles and basic project overviews (financial ledgers, payment schedules, and money columns remain hidden). Has no direct team, so Team Management is disabled.
   * **Custom Permission Overrides**: Administrators can customize granular module permissions (`view`, `add`, `edit`, `delete`, `export`) for individual staff members, with 1-click reset to role defaults.
 * **Team Governance & Directory:**
   * **Users Directory (`/users`)**: Searchable staff management table for administrators with role and status filtering, quick user previews, and temporary password resets.
@@ -116,6 +120,10 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 ### 📁 5. Customer Directory & Client Profiles
 
 * **Customer Directory Table:** Filterable list displaying **Customer**, primary **Contact**, assigned **Salesperson**, **City / State**, active **Projects**, total contract **Value**, outstanding **Due**, and **Status**.
+* **Client Approval Workflow:** Supports formal management oversight:
+  * Newly submitted client dossiers default to **Pending Approval** if submitted by non-supervisory staff.
+  * Designated supervisors and administrators review client records and execute **Approve Client** or **Reject Client** (with documented rejection feedback).
+  * Rejected client cards feature an alert banner with a 1-click **Edit & Resubmit** workflow.
 * **Flexible Sole Proprietor & Corporate Profiles:** Supports corporate clients with GST/PAN tax details alongside individual clients without a company name.
 * **Deterministic Display Fallback:** Automatically displays company name when available, or cleanly falls back to **"{Contact Name} (Client)"** (or customer code) across all tables, search dropdowns, and activity feeds.
 * **Sales Targets & Quotas:** Tracks onboarding attribution and monitors collection progress against monthly quotas configured in user settings `(% Achieved = (Received / Target) * 100)`.
@@ -123,14 +131,17 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 
 ### 🚀 6. Project Coordination, Milestones & Maintenance
 
-* **Project Directory Table:** Complete work order list showing **Project**, **Customer**, delivery **Health** (On Track, At Risk, Delayed, Completed), work **Status** (Onboarding, In Progress, Review / UAT, Delivered, On Hold, Cancelled), assigned **Coordinator**, contracted **Value**, **Received**, **Due**, and target **Delivery Date**.
+* **Project Directory Table:** Complete work order list showing **Project**, **Customer**, delivery **Health** (On Track, At Risk, Delayed, Completed), work **Status** (Onboarding, In Progress, Review / UAT, Delivered, On Hold, Cancelled), assigned **Coordinator**, assigned **Tech Person**, contracted **Value**, **Received**, **Due**, and target **Delivery Date**.
+* **Project Approval Workflow:** Multi-tiered contract validation:
+  * Projects submitted by staff enter **Pending Approval** status with prominent visual banners.
+  * Authorized managers and admins can approve or reject projects with mandatory explanation notes.
 * **Delivery Health Monitoring:** Visible health tags with mandatory delay reasons to highlight delivery roadblocks early.
 * **Auto-Split (30/40/30) Schedule Wizard:** 1-Click payment term calculation dividing total project value into standard agency installments:
   * **Advance (30%)**: Upfront retainer upon signing
   * **Mid-Project (40%)**: Billed upon interim delivery milestone
   * **Final Delivery (30%)**: Remaining completion balance (with exact penny matching)
   * Automatically maps due dates to milestones or staggers them (+0, +15, +30 days) from project start.
-* **Milestone Checklist & Chase Tracker:** Interactive milestone tracker with due dates, payment trigger linking, 1-click completion checkmarks, and a dedicated **Milestone Chase Modal** to record follow-up notes and schedule next chase dates.
+* **Milestone Checklist & Chase Tracker:** Interactive milestone tracker with due dates, payment trigger linking, 1-click completion checkmarks, and a dedicated **Milestone Chase Modal** to record follow-up notes and schedule next chase dates (with resilient empty-date normalization).
 * **Annual Maintenance Contracts (AMC):** Dedicated contract duration tracking with automated renewal warnings before expiration.
 * **Handover Governance:** Post-delivery checklist and formal client handover notes.
 
@@ -256,6 +267,17 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
     When form validation fails, the UI automatically unhides inactive tabs if the invalid field is concealed inside a tab pane, smooth-scrolls to the input, sets focus, and triggers an animated red focus ring (`.error-focused`).
 15. **Event-Driven Dynamic Counters (`DynamicCounter`)**:
     Sidebar badges automatically update on domain events (`customer-saved`, `project-saved`, `payment-saved`, `counter-refresh`) without full-page re-renders.
+16. **Global Reusable Helper Architecture (`app/Helpers/helpers.php`)**:
+    Autoloaded via `composer.json`, reusable global helpers replace redundant method chains and raw framework calls:
+    * `logged_in_user()` & `logged_in_user_id()`: Clean typed access to the current authenticated `User`.
+    * `has_permission($module, $action)`: Dot-notation or two-argument RBAC authorization check.
+    * `is_admin()`, `is_manager()`, `is_coordinator()`, `is_sales()`, `is_tech_person()`: Self-documenting role guards.
+    * `audit_service()`: Instant access to the centralized `AuditNotificationService`.
+    * `format_inr($amount)`: Standardized Indian Rupee monetary formatting with symbol and comma separation.
+17. **Standardized Button System & Accessible Icon Actions**:
+    All arbitrary inline color utilities on buttons are replaced by the canonical design system (`.btn`, `.btn-primary`, `.btn-outline-secondary`, `.btn-success`, `.btn-danger`, `.btn-outline-primary`, `.btn-outline-success`, `.btn-outline-danger`, `.btn-xs`, `.btn-sm`). High-density table row actions utilize compact, accessible icon buttons with explicit `title` attributes.
+18. **Early Sidebar State Stabilization (`html.sidebar-collapsed-init`)**:
+    An early-execution state synchronizer checks localStorage for `pjt_sidebar_collapsed` prior to initial paint, preventing sidebar expansion glitches on page reloads.
 
 ---
 
@@ -267,7 +289,9 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
 │   └── skills/                             # Domain skills (codewise, laravel-best-practices, livewire, etc.)
 ├── app/
 │   ├── Constants/
-│   │   └── Permissions.php                 # Multi-level role & action permission matrix
+│   │   └── Permissions.php                 # Canonical 5-role & module action permission matrix
+│   ├── Helpers/
+│   │   └── helpers.php                     # Centralized global helper functions (autoloaded)
 │   ├── Http/
 │   │   ├── Controllers/
 │   │   │   ├── Api/
@@ -458,9 +482,11 @@ Following database seeding, log in using any of the following accounts:
 
 | Role | Email | Default Password | Permissions Scope |
 |:---|:---|:---|:---|
-| **Admin** | `admin@the10xagency.in` | `Sample@1123` | Unrestricted access: User Administration, System Settings, Customer Deletion |
-| **Coordinator** | `coordinator@the10xagency.in` | `Sample@1123` | Account-scoped access: Customers, Assigned Projects, Payments, Uploads, Tasks |
-| **Manager** | `manager@the10xagency.in` | `Sample@1123` | Supervisory access: Downline coordinator project oversight and activity tracking |
+| **Admin** | `admin@the10xagency.in` | `Sample@1123` | Unrestricted access: User Administration, System Settings, Approvals, Customer Deletion |
+| **Coordinator** | `coordinator1@the10xagency.in` | `Sample@1123` | Account-scoped access: Customers, Assigned Projects, Payments, Uploads, Tasks |
+| **Manager** | `manager1@the10xagency.in` | `Sample@1123` | Supervisory access: Downline team project oversight, approvals, and activity tracking |
+| **Tech Person** | `tech1@the10xagency.in` | `Sample@1123` | Project execution lead: strictly assigned projects, milestones, handovers (finance masked) |
+| **Sales** | `sales1@the10xagency.in` | `Sample@1123` | Commercial onboarding: self-attributed customer accounts and basic project views |
 
 > **Security Notice:** Update default passwords immediately via **Settings (`/settings`)** upon initial deployment.
 

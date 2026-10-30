@@ -1,6 +1,6 @@
 <x-modal name="customer-modal"
-         :title="$customerId ? 'Edit Customer' : 'New Customer'"
-         :sub="$customerId ? 'Changes are saved immediately' : 'Onboard a customer and create a project'"
+         :title="$customerId ? ($isRejected ? 'Edit & Resubmit Customer' : 'Edit Customer') : 'New Customer'"
+         :sub="$customerId ? ($isRejected ? 'Update details to re-submit this customer for review' : 'Changes are saved immediately') : 'Onboard a customer and create a project'"
          :wide="true">
     <form wire:submit="save">
         <div class="form-grid">
@@ -180,17 +180,14 @@
 
         <div class="mt-6 flex justify-end gap-3">
             <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
-            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled" wire:target="save">
-                <span wire:loading.remove
-                      wire:target="save">{{ $customerId ? 'Save changes' : 'Create customer' }}</span>
-                <span wire:loading wire:target="save" class="inline-flex items-center gap-1.5">
-                    <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <button type="submit" class="btn btn-primary min-w-[150px] justify-center" wire:loading.attr="disabled" wire:target="save">
+                <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">{{ $customerId ? ($isRejected ? 'Update & Resubmit' : 'Save changes') : 'Create customer' }}</span>
+                <span wire:loading.inline-flex wire:target="save" class="items-center justify-center gap-1.5">
+                    <svg class="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Saving...
+                    <span>Saving...</span>
                 </span>
             </button>
         </div>

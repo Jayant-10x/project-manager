@@ -113,8 +113,10 @@ class DocumentUploadModal extends Component
         // Store directly to public uploads directory for simple, symlink-free web access
         $this->file->storeAs('', $storedName, 'uploads');
 
-        // Also store explicitly to the public storage disk root (storage/app/public)
-        $this->file->storeAs('', $storedName, 'public');
+        // Also replicate explicitly to the public storage disk root (storage/app/public)
+        if (Storage::disk('uploads')->exists($storedName)) {
+            Storage::disk('public')->put($storedName, Storage::disk('uploads')->get($storedName));
+        }
 
         $doc = Document::create([
             'customer_id' => $this->customer_id,
@@ -128,7 +130,8 @@ class DocumentUploadModal extends Component
             'uploaded_by' => auth()->id(),
         ]);
 
-        app(AuditNotificationService::class)->log(
+        $auditService = app(AuditNotificationService::class);
+        $auditService->log(
             auth()->id(),
             'Uploaded Document',
             'Document',
@@ -136,6 +139,32 @@ class DocumentUploadModal extends Component
             '',
             "Uploaded {$doc->title} ({$doc->file_name})"
         );
+
+        if ($this->project_id) {
+            $proj = Project::find($this->project_id);
+            if ($proj) {
+                $auditService->notifyProjectStakeholders(
+                    $proj,
+                    'Document Uploaded',
+                    "New Document: {$doc->title}",
+                    auth()->user()->name." uploaded document '{$doc->title}' ({$doc->category}) for project {$proj->name}.",
+                    'project',
+                    $proj->id
+                );
+            }
+        } elseif ($this->customer_id) {
+            $cust = Customer::find($this->customer_id);
+            if ($cust) {
+                $auditService->notifyCustomerStakeholders(
+                    $cust,
+                    'Document Uploaded',
+                    "New Document: {$doc->title}",
+                    auth()->user()->name." uploaded document '{$doc->title}' ({$doc->category}) for customer {$cust->display_name}.",
+                    'customer',
+                    $cust->id
+                );
+            }
+        }
 
         $this->reset(['file', 'title', 'category', 'customer_id', 'project_id']);
         $this->dispatch('document-saved');

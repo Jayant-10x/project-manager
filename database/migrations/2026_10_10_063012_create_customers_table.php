@@ -18,6 +18,8 @@ return new class extends Migration
             $table->string('alt_phone', 30)->nullable()->default(null);
             $table->string('city', 60)->nullable()->default(null);
             $table->string('state', 60)->nullable()->default(null);
+            $table->enum('approval_status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
+            $table->string('rejection_reason', 255)->nullable()->default(null);
             $table->text('address')->nullable()->default(null);
             $table->string('gst_number', 20)->unique()->nullable()->default(null);
             $table->string('pan_number', 15)->unique()->nullable()->default(null);
@@ -28,7 +30,9 @@ return new class extends Migration
             $table->enum('status', ['Active', 'On Hold', 'Completed', 'Churned'])->default('Active');
             $table->text('internal_notes')->nullable()->default(null);
             $table->foreignId('sales_person_id')->nullable()->default(null)->constrained('users')->nullOnDelete();
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('created_by')->nullable()->default(null)->constrained('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable()->default(null);
             $table->timestamps();
         });
     }

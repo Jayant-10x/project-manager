@@ -322,7 +322,7 @@ class GovernanceAndReportingSystemTest extends TestCase
         $salesResp = $this->actingAs($this->sales)->get('/reports');
         $salesResp->assertStatus(200);
         $salesResp->assertSee('Total Closed Deals');
-        $salesResp->assertSee('Deals Pipeline &amp; Client Realization', false);
+        $salesResp->assertSee('Deals Pipeline &amp; Customer Realization', false);
         $salesResp->assertDontSee('Payment Ageing Analysis');
     }
 

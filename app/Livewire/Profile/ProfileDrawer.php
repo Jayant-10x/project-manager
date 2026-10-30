@@ -3,6 +3,8 @@
 namespace App\Livewire\Profile;
 
 use App\Models\User;
+use App\Services\AuditNotificationService;
+use App\Services\PasswordGeneratorService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -116,25 +118,9 @@ class ProfileDrawer extends Component
 
     public function generateRandomPassword(): void
     {
-        $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-        $lower = 'abcdefghijkmnopqrstuvwxyz';
-        $numbers = '23456789';
-        $symbols = '@#$%&*!';
-
-        $pass = '';
-        $pass .= $upper[random_int(0, strlen($upper) - 1)];
-        $pass .= $lower[random_int(0, strlen($lower) - 1)];
-        $pass .= $numbers[random_int(0, strlen($numbers) - 1)];
-        $pass .= $symbols[random_int(0, strlen($symbols) - 1)];
-
-        $all = $upper.$lower.$numbers.$symbols;
-        for ($i = 0; $i < 8; $i++) {
-            $pass .= $all[random_int(0, strlen($all) - 1)];
-        }
-
-        $shuffled = str_shuffle($pass);
-        $this->new_password = $shuffled;
-        $this->new_password_confirmation = $shuffled;
+        $password = PasswordGeneratorService::generate(16);
+        $this->new_password = $password;
+        $this->new_password_confirmation = $password;
     }
 
     public function save(): void
@@ -165,21 +151,42 @@ class ProfileDrawer extends Component
                     }
                 },
             ];
-            $rules['new_password'] = ['required', 'string', 'min:8', 'confirmed'];
+            $rules['new_password'] = [
+                'required',
+                'string',
+                'min:8',
+                'regex:/[A-Z]/',
+                'regex:/[a-z]/',
+                'regex:/[0-9]/',
+                'confirmed',
+                'different:current_password',
+            ];
         }
 
-        $this->validate($rules);
+        $messages = [
+            'new_password.min' => 'Password must be at least 8 characters.',
+            'new_password.regex' => 'Password must contain at least 1 uppercase letter, 1 lowercase letter, and 1 number.',
+            'new_password.different' => 'The new password must be different from the current password.',
+        ];
+
+        $this->validate($rules, $messages);
+
+        $auditService = app(AuditNotificationService::class);
 
         $user->name = $this->name;
         $user->phone = ! empty($this->phone) ? $this->phone : null;
         $user->city = ! empty($this->city) ? $this->city : null;
 
+        $structuredChanges = $auditService->computeChanges($user, ['updated_at', 'created_at', 'password', 'remember_token', 'fail_count', 'locked_until']);
+
         // Avatar handling
+        $avatarChanged = false;
         if ($this->removeAvatar) {
             if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
                 Storage::disk('public')->delete($user->avatar);
             }
             $user->avatar = null;
+            $avatarChanged = true;
         } elseif ($this->avatarFile) {
             if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
                 Storage::disk('public')->delete($user->avatar);
@@ -189,17 +196,54 @@ class ProfileDrawer extends Component
             $safeName = Str::slug($nameWithoutExt) ?: 'avatar';
             $filename = "{$safeName}_".time().".{$extension}";
             $user->avatar = $this->avatarFile->storeAs('avatars', $filename, 'public');
+            $avatarChanged = true;
         }
 
         // Password change handling
+        $passwordChanged = false;
         if (! empty($this->new_password)) {
             $user->password = $this->new_password;
             $user->must_change = false;
             $user->fail_count = 0;
             $user->locked_until = null;
+            $passwordChanged = true;
         }
 
         $user->save();
+
+        if ($passwordChanged) {
+            $auditService->log(
+                $user->id,
+                'Changed Password',
+                'User',
+                $user->id,
+                (string) $user->id,
+                "User {$user->name} changed their password from the profile drawer"
+            );
+        }
+
+        if (! empty($structuredChanges) || $avatarChanged) {
+            $details = [];
+            foreach ($structuredChanges as $f => $d) {
+                $details[] = "{$f}: {$d['old']} -> {$d['new']}";
+            }
+            if ($this->avatarFile) {
+                $details[] = 'avatar: uploaded new photo';
+            } elseif ($this->removeAvatar) {
+                $details[] = 'avatar: removed photo';
+            }
+            $diffText = ! empty($details) ? ' ('.implode(', ', $details).')' : '';
+
+            $auditService->log(
+                $user->id,
+                'Updated Profile',
+                'User',
+                $user->id,
+                (string) $user->id,
+                "User {$user->name} updated profile details{$diffText}",
+                $structuredChanges
+            );
+        }
 
         $this->dispatch('toast', ['msg' => 'Profile updated successfully!', 'type' => 'ok']);
         $this->dispatch('profile-updated');

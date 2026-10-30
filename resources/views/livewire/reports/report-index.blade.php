@@ -15,69 +15,128 @@
         </div>
     </div>
 
-    <!-- 1. Role-Tailored KPI Cards -->
-    @if($role === 'Admin')
-        <div class="kpis four mb-6">
-            <x-kpi-card label="Collection rate" :value="$collectionRate . '%'"
-                        :sub="$totalTds > 0
-                            ? (view('components.money', ['value' => $totalCash])->render() . ' Cash + ' . view('components.money', ['value' => $totalTds])->render() . ' TDS Credit (' . $collectionRate . '% settled)')
-                            : (view('components.money', ['value' => $totalReceived])->render() . ' of ' . view('components.money', ['value' => $totalScheduled])->render())"
-                        icon="chart" color="#5aa236" bg="#eef7e8" :href="route('schedule.index')"/>
-            <x-kpi-card label="Overdue" :value="$overdueAmt" :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount)" icon="alert"
-                        :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
-            <x-kpi-card label="TDS deducted" :value="$totalTds" sub="Withheld against invoices" icon="shield" color="#7a5af8"
-                        :ismoney="true" bg="#f0ecff" :href="route('payments.index')"/>
-            <x-kpi-card label="Average project value" :value="$avgProjectValue" :sub="$projectsCount . ' ' . \Illuminate\Support\Str::plural('project', $projectsCount)"
-                        :ismoney="true" icon="cash" color="#0b3d91" bg="#e8eefc" :href="route('projects.index')"/>
+    <!-- 1. Executive Analytics & KPI Summary Section Card -->
+    <div class="card mb-6">
+        <div class="card-head flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-50 text-[#5aa236] flex items-center justify-center shrink-0">
+                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm text-[#0d1b34]">
+                        @switch($role)
+                            @case('Admin') Executive Revenue &amp; Collection Analytics @break
+                            @case('Manager') Team Revenue &amp; Collections Summary @break
+                            @case('Coordinator') Portfolio Payments &amp; Delivery Progress @break
+                            @case('TechPerson') Execution &amp; Milestone Delivery Summary @break
+                            @case('Sales') Deals Realization &amp; Collections Summary @break
+                        @endswitch
+                    </h3>
+                    <div class="text-xs text-[#8894ac]">Reconciled contract values, gross settled collections &amp; pending dues</div>
+                </div>
+            </div>
+            <div class="text-xs text-slate-500 font-medium">
+                Period: <span class="font-semibold text-slate-700">{{ now()->format('F Y') }}</span>
+            </div>
         </div>
-    @elseif($role === 'Manager')
-        <div class="kpis four mb-6">
-            <x-kpi-card label="Total Receivable" :value="$totalScheduled" sub="Team Bookings · Total team contract value" icon="cash"
-                        :ismoney="true" color="#0b3d91" bg="#e8eefc" :href="route('schedule.index')"/>
-            <x-kpi-card label="Received" :value="$totalReceived"
-                        :sub="$totalTds > 0
-                            ? (view('components.money', ['value' => $totalCash])->render() . ' Cash + ' . view('components.money', ['value' => $totalTds])->render() . ' TDS Credit (' . $collectionRate . '% settled)')
-                            : ('Team Realized · ' . $collectionRate . '% collected to date')"
-                        icon="check"
-                        :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('payments.index')"/>
-            <x-kpi-card label="Overdue" :value="$overdueAmt" :sub="'Team Overdue · ' . $overdueCount . ' installments late'" icon="alert"
-                        :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
-            <x-kpi-card label="Active Projects" :value="$projectsCount" sub="Managed by your team" icon="proj"
-                        :ismoney="false" color="#2e75b6" bg="#e8f1fa" :href="route('projects.index')"/>
-        </div>
-    @elseif($role === 'Coordinator')
-        <div class="kpis four mb-6">
-            <x-kpi-card label="Active Projects" :value="$projectsCount" sub="Assigned Projects · In your portfolio" icon="proj"
-                        :ismoney="false" color="#0b3d91" bg="#e8eefc" :href="route('projects.index')"/>
-            <x-kpi-card label="Milestones" :value="$coordinatorData['completedMilestones'] . ' / ' . $coordinatorData['totalMilestones']"
-                        :sub="'Milestone Velocity · ' . $coordinatorData['milestoneRate'] . '% completed'" icon="check"
-                        :ismoney="false" color="#5aa236" bg="#eef7e8" :href="route('schedule.index')"/>
-            <x-kpi-card label="Total Receivable" :value="$totalScheduled" sub="Portfolio Value · Contract value on your accounts" icon="cash"
-                        :ismoney="true" color="#2e75b6" bg="#e8f1fa" :href="route('schedule.index')"/>
-            <x-kpi-card label="Overdue" :value="$overdueAmt" :sub="'Overdue on Projects · ' . $overdueCount . ' pending recovery'" icon="alert"
-                        :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
-        </div>
-    @elseif($role === 'Sales')
-        <div class="kpis four mb-6">
-            <x-kpi-card label="Total Receivable" :value="$salesData['totalDealsValue']" :sub="'Total Closed Deals · ' . $salesData['dealsCount'] . ' deals closed'" icon="cash"
-                        :ismoney="true" color="#0b3d91" bg="#e8eefc" :href="route('projects.index')"/>
-            @if($salesData['target'] > 0)
-                <x-kpi-card label="Target" :value="$salesData['target']" :sub="'Quota Target · ' . $salesData['targetProgress'] . '% quota achieved'" icon="target"
-                            :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('projects.index')"/>
-            @else
-                <x-kpi-card label="Avg Deal Value" :value="$salesData['avgDealSize']" sub="Per closed client project" icon="chart"
-                            :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('projects.index')"/>
+        <div class="card-body p-4 sm:p-5 bg-slate-50/40">
+            @if($role === 'Admin')
+                <div class="kpis mb-0">
+                    <x-kpi-card label="Total Receivable" :value="$totalScheduled" sub="Portfolio contract value across organization" icon="cash"
+                                :ismoney="true" color="#0b3d91" bg="#e8eefc" :href="route('schedule.index')"/>
+                    <x-kpi-card label="Received" :value="$totalReceived"
+                                :sub="$totalTds > 0
+                                    ? (view('components.money', ['value' => $totalCash])->render() . ' Cash + ' . view('components.money', ['value' => $totalTds])->render() . ' TDS Credit (' . $collectionRate . '% settled)')
+                                    : ('Realized Revenue · ' . $collectionRate . '% settled to date')"
+                                icon="check" :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('payments.index')"/>
+                    <x-kpi-card label="Due" :value="$totalDue" sub="Balance Due · Net pending collection" icon="clock"
+                                color="#e0a13a" :ismoney="true" bg="#fdf3e2" :href="route('schedule.index')"/>
+                    <x-kpi-card label="Overdue" :value="$overdueAmt" :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount) . ' late'" icon="alert"
+                                :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
+                    <x-kpi-card label="TDS Deducted" :value="$totalTds" sub="Withheld TDS against invoices" icon="shield" color="#7a5af8"
+                                :ismoney="true" bg="#f0ecff" :href="route('payments.index')"/>
+                </div>
+            @elseif($role === 'Manager')
+                <div class="kpis mb-0">
+                    <x-kpi-card label="Total Receivable" :value="$totalScheduled" sub="Team Bookings · Total team contract value" icon="cash"
+                                :ismoney="true" color="#0b3d91" bg="#e8eefc" :href="route('schedule.index')"/>
+                    <x-kpi-card label="Received" :value="$totalReceived"
+                                :sub="$totalTds > 0
+                                    ? (view('components.money', ['value' => $totalCash])->render() . ' Cash + ' . view('components.money', ['value' => $totalTds])->render() . ' TDS Credit (' . $collectionRate . '% settled)')
+                                    : ('Team Realized · ' . $collectionRate . '% collected to date')"
+                                icon="check"
+                                :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('payments.index')"/>
+                    <x-kpi-card label="Due" :value="$totalDue" sub="Balance Due · Net pending collection" icon="clock"
+                                color="#e0a13a" :ismoney="true" bg="#fdf3e2" :href="route('schedule.index')"/>
+                    <x-kpi-card label="Overdue" :value="$overdueAmt" :sub="'Team Overdue · ' . $overdueCount . ' installments late'" icon="alert"
+                                :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
+                    <x-kpi-card label="Active Projects" :value="$projectsCount" sub="Managed by your team" icon="proj"
+                                :ismoney="false" color="#2e75b6" bg="#e8f1fa" :href="route('projects.index')"/>
+                </div>
+            @elseif($role === 'Coordinator')
+                <div class="kpis mb-0">
+                    <x-kpi-card label="Total Receivable" :value="$totalScheduled" sub="Portfolio Value · Contract value on accounts" icon="cash"
+                                :ismoney="true" color="#0b3d91" bg="#e8eefc" :href="route('schedule.index')"/>
+                    <x-kpi-card label="Received" :value="$totalReceived"
+                                :sub="$totalTds > 0
+                                    ? (view('components.money', ['value' => $totalCash])->render() . ' Cash + ' . view('components.money', ['value' => $totalTds])->render() . ' TDS Credit (' . $collectionRate . '% settled)')
+                                    : ('Realized Revenue · ' . $collectionRate . '% settled to date')"
+                                icon="check" :ismoney="true" color="#5aa236" bg="#eef7e8" :href="route('payments.index')"/>
+                    <x-kpi-card label="Due" :value="$totalDue" sub="Balance Due · Net pending collection" icon="clock"
+                                color="#e0a13a" :ismoney="true" bg="#fdf3e2" :href="route('schedule.index')"/>
+                    <x-kpi-card label="Overdue" :value="$overdueAmt" :sub="'Overdue on Projects · ' . $overdueCount . ' pending recovery'" icon="alert"
+                                :ismoney="true" color="#d94b4b" bg="#fdeaea" :href="route('today.index')"/>
+                    <x-kpi-card label="Active Projects" :value="$projectsCount"
+                                :sub="'Assigned Projects · ' . ($coordinatorData['completedMilestones'] ?? 0) . ' / ' . ($coordinatorData['totalMilestones'] ?? 0) . ' done (' . ($coordinatorData['milestoneRate'] ?? 0) . '%)'"
+                                icon="proj" :ismoney="false" color="#2e75b6" bg="#e8f1fa" :href="route('projects.index')"/>
+                </div>
+            @elseif($role === 'TechPerson')
+                <div class="kpis mb-0">
+                    <x-kpi-card label="Active Projects" :value="$projectsCount"
+                                sub="My Active Projects · In progress"
+                                icon="proj" :ismoney="false" color="#0b3d91" bg="#e8eefc" :href="route('projects.index', ['status' => 'In Progress'])"/>
+                    <x-kpi-card label="Milestones Done"
+                                :value="($coordinatorData['completedMilestones'] ?? 0) . ' / ' . ($coordinatorData['totalMilestones'] ?? 0)"
+                                :sub="'Milestone Velocity · ' . ($coordinatorData['milestoneRate'] ?? 0) . '% completed'"
+                                icon="check" :ismoney="false" color="#5aa236" bg="#eef7e8" :href="route('projects.index')"/>
+                    <x-kpi-card label="On Track" :value="$healthDistribution['On Track']" sub="Projects on track" icon="check"
+                                color="#5aa236" :ismoney="false" bg="#eef7e8" :href="route('projects.index', ['health' => 'On Track'])"/>
+                    <x-kpi-card label="Delayed / At Risk" :value="$healthDistribution['Delayed'] + $healthDistribution['At Risk']"
+                                sub="Projects needing attention" icon="alert"
+                                :ismoney="false" color="#d94b4b" bg="#fdeaea" :href="route('projects.index', ['health' => 'Delayed'])"/>
+                    <x-kpi-card label="Completed" :value="$healthDistribution['Completed']"
+                                sub="Successfully delivered projects"
+                                icon="shield" :ismoney="false" color="#2e75b6" bg="#e8f1fa" :href="route('projects.index', ['status' => 'Delivered'])"/>
+                </div>
+            @elseif($role === 'Sales')
+                <div class="kpis mb-0">
+                    <x-kpi-card label="Total Receivable" :value="$salesData['totalDealsValue']" :sub="'Total Closed Deals · ' . $salesData['dealsCount'] . ' deals closed'" icon="cash"
+                                :ismoney="true" color="#0b3d91" bg="#e8eefc" :href="route('projects.index')"/>
+                    <x-kpi-card label="Received" :value="$salesData['grossRealized']"
+                                :sub="$salesData['tdsRealized'] > 0
+                                    ? (view('components.money', ['value' => $salesData['cashRealized']])->render() . ' Cash + ' . view('components.money', ['value' => $salesData['tdsRealized']])->render() . ' TDS Credit (' . $salesData['realizationRate'] . '% settled)')
+                                    : ('Cash Realized · ' . $salesData['realizationRate'] . '% realized from deals')"
+                                icon="check" color="#5aa236"
+                                :ismoney="true" bg="#eef7e8" :href="auth()->user()->hasPermission('payments', 'view') ? route('payments.index') : route('projects.index')"/>
+                    <x-kpi-card label="Due" :value="$salesData['dueAmount']" sub="Balance Due · Pending collection on deals" icon="clock"
+                                color="#e0a13a" :ismoney="true" bg="#fdf3e2"
+                                :href="auth()->user()->hasPermission('schedules', 'view') ? route('schedule.index') : route('projects.index')"/>
+                    <x-kpi-card label="Overdue" :value="$salesData['overdueAmount']" :sub="$salesData['overdueCount'] . ' late on customer accounts'" icon="alert"
+                                :ismoney="true" color="#d94b4b" bg="#fdeaea"
+                                :href="auth()->user()->hasPermission('today', 'view') ? route('today.index') : route('projects.index')"/>
+                    @if($salesData['target'] > 0)
+                        <x-kpi-card label="Target" :value="$salesData['target']" :sub="'Quota Target · ' . $salesData['targetProgress'] . '% quota achieved'" icon="target"
+                                    :ismoney="true" color="#2e75b6" bg="#e8f1fa" :href="route('projects.index')"/>
+                    @else
+                        <x-kpi-card label="Customers" :value="$salesData['customersAcquired']" sub="Customer Accounts · Acquired customers" icon="cust" color="#2e75b6"
+                                    :ismoney="false" bg="#e8f1fa" :href="route('customers.index')"/>
+                    @endif
+                </div>
             @endif
-            <x-kpi-card label="Received" :value="$salesData['grossRealized']"
-                        :sub="$salesData['tdsRealized'] > 0
-                            ? (view('components.money', ['value' => $salesData['cashRealized']])->render() . ' Cash + ' . view('components.money', ['value' => $salesData['tdsRealized']])->render() . ' TDS Credit (' . $salesData['realizationRate'] . '% settled)')
-                            : ('Cash Realized · ' . $salesData['realizationRate'] . '% realized from deals')"
-                        icon="cash" color="#2e75b6"
-                        :ismoney="true" bg="#e8f1fa" :href="auth()->user()->hasPermission('payments', 'view') ? route('payments.index') : route('projects.index')"/>
-            <x-kpi-card label="Customers" :value="$salesData['customersAcquired']" sub="Client Accounts · Acquired customers" icon="cust" color="#e0a13a"
-                        :ismoney="false" bg="#fdf3e2" :href="route('customers.index')"/>
         </div>
-    @endif
+    </div>
 
     <!-- 2. Role-Specific Charts & Reports Breakdown -->
     @if($role === 'Admin' || $role === 'Manager')
@@ -252,7 +311,7 @@
                         <thead>
                             <tr>
                                 <th>Salesperson</th>
-                                <th>Clients</th>
+                                <th>Customers</th>
                                 <th>Projects</th>
                                 <th class="num">Contract Value</th>
                                 <th class="num">Realized</th>
@@ -351,8 +410,8 @@
             </div>
         </div>
 
-    @elseif($role === 'Coordinator')
-        <!-- COORDINATOR VIEW -->
+    @elseif($role === 'Coordinator' || $role === 'TechPerson')
+        <!-- COORDINATOR & TECH PERSON VIEW -->
         <div class="grid-2 mb-6">
             <!-- Upcoming Deliveries (Next 60 Days) -->
             <div class="card">
@@ -449,8 +508,8 @@
                     <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
                 </div>
                 <div>
-                    <h3 class="font-bold text-sm text-[#0d1b34]">Deals Pipeline &amp; Client Realization</h3>
-                    <div class="text-xs text-[#8894ac]">Closed client accounts, payment collections and fulfillment health</div>
+                    <h3 class="font-bold text-sm text-[#0d1b34]">Deals Pipeline &amp; Customer Realization</h3>
+                    <div class="text-xs text-[#8894ac]">Closed customer accounts, payment collections and fulfillment health</div>
                 </div>
             </div>
             <div class="table-wrap">

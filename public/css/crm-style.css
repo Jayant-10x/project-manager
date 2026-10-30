@@ -882,6 +882,10 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     transition: stroke .16s ease-in-out, fill .16s ease-in-out, color .16s ease-in-out;
 }
 
+.btn svg.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
 /* --- Solid Variants --- */
 .btn-primary {
     background: var(--navy);
@@ -897,31 +901,49 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     box-shadow: 0 6px 18px -4px rgba(11, 61, 145, .6);
 }
 
-.btn-green {
+.btn-green,
+.btn-success {
     background: var(--green);
     border-color: var(--green);
     color: #fff;
     box-shadow: 0 4px 14px -4px rgba(90, 162, 54, .5);
 }
 
-.btn-green:hover {
+.btn-green:hover,
+.btn-success:hover {
     background: #4a8a2b;
     border-color: #4a8a2b;
     color: #fff;
     box-shadow: 0 6px 18px -4px rgba(90, 162, 54, .6);
 }
 
-.btn-amber {
+.btn-amber,
+.btn-warning {
     background: var(--amber);
     border-color: var(--amber);
     color: #fff;
     box-shadow: 0 4px 12px -4px rgba(224, 161, 58, .6);
 }
 
-.btn-amber:hover {
+.btn-amber:hover,
+.btn-warning:hover {
     background: #c88a28;
     border-color: #c88a28;
     color: #fff;
+}
+
+.btn-purple {
+    background: #7c3aed;
+    border-color: #7c3aed;
+    color: #fff;
+    box-shadow: 0 4px 14px -4px rgba(124, 58, 237, .5);
+}
+
+.btn-purple:hover {
+    background: #6d28d9;
+    border-color: #6d28d9;
+    color: #fff;
+    box-shadow: 0 6px 18px -4px rgba(124, 58, 237, .6);
 }
 
 .btn-amber-soft {

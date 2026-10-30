@@ -47,20 +47,12 @@
                                 <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 8px;">
                                     Temporary Password
                                 </div>
-                                <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-                                    <tr>
-                                        <td style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 16px; font-weight: 700; color: #0b3d91; word-break: break-all; background-color: #ffffff; padding: 12px 14px; border-radius: 8px 0 0 8px; border: 1px solid #cbd5e1; border-right: none;">
-                                            {{ $temporaryPassword }}
-                                        </td>
-                                        <td style="width: 140px; background-color: #ffffff; border: 1px solid #cbd5e1; border-left: none; border-radius: 0 8px 8px 0; padding: 6px 10px; text-align: center; vertical-align: middle;">
-                                            <button type="button"
-                                                    onclick="navigator.clipboard.writeText('{{ $temporaryPassword }}'); this.innerText='Copied!'; setTimeout(() => this.innerText='Copy Password', 2500);"
-                                                    style="background-color: #0b3d91; color: #ffffff; border: none; border-radius: 6px; padding: 9px 14px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-block; text-decoration: none; font-family: inherit;">
-                                                Copy Password
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </table>
+                                <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 18px; font-weight: 700; color: #0b3d91; word-break: break-all; background-color: #ffffff; padding: 14px 18px; border-radius: 8px; border: 1px solid #cbd5e1; text-align: center; letter-spacing: 1px; user-select: all; -webkit-user-select: all; -moz-user-select: all;">
+                                    {{ $temporaryPassword }}
+                                </div>
+                                <p style="margin: 8px 0 0; font-size: 12px; color: #64748b; text-align: center;">
+                                    Select and copy your temporary password above
+                                </p>
                             </div>
 
                             <!-- Login CTA -->
