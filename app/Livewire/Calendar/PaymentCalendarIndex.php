@@ -42,18 +42,18 @@ class PaymentCalendarIndex extends Component
     public function prevMonth(): void
     {
         try {
-            $this->month = Carbon::createFromFormat('Y-m', $this->month)->subMonth()->format('Y-m');
+            $this->month = Carbon::parse($this->month.'-01')->subMonth()->format('Y-m');
         } catch (\Throwable) {
-            $this->month = Carbon::today()->subMonth()->format('Y-m');
+            $this->month = Carbon::today()->startOfMonth()->subMonth()->format('Y-m');
         }
     }
 
     public function nextMonth(): void
     {
         try {
-            $this->month = Carbon::createFromFormat('Y-m', $this->month)->addMonth()->format('Y-m');
+            $this->month = Carbon::parse($this->month.'-01')->addMonth()->format('Y-m');
         } catch (\Throwable) {
-            $this->month = Carbon::today()->addMonth()->format('Y-m');
+            $this->month = Carbon::today()->startOfMonth()->addMonth()->format('Y-m');
         }
     }
 
@@ -120,7 +120,7 @@ class PaymentCalendarIndex extends Component
 
         // Compute active month Carbon instance
         try {
-            $currentMonth = Carbon::createFromFormat('Y-m', $this->month)->startOfMonth();
+            $currentMonth = Carbon::parse($this->month.'-01')->startOfMonth();
         } catch (\Throwable) {
             $currentMonth = Carbon::today()->startOfMonth();
             $this->month = $currentMonth->format('Y-m');

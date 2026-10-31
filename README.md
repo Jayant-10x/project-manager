@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/PHP-8.4-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.4">
   <img src="https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL 8.0+">
   <img src="https://img.shields.io/badge/Frontend-Alpine.js%20%26%20Tailwind-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
-  <img src="https://img.shields.io/badge/Tests-285%20Passed-2ea44f?style=for-the-badge&logo=githubactions&logoColor=white" alt="285 Tests Passed">
+  <img src="https://img.shields.io/badge/Tests-288%20Passed-2ea44f?style=for-the-badge&logo=githubactions&logoColor=white" alt="288 Tests Passed">
   <img src="https://img.shields.io/badge/License-Proprietary-0B3D91?style=for-the-badge" alt="Proprietary License">
 </p>
 

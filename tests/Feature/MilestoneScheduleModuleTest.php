@@ -472,4 +472,143 @@ class MilestoneScheduleModuleTest extends TestCase
         $this->assertNull($milestone->next_chase_date);
         $this->assertNull($milestone->chase_notes);
     }
+
+    public function test_split5050_preserves_locked_payment_and_splits_remaining_balance(): void
+    {
+        // Project value = 100,000
+        $lockedTerm = PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 1,
+            'label' => 'Advance Deposit',
+            'amount' => 30000.00,
+            'trigger_type' => 'fixed',
+            'due_date' => now()->toDateString(),
+            'status' => 'Paid',
+            'received' => 30000.00,
+            'tds' => 0.00,
+        ]);
+
+        $unlockedTerm = PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 2,
+            'label' => 'Final Payment',
+            'amount' => 70000.00,
+            'trigger_type' => 'fixed',
+            'due_date' => now()->addDays(30)->toDateString(),
+            'status' => 'Pending',
+            'received' => 0.00,
+            'tds' => 0.00,
+        ]);
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectScheduleModal::class)
+            ->call('load', $this->project->id)
+            ->call('split5050');
+
+        $terms = $component->get('terms');
+
+        // Must have 3 terms: 1 locked + 2 new terms splitting the remaining 70,000 (50/50 = 35,000 + 35,000)
+        $this->assertCount(3, $terms);
+        $this->assertTrue($terms[0]['locked']);
+        $this->assertEquals($lockedTerm->id, $terms[0]['id']);
+        $this->assertEquals(30000.00, $terms[0]['amount']);
+        $this->assertEquals('Advance Deposit', $terms[0]['label']);
+
+        $this->assertFalse($terms[1]['locked']);
+        $this->assertEquals(35000.00, $terms[1]['amount']);
+        $this->assertEquals('Interim Installment', $terms[1]['label']);
+
+        $this->assertFalse($terms[2]['locked']);
+        $this->assertEquals(35000.00, $terms[2]['amount']);
+        $this->assertEquals('On delivery', $terms[2]['label']);
+
+        $this->assertEquals(100000.00, array_sum(array_column($terms, 'amount')));
+
+        // Save and verify database integrity
+        $component->call('save')->assertHasNoErrors();
+
+        $dbTerms = PaymentTerm::where('project_id', $this->project->id)->orderBy('seq')->get();
+        $this->assertCount(3, $dbTerms);
+        $this->assertEquals($lockedTerm->id, $dbTerms[0]->id);
+        $this->assertEquals(30000.00, (float) $dbTerms[0]->amount);
+        $this->assertEquals(30000.00, (float) $dbTerms[0]->received);
+        $this->assertEquals('Paid', $dbTerms[0]->status);
+
+        $this->assertEquals(35000.00, (float) $dbTerms[1]->amount);
+        $this->assertEquals(35000.00, (float) $dbTerms[2]->amount);
+    }
+
+    public function test_autosplit_30_40_30_preserves_locked_payment_and_splits_remaining_balance(): void
+    {
+        // Project value = 100,000
+        $lockedTerm = PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 1,
+            'label' => 'Initial Milestone Payment',
+            'amount' => 40000.00,
+            'trigger_type' => 'fixed',
+            'due_date' => now()->toDateString(),
+            'status' => 'Paid',
+            'received' => 40000.00,
+            'tds' => 0.00,
+        ]);
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectScheduleModal::class)
+            ->call('load', $this->project->id)
+            ->call('autoSplit');
+
+        $terms = $component->get('terms');
+
+        // Remaining = 60,000. Split 30% (18,000) / 40% (24,000) / 30% (18,000)
+        $this->assertCount(4, $terms);
+        $this->assertTrue($terms[0]['locked']);
+        $this->assertEquals($lockedTerm->id, $terms[0]['id']);
+        $this->assertEquals(40000.00, $terms[0]['amount']);
+
+        $this->assertFalse($terms[1]['locked']);
+        $this->assertEquals(18000.00, $terms[1]['amount']);
+
+        $this->assertFalse($terms[2]['locked']);
+        $this->assertEquals(24000.00, $terms[2]['amount']);
+
+        $this->assertFalse($terms[3]['locked']);
+        $this->assertEquals(18000.00, $terms[3]['amount']);
+
+        $this->assertEquals(100000.00, array_sum(array_column($terms, 'amount')));
+
+        $component->call('save')->assertHasNoErrors();
+
+        $dbTerms = PaymentTerm::where('project_id', $this->project->id)->orderBy('seq')->get();
+        $this->assertCount(4, $dbTerms);
+        $this->assertEquals($lockedTerm->id, $dbTerms[0]->id);
+        $this->assertEquals(40000.00, (float) $dbTerms[0]->amount);
+        $this->assertEquals('Paid', $dbTerms[0]->status);
+    }
+
+    public function test_split_when_locked_terms_cover_project_value_dispatches_warning(): void
+    {
+        $lockedTerm = PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 1,
+            'label' => 'Full Payment',
+            'amount' => 100000.00,
+            'trigger_type' => 'fixed',
+            'due_date' => now()->toDateString(),
+            'status' => 'Paid',
+            'received' => 100000.00,
+            'tds' => 0.00,
+        ]);
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectScheduleModal::class)
+            ->call('load', $this->project->id)
+            ->call('split5050')
+            ->assertDispatched('toast');
+
+        $terms = $component->get('terms');
+        $this->assertCount(1, $terms);
+        $this->assertTrue($terms[0]['locked']);
+        $this->assertEquals(100000.00, $terms[0]['amount']);
+    }
 }

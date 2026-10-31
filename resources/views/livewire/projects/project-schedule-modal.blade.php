@@ -169,19 +169,28 @@
             @endforeach
         </div>
 
-        <div class="flex gap-2 mt-4 flex-wrap">
+        @php
+            $hasLockedTerms = ! empty(array_filter($terms, fn ($t) => ! empty($t['locked'])));
+        @endphp
+
+        <div class="flex gap-2 mt-4 flex-wrap items-center">
             <button type="button" class="btn btn-outline-primary btn-sm" wire:click="addRow">
                 <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                     <path d="M12 5v14M5 12h14"/>
                 </svg>
                 Add installment
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" wire:click="split5050">
-                50-50 Split
+            <button type="button" class="btn btn-outline-secondary btn-sm" wire:click="split5050" title="{{ $hasLockedTerms ? 'Preserve locked payments and split remaining balance 50-50' : 'Split full project value 50-50' }}">
+                50-50 Split{{ $hasLockedTerms ? ' (Remaining)' : '' }}
             </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" wire:click="autoSplit">
-                Auto-split (30/40/30)
+            <button type="button" class="btn btn-outline-secondary btn-sm" wire:click="autoSplit" title="{{ $hasLockedTerms ? 'Preserve locked payments and split remaining balance 30/40/30' : 'Split full project value 30/40/30' }}">
+                Auto-split (30/40/30){{ $hasLockedTerms ? ' (Remaining)' : '' }}
             </button>
+            @if($hasLockedTerms)
+                <span class="text-[11px] text-gray-500 italic">
+                    (Locked payments are safely preserved; only uncollected balance is split)
+                </span>
+            @endif
         </div>
 
         <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">

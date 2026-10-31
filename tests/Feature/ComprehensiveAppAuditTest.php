@@ -327,7 +327,7 @@ class ComprehensiveAppAuditTest extends TestCase
             ->call('closeDateModal')
             ->assertSet('selectedDate', null)
             ->call('nextMonth')
-            ->assertSet('month', $today->copy()->addMonth()->format('Y-m'))
+            ->assertSet('month', $today->copy()->startOfMonth()->addMonth()->format('Y-m'))
             ->call('prevMonth')
             ->assertSet('month', $today->format('Y-m'))
             ->call('goToToday')

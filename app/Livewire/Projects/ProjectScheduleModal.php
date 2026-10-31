@@ -76,54 +76,139 @@ class ProjectScheduleModal extends Component
 
     public function split5050(): void
     {
-        $projectValue = $this->projectValue;
-        $milestoneCount = count($this->availableMilestones);
-        $lastMilestone = $milestoneCount > 0 ? end($this->availableMilestones)['id'] : null;
+        // 1. Preserve any existing locked terms
+        $lockedTerms = array_values(array_filter($this->terms, fn ($t) => ! empty($t['locked'])));
+        $lockedTotal = (float) array_sum(array_column($lockedTerms, 'amount'));
+        $remainingBalance = round(max(0, $this->projectValue - $lockedTotal), 2);
 
-        $advanceAmount = round($projectValue * 0.5, 2);
-        $deliveryAmount = round($projectValue - $advanceAmount, 2);
+        if (! empty($lockedTerms) && $remainingBalance <= 0) {
+            $this->dispatch('toast', [
+                'msg' => 'Cannot split: Locked installments already cover or exceed the project value.',
+                'type' => 'warning',
+            ]);
+            $this->terms = $lockedTerms;
+            $this->resetValidation();
+
+            return;
+        }
+
+        // Available milestones not already linked to locked terms
+        $usedMilestoneIds = array_filter(array_column($lockedTerms, 'milestoneId'));
+        $unusedMilestones = array_values(array_filter(
+            $this->availableMilestones,
+            fn ($m) => ! in_array($m['id'], $usedMilestoneIds)
+        ));
+        $unusedCount = count($unusedMilestones);
 
         $advanceDate = $this->projectStartDate ?? now()->toDateString();
         $deliveryDate = $this->projectDeliveryDate ?? now()->addDays(60)->toDateString();
 
-        $this->terms = [
-            [
-                'id' => null,
-                'label' => 'Advance',
-                'amount' => $advanceAmount,
-                'trigger' => 'fixed',
-                'milestoneId' => null,
-                'dueDate' => $advanceDate,
-                'graceDays' => 0,
-                'locked' => false,
-            ],
-            [
-                'id' => null,
-                'label' => 'On delivery',
-                'amount' => $deliveryAmount,
-                'trigger' => $lastMilestone ? 'milestone' : 'fixed',
-                'milestoneId' => $lastMilestone,
-                'dueDate' => $lastMilestone ? '' : $deliveryDate,
-                'graceDays' => 7,
-                'locked' => false,
-            ],
-        ];
+        if (empty($lockedTerms)) {
+            // Standard 50-50 Split when no payments are locked
+            $advanceAmount = round($this->projectValue * 0.5, 2);
+            $deliveryAmount = round($this->projectValue - $advanceAmount, 2);
+            $lastMilestone = $unusedCount > 0 ? end($unusedMilestones)['id'] : null;
+
+            $this->terms = [
+                [
+                    'id' => null,
+                    'label' => 'Advance',
+                    'amount' => $advanceAmount,
+                    'trigger' => 'fixed',
+                    'milestoneId' => null,
+                    'dueDate' => $advanceDate,
+                    'graceDays' => 0,
+                    'locked' => false,
+                ],
+                [
+                    'id' => null,
+                    'label' => 'On delivery',
+                    'amount' => $deliveryAmount,
+                    'trigger' => $lastMilestone ? 'milestone' : 'fixed',
+                    'milestoneId' => $lastMilestone,
+                    'dueDate' => $lastMilestone ? '' : $deliveryDate,
+                    'graceDays' => 7,
+                    'locked' => false,
+                ],
+            ];
+        } else {
+            // Locked payments exist: Retain locked terms and generate two new installments splitting the remaining balance 50/50
+            $firstAmount = round($remainingBalance * 0.5, 2);
+            $secondAmount = round($remainingBalance - $firstAmount, 2);
+
+            $interimMilestone = $unusedCount > 1 ? $unusedMilestones[0]['id'] : null;
+            $finalMilestone = $unusedCount > 0 ? end($unusedMilestones)['id'] : null;
+            if ($interimMilestone === $finalMilestone) {
+                $interimMilestone = null;
+            }
+
+            $advanceCarbon = Carbon::parse($advanceDate);
+            $deliveryCarbon = Carbon::parse($deliveryDate);
+            $daysDiff = (int) round($advanceCarbon->startOfDay()->diffInDays($deliveryCarbon->startOfDay(), false));
+            $midDate = ($daysDiff > 14)
+                ? $advanceCarbon->copy()->addDays((int) floor($daysDiff / 2))->toDateString()
+                : now()->addDays(30)->toDateString();
+
+            $newTerms = [
+                [
+                    'id' => null,
+                    'label' => 'Interim Installment',
+                    'amount' => $firstAmount,
+                    'trigger' => $interimMilestone ? 'milestone' : 'fixed',
+                    'milestoneId' => $interimMilestone,
+                    'dueDate' => $interimMilestone ? '' : $midDate,
+                    'graceDays' => 7,
+                    'locked' => false,
+                ],
+                [
+                    'id' => null,
+                    'label' => 'On delivery',
+                    'amount' => $secondAmount,
+                    'trigger' => $finalMilestone ? 'milestone' : 'fixed',
+                    'milestoneId' => $finalMilestone,
+                    'dueDate' => $finalMilestone ? '' : $deliveryDate,
+                    'graceDays' => 7,
+                    'locked' => false,
+                ],
+            ];
+
+            $this->terms = array_merge($lockedTerms, $newTerms);
+
+            $this->dispatch('toast', [
+                'msg' => 'Preserved locked payments and split remaining ₹'.number_format($remainingBalance, 2).' (50-50).',
+                'type' => 'ok',
+            ]);
+        }
 
         $this->resetValidation();
     }
 
     public function autoSplit(): void
     {
-        $projectValue = $this->projectValue;
-        $milestoneCount = count($this->availableMilestones);
-        $firstMilestone = $milestoneCount > 0 ? $this->availableMilestones[0]['id'] : null;
-        $lastMilestone = $milestoneCount > 1 ? end($this->availableMilestones)['id'] : ($milestoneCount === 1 ? $firstMilestone : null);
+        // 1. Preserve any existing locked terms
+        $lockedTerms = array_values(array_filter($this->terms, fn ($t) => ! empty($t['locked'])));
+        $lockedTotal = (float) array_sum(array_column($lockedTerms, 'amount'));
+        $remainingBalance = round(max(0, $this->projectValue - $lockedTotal), 2);
 
-        $advanceAmount = round($projectValue * 0.3, 2);
-        $midAmount = round($projectValue * 0.4, 2);
-        $deliveryAmount = round($projectValue - $advanceAmount - $midAmount, 2);
+        if (! empty($lockedTerms) && $remainingBalance <= 0) {
+            $this->dispatch('toast', [
+                'msg' => 'Cannot split: Locked installments already cover or exceed the project value.',
+                'type' => 'warning',
+            ]);
+            $this->terms = $lockedTerms;
+            $this->resetValidation();
 
-        // Staggered dates when no milestones are available
+            return;
+        }
+
+        // Available milestones not already linked to locked terms
+        $usedMilestoneIds = array_filter(array_column($lockedTerms, 'milestoneId'));
+        $unusedMilestones = array_values(array_filter(
+            $this->availableMilestones,
+            fn ($m) => ! in_array($m['id'], $usedMilestoneIds)
+        ));
+        $unusedCount = count($unusedMilestones);
+
         $advanceDate = $this->projectStartDate ?? now()->toDateString();
         $deliveryDate = $this->projectDeliveryDate ?? now()->addDays(60)->toDateString();
 
@@ -134,38 +219,100 @@ class ProjectScheduleModal extends Component
             ? $advanceCarbon->copy()->addDays((int) floor($daysDiff / 2))->toDateString()
             : now()->addDays(30)->toDateString();
 
-        $this->terms = [
-            [
-                'id' => null,
-                'label' => 'Advance',
-                'amount' => $advanceAmount,
-                'trigger' => 'fixed',
-                'milestoneId' => null,
-                'dueDate' => $advanceDate,
-                'graceDays' => 0,
-                'locked' => false,
-            ],
-            [
-                'id' => null,
-                'label' => 'Mid project',
-                'amount' => $midAmount,
-                'trigger' => $firstMilestone ? 'milestone' : 'fixed',
-                'milestoneId' => $firstMilestone,
-                'dueDate' => $firstMilestone ? '' : $midDate,
-                'graceDays' => 7,
-                'locked' => false,
-            ],
-            [
-                'id' => null,
-                'label' => 'On delivery',
-                'amount' => $deliveryAmount,
-                'trigger' => ($lastMilestone && $lastMilestone !== $firstMilestone) ? 'milestone' : 'fixed',
-                'milestoneId' => ($lastMilestone && $lastMilestone !== $firstMilestone) ? $lastMilestone : null,
-                'dueDate' => ($lastMilestone && $lastMilestone !== $firstMilestone) ? '' : $deliveryDate,
-                'graceDays' => 7,
-                'locked' => false,
-            ],
-        ];
+        if (empty($lockedTerms)) {
+            // Standard 30/40/30 Split
+            $firstMilestone = $unusedCount > 0 ? $unusedMilestones[0]['id'] : null;
+            $lastMilestone = $unusedCount > 1 ? end($unusedMilestones)['id'] : ($unusedCount === 1 ? $firstMilestone : null);
+
+            $advanceAmount = round($this->projectValue * 0.3, 2);
+            $midAmount = round($this->projectValue * 0.4, 2);
+            $deliveryAmount = round($this->projectValue - $advanceAmount - $midAmount, 2);
+
+            $this->terms = [
+                [
+                    'id' => null,
+                    'label' => 'Advance',
+                    'amount' => $advanceAmount,
+                    'trigger' => 'fixed',
+                    'milestoneId' => null,
+                    'dueDate' => $advanceDate,
+                    'graceDays' => 0,
+                    'locked' => false,
+                ],
+                [
+                    'id' => null,
+                    'label' => 'Mid project',
+                    'amount' => $midAmount,
+                    'trigger' => $firstMilestone ? 'milestone' : 'fixed',
+                    'milestoneId' => $firstMilestone,
+                    'dueDate' => $firstMilestone ? '' : $midDate,
+                    'graceDays' => 7,
+                    'locked' => false,
+                ],
+                [
+                    'id' => null,
+                    'label' => 'On delivery',
+                    'amount' => $deliveryAmount,
+                    'trigger' => ($lastMilestone && $lastMilestone !== $firstMilestone) ? 'milestone' : 'fixed',
+                    'milestoneId' => ($lastMilestone && $lastMilestone !== $firstMilestone) ? $lastMilestone : null,
+                    'dueDate' => ($lastMilestone && $lastMilestone !== $firstMilestone) ? '' : $deliveryDate,
+                    'graceDays' => 7,
+                    'locked' => false,
+                ],
+            ];
+        } else {
+            // Locked payments exist: Retain locked terms and generate 3 new installments for the remaining balance in 30/40/30 proportions
+            $part1 = round($remainingBalance * 0.3, 2);
+            $part2 = round($remainingBalance * 0.4, 2);
+            $part3 = round($remainingBalance - $part1 - $part2, 2);
+
+            $firstMilestone = $unusedCount > 0 ? $unusedMilestones[0]['id'] : null;
+            $midMilestone = $unusedCount > 1 ? $unusedMilestones[1]['id'] : null;
+            $lastMilestone = $unusedCount > 2 ? end($unusedMilestones)['id'] : null;
+
+            $step1Date = $advanceCarbon->copy()->addDays(max(1, (int) floor($daysDiff / 3)))->toDateString();
+            $step2Date = $advanceCarbon->copy()->addDays(max(2, (int) floor($daysDiff * 2 / 3)))->toDateString();
+
+            $newTerms = [
+                [
+                    'id' => null,
+                    'label' => 'Installment (30%)',
+                    'amount' => $part1,
+                    'trigger' => $firstMilestone ? 'milestone' : 'fixed',
+                    'milestoneId' => $firstMilestone,
+                    'dueDate' => $firstMilestone ? '' : $step1Date,
+                    'graceDays' => 0,
+                    'locked' => false,
+                ],
+                [
+                    'id' => null,
+                    'label' => 'Mid project (40%)',
+                    'amount' => $part2,
+                    'trigger' => $midMilestone ? 'milestone' : 'fixed',
+                    'milestoneId' => $midMilestone,
+                    'dueDate' => $midMilestone ? '' : $step2Date,
+                    'graceDays' => 7,
+                    'locked' => false,
+                ],
+                [
+                    'id' => null,
+                    'label' => 'On delivery (30%)',
+                    'amount' => $part3,
+                    'trigger' => $lastMilestone ? 'milestone' : 'fixed',
+                    'milestoneId' => $lastMilestone,
+                    'dueDate' => $lastMilestone ? '' : $deliveryDate,
+                    'graceDays' => 7,
+                    'locked' => false,
+                ],
+            ];
+
+            $this->terms = array_merge($lockedTerms, $newTerms);
+
+            $this->dispatch('toast', [
+                'msg' => 'Preserved locked payments and split remaining ₹'.number_format($remainingBalance, 2).' (30/40/30).',
+                'type' => 'ok',
+            ]);
+        }
 
         $this->resetValidation();
     }
