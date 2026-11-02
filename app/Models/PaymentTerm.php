@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -19,6 +20,11 @@ class PaymentTerm extends Model
         'grace_days' => 'integer',
         'seq' => 'integer',
     ];
+
+    public function scopeForUser(Builder $query, ?User $user = null): Builder
+    {
+        return $query->whereHas('project', fn (Builder $q) => $q->forUser($user));
+    }
 
     public function setDueDateAttribute($value): void
     {

@@ -135,7 +135,7 @@ class ReportIndex extends Component
         if (in_array($role, ['Admin', 'Manager'], true)) {
             $salesPeopleQuery = User::where('role', 'Sales')->where('status', 'Active')->with(['salesProjects.payments']);
             if ($role === 'Manager') {
-                $salesPeopleQuery->whereIn('id', $user->getDownlineUserIds());
+                $salesPeopleQuery->whereIn('id', current_user_downline_ids());
             }
             $salesPeople = $salesPeopleQuery->orderBy('name')->get();
 

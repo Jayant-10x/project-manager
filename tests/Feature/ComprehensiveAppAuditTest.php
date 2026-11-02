@@ -216,8 +216,7 @@ class ComprehensiveAppAuditTest extends TestCase
      */
     public function test_document_download_controller_enforces_downline_and_project_authorization(): void
     {
-        Storage::fake('uploads');
-        Storage::fake('public');
+        Storage::fake('documents');
 
         $customer = Customer::create([
             'customer_code' => 'CUS-DOC-01',
@@ -239,7 +238,7 @@ class ComprehensiveAppAuditTest extends TestCase
         ]);
 
         $storedName = 'confidential_contract_2026.pdf';
-        Storage::disk('uploads')->put($storedName, 'CONFIDENTIAL CONTRACT CONTENT');
+        Storage::disk('documents')->put($storedName, 'CONFIDENTIAL CONTRACT CONTENT');
 
         $doc = Document::create([
             'customer_id' => $customer->id,
@@ -379,11 +378,11 @@ class ComprehensiveAppAuditTest extends TestCase
     }
 
     /**
-     * ISS-099: Verify Customer deletion cleans files from both public and uploads storage disks.
+     * ISS-099/ISS-103: Verify Customer deletion cleans files from canonical documents storage disk.
      */
     public function test_customer_deletion_cleans_both_public_and_uploads_storage_disks(): void
     {
-        Storage::fake('uploads');
+        Storage::fake('documents');
         Storage::fake('public');
 
         $customer = Customer::create([
@@ -397,7 +396,7 @@ class ComprehensiveAppAuditTest extends TestCase
         ]);
 
         $storedName = 'customer_doc_to_delete.pdf';
-        Storage::disk('uploads')->put($storedName, 'FILE ON UPLOADS');
+        Storage::disk('documents')->put($storedName, 'FILE ON DOCUMENTS');
         Storage::disk('public')->put($storedName, 'FILE ON PUBLIC');
 
         Document::create([
@@ -410,7 +409,7 @@ class ComprehensiveAppAuditTest extends TestCase
             'uploaded_by' => $this->admin->id,
         ]);
 
-        Storage::disk('uploads')->assertExists($storedName);
+        Storage::disk('documents')->assertExists($storedName);
         Storage::disk('public')->assertExists($storedName);
 
         Livewire::actingAs($this->admin)
@@ -419,7 +418,7 @@ class ComprehensiveAppAuditTest extends TestCase
             ->assertRedirect(route('customers.index'));
 
         $this->assertNull(Customer::find($customer->id));
-        Storage::disk('uploads')->assertMissing($storedName);
+        Storage::disk('documents')->assertMissing($storedName);
         Storage::disk('public')->assertMissing($storedName);
     }
 

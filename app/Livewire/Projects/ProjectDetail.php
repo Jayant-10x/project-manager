@@ -193,10 +193,12 @@ class ProjectDetail extends Component
     {
         $doc = $this->project->documents()->findOrFail($docId);
         $docName = $doc->file_name;
-        if (Storage::disk('uploads')->exists($doc->stored_as)) {
-            Storage::disk('uploads')->delete($doc->stored_as);
+        if (Storage::disk('documents')->exists($doc->stored_as)) {
+            Storage::disk('documents')->delete($doc->stored_as);
         }
-        Storage::disk('public')->delete($doc->stored_as);
+        if (Storage::disk('public')->exists($doc->stored_as)) {
+            Storage::disk('public')->delete($doc->stored_as);
+        }
         $doc->delete();
 
         app(AuditNotificationService::class)->log(
@@ -218,7 +220,12 @@ class ProjectDetail extends Component
         }
 
         foreach ($this->project->documents as $doc) {
-            Storage::disk('public')->delete($doc->stored_as);
+            if (Storage::disk('documents')->exists($doc->stored_as)) {
+                Storage::disk('documents')->delete($doc->stored_as);
+            }
+            if (Storage::disk('public')->exists($doc->stored_as)) {
+                Storage::disk('public')->delete($doc->stored_as);
+            }
         }
 
         $name = $this->project->name;

@@ -136,10 +136,11 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
   * Projects submitted by staff enter **Pending Approval** status with prominent visual banners.
   * Authorized managers and admins can approve or reject projects with mandatory explanation notes.
 * **Delivery Health Monitoring:** Visible health tags with mandatory delay reasons to highlight delivery roadblocks early.
-* **Auto-Split (30/40/30) Schedule Wizard:** 1-Click payment term calculation dividing total project value into standard agency installments:
+* **Auto-Split (30/40/30 & 50/50) Schedule Wizards:** 1-Click payment term calculation dividing total project value into standard agency installments:
   * **Advance (30%)**: Upfront retainer upon signing
   * **Mid-Project (40%)**: Billed upon interim delivery milestone
   * **Final Delivery (30%)**: Remaining completion balance (with exact penny matching)
+  * **Locked Payment Term Preservation**: Existing locked installments (terms with recorded payments or TDS deductions) are strictly preserved intact; auto-split distributes only the remaining uncollected balance (`Project Value - Locked Total`) across the new terms.
   * Automatically maps due dates to milestones or staggers them (+0, +15, +30 days) from project start.
 * **Milestone Checklist & Chase Tracker:** Interactive milestone tracker with due dates, payment trigger linking, 1-click completion checkmarks, and a dedicated **Milestone Chase Modal** to record follow-up notes and schedule next chase dates (with resilient empty-date normalization).
 * **Annual Maintenance Contracts (AMC):** Dedicated contract duration tracking with automated renewal warnings before expiration.
@@ -149,7 +150,7 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 
 * **Payments Ledger:** Comprehensive receipts table tracking **Receipt #**, **Project / Customer**, installment **Term**, payment **Amount**, **TDS Deducted**, **Total Credited**, **Paid on** date, and **Mode & Reference** (Cash, UPI, NEFT, RTGS, Cheque, Card).
 * **Datewise Payment Calendar (`/calendar`):** Full 7-column monthly view charting scheduled installment dues and payment receipts on their exact calendar dates:
-  * **Month Navigation & Quick Jump:** Seamless previous/next month transitions, current month "Today" reset, and direct month-year input selector.
+  * **Month Navigation & Quick Jump:** Seamless previous/next month transitions with overflow-safe date arithmetic (`Carbon::parse($month.'-01')`), current month "Today" reset, and direct month-year input selector.
   * **Monthly Cash Flow KPIs:** Top indicators calculating Total Scheduled Due, Total Received, Total Due (Pending), and Overdue amounts.
   * **Dual Filter System:** Toggle between All Records, Scheduled Dues Only, or Received Payments Only, with downline team member scoping for Administrators and Managers.
   * **Itemized Day Details Modal:** Click any date cell to review comprehensive tables of due installments and payment receipts with deep-linking to project dossiers.
@@ -169,7 +170,7 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 
 * **My Tasks Checklist:** Personal task manager with priority tags (**Low**, **Medium**, **High**, **Urgent**), due dates, and late indicators.
 * **Client Follow-ups Logger:** Multi-channel interaction tracker (**Call**, **Email**, **Meeting**, **WhatsApp**, **Note**) with scheduled next action dates and reminders.
-* **Document Vault:** Secure file manager supporting contracts, KYC documents, invoices, and delivery proofs up to 10 MB with instant in-browser lightbox previews for PDFs and images.
+* **Document Vault:** Secure file manager supporting contracts, KYC documents, invoices, and delivery proofs up to 10 MB with instant in-browser lightbox previews for PDFs and images, plus downline RBAC authorization on file downloads (`DocumentDownloadController`).
 * **Activity Log:** Reverse-chronological timeline recording all team creates, edits, receipts, uploads, and deletions.
 * **Settings & User Administration:** Configure company information, adjust alert lead times (payment, AMC, follow-up windows), manage staff profiles, and generate 1-click temporary credentials for password resets.
 
@@ -223,7 +224,7 @@ graph TD
     subgraph StorageLayer ["Data and Storage Layer"]
         Eloquent["Eloquent ORM Models (with Casts & Relationships)"]
         MySQL[("MySQL 8.0+ Database")]
-        DiskStorage[("Public Disk Storage (storage/app/public)")]
+        DiskStorage[("Private Documents (storage/app/private/documents) & Public Avatars (storage/app/public)")]
 
         MoneyService & CodeService --> Eloquent
         Eloquent --> MySQL
@@ -509,7 +510,7 @@ All operational modules are built as dedicated Livewire 4 full-page components, 
 | | **9. Payment Schedule** | `schedule.index` | `Schedule\ScheduleIndex` | Master timeline, trigger badges, CSV export, live recalculations |
 | | **10. Payment Calendar** | `calendar.index` | `Calendar\PaymentCalendarIndex` | 7-column monthly cash flow grid, datewise due installments & payment receipts, downline filter, day details modal |
 | | **11. Reports** | `reports.index` | `Reports\ReportIndex` | Executive analytics: collection rate % `((received / scheduled) * 100)`, trailing 6-month sparkline `(monthly sum(payments))`, mode bars `(sum(payments) grouped by mode)`, aging bars `(overdue terms bucketed: 0–30, 31–60, 61–90, 90+ days)`, and delivery variance table `(milestone_% - collection_%)` |
-| **Records** | **12. Documents** | `documents.index` | `Documents\DocumentIndex` | `DocumentUploadModal` (public disk root), `DocumentPreviewModal` (lightbox) |
+| **Records** | **12. Documents** | `documents.index` | `Documents\DocumentIndex` | `DocumentUploadModal` (private documents disk), `DocumentPreviewModal` (streaming lightbox) |
 | | **13. Follow-ups** | `followups.index` | `Followups\FollowupIndex` | Touchpoint feed, overdue alert banner, scoped project relations |
 | | **14. Sales Team** | `sales.index` | `Sales\SalesIndex` | Shared `UserModal` for quota tracking and credential management |
 | **System** | **15. Notifications** | `notifications.index`<br>`notifications.show` | `Notifications\NotificationIndex`<br>`Notifications\NotificationDetail` | `Components\NotificationBell`, `Components\NotificationDrawer`, `DynamicCounter`, deep linking |
@@ -564,12 +565,14 @@ Installments automatically update their visual status badge in the **Payment Sch
 4. **`Pending`** (Gray): `Today <= Due Date + Grace Days` AND `Received + TDS Deducted == 0` (future installment).
 5. **`Cancelled`** (Muted): Voided term excluded from active receivables.
 
-### 3. Auto-Split (30/40/30) Schedule Wizard
+### 3. Auto-Split (30/40/30 & 50/50) Schedule Wizards
 
-Available inside the **Schedule** modal on any project, this wizard divides the contracted **Project Value** into standard agency milestone terms with exact penny settlement:
+Available inside the **Schedule** modal on any project, this wizard divides the contracted **Project Value** (or remaining uncollected balance) into standard agency milestone terms with exact penny settlement:
 * **Advance (30%)**: `round(Project Value * 0.30, 2)` (upfront retainer upon signing)
 * **Mid-Project (40%)**: `round(Project Value * 0.40, 2)` (interim milestone billing)
 * **Final Delivery (30%)**: `Project Value - Advance - Mid-Project` (remaining balance upon project completion)
+* **50/50 Split**: Divides into equal Advance (50%) and Delivery (50%) installments.
+* **Locked Installment Preservation**: If any terms already have recorded payments or TDS deductions (`locked === true`), the wizard preserves those locked terms untouched, computes the remaining balance (`Project Value - Locked Terms Sum`), and generates new terms distributing solely the remaining balance. If locked payments equal or exceed the total project value, auto-splitting is blocked with an informational warning toast.
 * **Due Date Synchronization**: If delivery milestones exist, terms inherit their due dates; if milestones are not yet defined, terms automatically stagger (+0 days, +15 days, +30 days) from the project start date.
 
 ### 4. Concurrency-Safe Sequence Engine & Counter Auto-Healing (`CodeGeneratorService`)

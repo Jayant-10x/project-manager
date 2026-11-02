@@ -169,7 +169,7 @@
                         @endif
                         <td>
                             <span
-                                class="badge {{ $customer->status === 'Active' ? 'b-green' : ($customer->status === 'Churned' ? 'b-red' : 'b-grey') }}">
+                                class="badge {{ status_badge_class($customer->status) }}">
                                 {{ $customer->status }}
                             </span>
                             @if($customer->isPendingApproval())

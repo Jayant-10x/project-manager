@@ -88,7 +88,7 @@ graph TD
     subgraph PersistenceLayer ["Persistence Layer"]
         Eloquent["Eloquent ORM Models (Relationships, Casts, Diff Tracking & Scopes)"]
         MySQL[("MySQL 8.0+ Database (18 Migrated Tables)")]
-        DiskStorage[("Local Public Disk Storage (storage/app/public & uploads)")]
+        DiskStorage[("Private Documents Storage (storage/app/private/documents) & Public Avatars (storage/app/public)")]
     end
 
     UI -->|Livewire Requests & wire:navigate| WebRoute
@@ -567,12 +567,17 @@ erDiagram
 * **`Projects\ProjectModal`**: Contract authoring modal with zero-default numeric normalization, auto-assignment of sales rep, coordinator, and tech person, delay reason clearing when health improves, and health degradation alerts.
 * **`Projects\ProjectMilestoneModal`**: Sortable milestone checklist with payment trigger linking.
 * **`Projects\MilestoneChaseModal`**: Interactive milestone chase note logging and next chase date scheduling (with resilient empty-date normalization), synchronized with customer follow-ups and touchpoints.
-* **`Projects\ProjectScheduleModal`**: Multi-tier installment scheduler supporting the Auto-Split 30/40/30 wizard `(Advance: round(value * 0.30, 2), Mid: round(value * 0.40, 2), Delivery: value - term1 - term2; staggered +0, +15, +30 days)`.
+* **`Projects\ProjectScheduleModal`**: Multi-tier installment scheduler supporting the Auto-Split 30/40/30 and 50/50 wizards `(Advance: round(value * 0.30, 2), Mid: round(value * 0.40, 2), Delivery: value - term1 - term2; staggered +0, +15, +30 days)`. Automatically preserves locked installments with recorded collections or TDS deductions, calculating remaining uncollected balances before generating new terms.
 * **`Projects\ProjectRecurringModal`**: Single-click monthly retainer generator `(generates N monthly recurring installments starting from anchor date)`.
 
 ### 4.5 Financial Receivables
 * **`Payments\PaymentIndex`**: Detailed receipt ledger with mode filtering `(Cash, UPI, NEFT, RTGS, Cheque, Card, Other)`, TDS accounting `(credited alongside received cash against term balance)`, compact icon actions, and CSV export.
 * **`Payments\PaymentModal`**: Receipt logger with auto-balance calculation `(balance_due = term_amount - received - tds)`, term status updating, atomic receipt codes `(RCP-XXXX)`, Smart Receipt upload (`WithFileUploads`) with auto-link to `Document`, and multi-recipient notifications (Coordinator, Salesperson, Admins).
+* **`Calendar\PaymentCalendarIndex`**: Full 7-column monthly datewise calendar charting scheduled installment dues and payment receipts on exact calendar dates:
+  * Month navigation and quick jump with overflow-safe date arithmetic (`Carbon::parse($month.'-01')`).
+  * Monthly cash flow indicators (Total Scheduled Due, Total Received, Total Due, Overdue).
+  * Dual filtering (All, Scheduled Dues Only, Received Payments Only) with manager/admin downline scoping.
+  * Day details modal listing itemized due installments and payment receipts with deep links to project dossiers.
 * **`Schedule\ScheduleIndex`**: Master installment schedule tracking fixed dates, milestone-linked triggers, and recurring terms:
   * Total Scheduled `(sum(terms) where status != 'Cancelled')`
   * Total Collected `(sum(payments))`
@@ -799,9 +804,9 @@ To reduce repetitive deep method chaining and enhance code readability across Bl
 
 ## 7. Historical Defect Registry, Technical Resolutions & Legacy Cleanup Archive
 
-### 7.1 Master Historical Defect Registry (ISS-001 through ISS-082)
+### 7.1 Master Historical Defect Registry (ISS-001 through ISS-103)
 
-The following registry catalogues all 82 technical defects, architectural enhancements, and usability refinements resolved across the system's evolutionary migration:
+The following registry catalogues all 103 technical defects, architectural enhancements, and usability refinements resolved across the system's evolutionary migration:
 
 | Issue ID | Severity | Functional Domain | Defect Description & System Impact | Resolution Status |
 |:---|:---|:---|:---|:---|
@@ -888,6 +893,27 @@ The following registry catalogues all 82 technical defects, architectural enhanc
 | **ISS-080** | High | Financial Privacy & RBAC | Customer dossiers, contract amounts, and payment notifications leaking to Tech Person | **[VERIFIED FIXED]** |
 | **ISS-081** | Critical | Database Integrity | SQLSTATE 22007 invalid datetime format when updating milestone chase notes with empty date | **[VERIFIED FIXED]** |
 | **ISS-082** | Low | Design System & Button UX | Ad-hoc, hardcoded button utility classes and bloated row actions across data tables | **[VERIFIED FIXED]** |
+| **ISS-083** | Medium | Milestones & Chasing | Deferred milestone creation on chase modal open preventing empty milestone record clutter | **[VERIFIED FIXED]** |
+| **ISS-084** | Medium | Payments & Cash Receipts | Preserved user-typed custom payment amounts on installment term selection in payment modal | **[VERIFIED FIXED]** |
+| **ISS-085** | Medium | Schedules & Recurring Terms | Preserved custom installment due dates across milestone mapping and recurring schedule adjustments | **[VERIFIED FIXED]** |
+| **ISS-086** | Low | Project Coordination | Automatic coordinator assignment to salesperson's direct reporting supervisor for sales-created projects | **[VERIFIED FIXED]** |
+| **ISS-087** | Low | Milestones & Templates | On-demand standard delivery stage template loading and preservation of custom done dates | **[VERIFIED FIXED]** |
+| **ISS-088** | Low | Touchpoints & Follow-ups | Custom past/future interaction date persistence in follow-up touchpoint logger | **[VERIFIED FIXED]** |
+| **ISS-089** | Low | Project Delivery Health | Automatic archiving of historical delay reasons into project notes when health recovers to On Track | **[VERIFIED FIXED]** |
+| **ISS-090** | High | Multi-Stakeholder Alerts | Recursive supervisor upline notifications (`reporting_to`) across project, payment, client, task, milestone, and document lifecycles | **[VERIFIED FIXED]** |
+| **ISS-091** | Critical | Migrations Architecture | Elimination of redundant schema alter migrations strictly preserving zero-alter pre-production policy | **[VERIFIED FIXED]** |
+| **ISS-092** | Medium | Authentication & Emails | Client-safe temporary password email template replacing inert JavaScript clipboard button with `user-select: all` block | **[VERIFIED FIXED]** |
+| **ISS-093** | Medium | Password Security & Profile | Standardized password complexity rules (min 8 chars, mixed-case, numbers) and cryptographically secure generator in ProfileDrawer | **[VERIFIED FIXED]** |
+| **ISS-094** | High | File Storage & Replication | Resilient file upload replication avoiding sequential `storeAs` temp-file move locks across `uploads` and `public` disks | **[VERIFIED FIXED]** |
+| **ISS-095** | Critical | Global Search & RBAC | GlobalSearch multi-tenant model scoping applying `Customer::forUser()` and concealing customer records from Tech Person | **[VERIFIED FIXED]** |
+| **ISS-096** | High | Operational Triage & Scoping | Customer-level follow-up leak prevention in Today's Work queue via customer downline authorization checks | **[VERIFIED FIXED]** |
+| **ISS-097** | Medium | Livewire 4 Query Sync | Added missing `Livewire\Attributes\Url` import in FollowupIndex to restore URL query parameter synchronization | **[VERIFIED FIXED]** |
+| **ISS-098** | Critical | File Security & RBAC | Added comprehensive RBAC, downline scoping, and entity access validation to DocumentDownloadController | **[VERIFIED FIXED]** |
+| **ISS-099** | Low | Storage Integrity & Cleanup | Dual-disk file cleanup on customer deletion removing linked documents from both `uploads` and `public` disks | **[VERIFIED FIXED]** |
+| **ISS-100** | High | Customer CSV Export | Restored `CustomerIndex::exportCsv()` with UTF-8 BOM, downline scoping, and permission checks, unskipping feature test | **[VERIFIED FIXED]** |
+| **ISS-101** | Critical | Schedule Auto-Split & Accounting | Schedule auto-splitting preserves locked payments with recorded collections and distributes only remaining uncollected balance | **[VERIFIED FIXED]** |
+| **ISS-102** | Medium | Payment Calendar Date Math | Eliminated Carbon month arithmetic day-of-month overflow on 31st days by pinning navigation to day `01` | **[VERIFIED FIXED]** |
+| **ISS-103** | Medium | File Storage & Security | Consolidated dual-disk storage into canonical private documents disk with authorized streaming & preview gateway | **[VERIFIED FIXED]** |
 
 ---
 
@@ -1015,6 +1041,89 @@ The following registry catalogues all 82 technical defects, architectural enhanc
 * **ISS-082 (Button System Standardization & Row Action Usability)**:
   * *Root Cause*: Scattered data tables and forms used ad-hoc, hardcoded utility class strings (`px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs...`) instead of project-wide button classes, causing visual inconsistencies and horizontal row bloat with text-heavy table actions.
   * *Technical Resolution*: Standardized all buttons across the application on the `.btn` design system (`.btn-primary`, `.btn-secondary`, `.btn-success`, `.btn-danger`, `.btn-outline-*`, `.btn-sm`, `.btn-xs`). Converted repetitive text buttons in high-density data tables (Approve, Reject, Resubmit, Edit, Delete, View) into compact icon-only buttons with explicit accessible `title` tooltips and SVG icons.
+
+#### 7.2.12 Workflow Ergonomics, Deferred Persistence & Delay Reason Archiving (ISS-083 through ISS-089)
+* **ISS-083 (Deferred Milestone Creation on Chase Modal Open)**:
+  * *Root Cause*: Triggering `MilestoneChaseModal` prematurely inserted an empty milestone record to the database prior to the user entering and submitting chase notes, cluttering milestone tracking with blank entries.
+  * *Technical Resolution*: Deferred milestone record persistence in `MilestoneChaseModal` until explicit user form submission (`save()`).
+* **ISS-084 (Typed Payment Amount Overwritten on Term Selection)**:
+  * *Root Cause*: In `PaymentModal`, pre-entering a custom payment amount before picking a scheduled installment term caused `updatedScheduleId()` to unconditionally overwrite the amount with the full installment balance.
+  * *Technical Resolution*: Updated `PaymentModal::updatedScheduleId()` to preserve manually typed payment amounts if already provided, only falling back to installment balance when the amount input was empty or zero.
+* **ISS-085 (Milestone and Recurring Schedule Due Date Preservation)**:
+  * *Root Cause*: In `ProjectScheduleModal`, switching between schedule modes or re-evaluating milestones reset custom due dates back to project start offset defaults.
+  * *Technical Resolution*: Preserved user-customized due dates across milestone mapping and recurring schedule adjustments in `ProjectScheduleModal`.
+* **ISS-086 (Automatic Supervisor Assignment for Sales-Created Projects)**:
+  * *Root Cause*: When sales staff created new project dossiers, the coordinator field was either unassigned or required manual selection from users they might not have permissions to see.
+  * *Technical Resolution*: Enhanced `ProjectModal` to automatically assign the sales representative's direct reporting supervisor (`reporting_to`) as the project coordinator when authored by sales.
+* **ISS-087 (On-Demand Milestone Stage Template Loading & Done Date Preservation)**:
+  * *Root Cause*: `ProjectMilestoneModal` lacked an on-demand standard delivery stage template loader, and toggling a milestone as completed reset custom `done_on` completion dates.
+  * *Technical Resolution*: Added standard stage template generator in `ProjectMilestoneModal` and preserved custom `done_on` completion timestamps.
+* **ISS-088 (Follow-up Interaction Custom Date Persistence)**:
+  * *Root Cause*: In `FollowupModal`, custom past or future interaction dates entered by the user were being overwritten by current timestamp defaults during save.
+  * *Technical Resolution*: Ensured custom interaction dates are respected and saved into `followups.created_at` and `followup_date`.
+* **ISS-089 (Project Delay Reason Archiving into Historical Notes)**:
+  * *Root Cause*: When a project's health recovered from "Delayed" or "At Risk" back to "On Track", the recorded delay reason was simply deleted, losing vital historical context regarding blockers encountered during project delivery.
+  * *Technical Resolution*: Implemented automatic historical archiving in `ProjectDetail`: when health transitions to "On Track", existing delay reasons are appended with an ISO timestamp into project notes before clearing the active delay reason field.
+
+#### 7.2.13 Multi-Tier Hierarchical Upline Notification Dispatch Engine (ISS-090)
+* **ISS-090 (Recursive Supervisor Upline Notifications across Entity Lifecycles)**:
+  * *Root Cause*: System activity logs and in-app notifications only alerted immediate creators or global administrators, failing to keep managerial supervisors in the reporting hierarchy (`reporting_to`) informed of project progress, client onboarding, or payment receipts.
+  * *Technical Resolution*: Upgraded `AuditNotificationService` with recursive upline resolution via `User::getUplineUserIds()` and dedicated event dispatchers (`notifyProjectCreated`, `notifyProjectApproved`, `notifyProjectRejected`, `notifyMilestoneCompleted`, `notifyPaymentReceived`, `notifyDocumentUploaded`), routing alerts to all supervisors up the reporting chain while filtering out unauthorized roles (such as suppressing financial/client notifications for `TechPerson`). Verified with 12 comprehensive feature tests in `UplineNotificationSystemTest`.
+
+#### 7.2.14 Schema Hygiene, Email Safety, Credential Security & Dual-Disk Storage (ISS-091 through ISS-094)
+* **ISS-091 (Elimination of Redundant Schema Alter Migrations)**:
+  * *Root Cause*: An incremental alter migration `2026_10_30_112551_modify_approval_status_to_enum_on_customers_and_projects.php` was introduced, violating the project's zero-alter migration policy prior to production release.
+  * *Technical Resolution*: Deleted the redundant alter migration and consolidated the `approval_status` enum definition directly into the baseline create table migrations (`create_customers_table` and `create_projects_table`).
+* **ISS-092 (Client-Safe Temporary Password Email Template)**:
+  * *Root Cause*: `TemporaryPasswordMail` rendered an interactive JavaScript `<button>` using `navigator.clipboard.writeText()`, which email clients strip out, rendering the button non-functional.
+  * *Technical Resolution*: Replaced the script-dependent button with an email-client-safe styled credentials card featuring `user-select: all`, monospace font, high-contrast border, and an explicit call-to-action button linking directly to `route('login')`.
+* **ISS-093 (Password Complexity Enforcement and Generator Unification in ProfileDrawer)**:
+  * *Root Cause*: `ProfileDrawer.php` allowed weak 6-character passwords without complexity validation, conflicting with system password policies (min 8 chars, uppercase, lowercase, numbers), and lacked high-entropy random password generation.
+  * *Technical Resolution*: Standardized validation rules to `Password::min(8)->letters()->mixedCase()->numbers()` in `ProfileDrawer`, verified new password differs from current password, and bound `PasswordGeneratorService::generate(16)` for random password generation.
+* **ISS-094 (Resilient File Upload Replication Without Sequential `storeAs`)**:
+  * *Root Cause*: In `PaymentModal.php` and `DocumentUploadModal.php`, files were being stored sequentially using `$receipt_file->storeAs(...)` to `uploads` and then calling `storeAs(...)` again to `public`. In Livewire/PHP temporary file handling, the first `storeAs` call moves or locks the temporary file, causing the second `storeAs` to throw a `FileNotFoundException` or save an empty file.
+  * *Technical Resolution*: Stored the uploaded file once to the `uploads` disk using `$receipt_file->storeAs(...)`, and then replicated the file to the `public` disk via `Storage::disk('public')->put($path, Storage::disk('uploads')->get($path))`.
+
+#### 7.2.15 Multi-Tenant Scoping, Attribute Imports, Download Authorization & Disk Cascade (ISS-095 through ISS-099)
+* **ISS-095 (GlobalSearch Scoping & Tech Person Customer Concealment)**:
+  * *Root Cause*: `GlobalSearch.php` queried `Customer::query()` directly without applying `->forUser($user)` and without checking `$user->hasPermission('customers', 'view')`. This leaked client dossiers across staff boundaries and exposed customers to `Tech Person` accounts.
+  * *Technical Resolution*: Updated `GlobalSearch.php` to verify `$user->hasPermission('customers', 'view') && ! $user->isTechPerson()` and apply `Customer::forUser($user)` before querying. Also verified project search respects `$user->hasPermission('projects', 'view')`.
+* **ISS-096 (Today's Work Customer-Level Follow-up Leak Prevention)**:
+  * *Root Cause*: In `app/Livewire/Today/TodayWorkIndex.php`, the follow-ups query used `where(function ($q) { $q->whereIn('project_id', $projectIds)->orWhereNull('project_id'); })`. When a follow-up was logged at the customer level (`project_id = null`), it appeared in every staff member's daily triage queue regardless of whether they were assigned to or permitted to view that customer.
+  * *Technical Resolution*: Scoped customer-level follow-ups by retrieving `$customerIds = Customer::forUser($user)->pluck('id')` and constraining `whereNull('project_id')->whereIn('customer_id', $customerIds)`.
+* **ISS-097 (Livewire Attributes Url Import in FollowupIndex)**:
+  * *Root Cause*: `app/Livewire/Followups/FollowupIndex.php` applied `#[Url]` to properties (`$search`, `$type`, `$customer_id`, `$date_from`, `$date_to`), but omitted `use Livewire\Attributes\Url;`. PHP treated the attribute as an unimported class, silently disabling URL query string synchronization on browser reloads.
+  * *Technical Resolution*: Added `use Livewire\Attributes\Url;` to `FollowupIndex.php`.
+* **ISS-098 (DocumentDownloadController RBAC & Authorization)**:
+  * *Root Cause*: `DocumentDownloadController::download()` streamed requested documents by model ID without verifying whether the authenticated user had permission to view documents or had access to the underlying customer or project dossier.
+  * *Technical Resolution*: Added RBAC and data isolation checks in `DocumentDownloadController::download()`: unauthenticated requests are redirected, and non-admin users must possess valid downline access to the attached `project_id` or `customer_id` or be the original file uploader.
+* **ISS-099 (Dual-Disk Document Cleanup on Customer Deletion)**:
+  * *Root Cause*: In `app/Livewire/Customers/CustomerDetail.php`, `deleteCustomer()` deleted document files only from `Storage::disk('public')`, leaving orphaned file artifacts in `Storage::disk('uploads')`.
+  * *Technical Resolution*: Updated `deleteCustomer()` to verify and delete document files from both `uploads` and `public` disks prior to cascade deletion.
+
+#### 7.2.16 CSV Export Recovery, Locked Installment Preservation & Date Arithmetic (ISS-100 through ISS-102)
+* **ISS-100 (Customer CSV Export Restoration & BOM Formatting)**:
+  * *Root Cause*: The "Export CSV" button was rendered on `customer-index.blade.php`, but the backend `exportCsv()` method in `CustomerIndex.php` was commented out with a temporary comment block, causing `BadMethodCallException` and forcing its test in `IssuesBatchTwoTest` to be skipped.
+  * *Technical Resolution*: Restored `CustomerIndex::exportCsv()` using global helper functions (`logged_in_user()`, `is_tech_person()`, `has_permission()`, `audit_service()`), applied full downline query scoping and filter constraints (`search`, `sales`, `state`, `status`, `pay`), added UTF-8 BOM headers for Excel compatibility, and unskipped its test.
+* **ISS-101 (Locked Installment Preservation During Schedule Auto-Splitting)**:
+  * *Root Cause*: In `ProjectScheduleModal.php`, executing `split5050()` or `autoSplit()` unconditionally wiped out all existing installments in `$this->terms`, resetting previously locked payment terms that had recorded cash receipts or TDS deductions and orphaning payment receipts.
+  * *Technical Resolution*: Updated `split5050()` and `autoSplit()` to preserve all locked installments intact (`locked === true`), calculate the remaining uncollected balance (`projectValue - lockedTotal`), and distribute the remaining balance across newly generated installments without altering locked payment terms. If locked payments already cover the contract value, auto-splitting is safely guarded with a notification toast. Added button status indicators in `project-schedule-modal.blade.php`.
+* **ISS-102 (Payment Calendar Month Arithmetic Day-of-Month Overflow Prevention)**:
+  * *Root Cause*: In `PaymentCalendarIndex.php`, `prevMonth()` and `nextMonth()` created Carbon dates using `Carbon::createFromFormat('Y-m', $this->month)`. In PHP DateTime/Carbon, missing day fields default to the current day of month (e.g. 31). On the 31st of any month, adding or subtracting months to non-31-day months (e.g. November, February) caused day overflow, skipping months entirely.
+  * *Technical Resolution*: Refactored month parsing across `prevMonth()`, `nextMonth()`, and `render()` to use `Carbon::parse($this->month.'-01')`, pinning the day to `01` and completely eliminating day-of-month arithmetic overflow.
+
+#### 7.2.17 Dual-Disk Storage Consolidation & Codebase Simplifications (ISS-103 & ENH-002 through ENH-007)
+* **ISS-103 (Consolidated Private `documents` Disk Storage with Authorized Gateway)**:
+  * *Root Cause*: Uploaded documents, contracts, and payment receipts were saved redundantly to both `uploads` (`public/uploads`) and `public` (`storage/app/public`), exposing confidential business artifacts in the web document root and wasting 100% additional disk space.
+  * *Technical Resolution*: Defined dedicated private `documents` disk in `config/filesystems.php` rooted at `storage_path('app/private/documents')` with `visibility => private`. Removed redundant `uploads` disk from configuration. Routed all document viewing and downloading exclusively through `DocumentDownloadController` (`download()` and `preview()` methods) guarded by authentication and role-based downline project/customer scoping. Refactored `DocumentUploadModal.php`, `PaymentModal.php`, `DocumentIndex.php`, `CustomerDetail.php`, and `ProjectDetail.php` to store and delete files exclusively from `Storage::disk('documents')`.
+* **ENH-002 (Uniform `scopeForUser` on `Payment` and `PaymentTerm`)**:
+  * *Technical Resolution*: Added `scopeForUser()` on `Payment` and `PaymentTerm` models, simplifying queries in `PaymentIndex.php` and `ScheduleIndex.php` and eliminating repetitive ID array plucking.
+* **ENH-003 (Direct Downline User IDs Helper `current_user_downline_ids`)**:
+  * *Technical Resolution*: Added `current_user_downline_ids(bool $excludeSelf = false): array` in `app/Helpers/helpers.php` and adopted it across 7 Livewire components.
+* **ENH-004 (Centralized Status & Health Badge Style Resolvers)**:
+  * *Technical Resolution*: Added `status_badge_class()` and `health_badge_class()` in `app/Helpers/helpers.php`, eliminating nested ternary expressions from Blade templates.
+* **ENH-005 – ENH-007 (CSS Architecture Parameterization, Radius Scale & Easing Unification)**:
+  * *Technical Resolution*: Parameterized `.btn-outline` using `--btn-color` and `--btn-border` custom properties in `public/css/crm-style.css`, standardized `--r-sm` through `--r-pill` radius scales, and unified 47 repetitive `cubic-bezier(0.4, 0, 0.2, 1)` strings with `--ease-smooth`.
 
 ---
 

@@ -138,13 +138,11 @@ class IssuesBatchThreeTest extends TestCase
     }
 
     /**
-     * ISS-094: Verify PaymentModal persists uploaded receipt to uploads disk and replicates
-     * to public disk storage cleanly without multiple storeAs calls on temporary file.
+     * ISS-094/ISS-103: Verify PaymentModal persists uploaded receipt to canonical private documents disk.
      */
     public function test_iss_094_payment_modal_receipt_upload_replicates_to_public_storage(): void
     {
-        Storage::fake('uploads');
-        Storage::fake('public');
+        Storage::fake('documents');
 
         $customer = Customer::create([
             'customer_code' => 'CUS-ISS-094',
@@ -184,9 +182,8 @@ class IssuesBatchThreeTest extends TestCase
         $this->assertNotNull($payment);
         $this->assertNotNull($payment->attachment);
 
-        // Verify stored in both uploads and public disks
-        Storage::disk('uploads')->assertExists($payment->attachment);
-        Storage::disk('public')->assertExists($payment->attachment);
+        // Verify stored in canonical documents disk
+        Storage::disk('documents')->assertExists($payment->attachment);
 
         // Verify Document record created
         $document = Document::where('stored_as', $payment->attachment)->first();

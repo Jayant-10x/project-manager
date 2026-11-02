@@ -50,8 +50,9 @@ Route::middleware(['auth', 'verified', EnsurePasswordIsChanged::class])->group(f
     Route::get('/projects', ProjectIndex::class)->name('projects.index');
     Route::get('/project/{project}', ProjectDetail::class)->name('projects.show');
 
-    // Document Download
+    // Document Download and Preview
     Route::get('/documents/{document}/download', [DocumentDownloadController::class, 'download'])->name('documents.download');
+    Route::get('/documents/{document}/preview', [DocumentDownloadController::class, 'preview'])->name('documents.preview');
 
     // Module 3, 4 & 5: Money & Operational Queue
     Route::get('/schedules', ScheduleIndex::class)->name('schedule.index');
@@ -82,11 +83,8 @@ Route::middleware(['auth', 'verified', EnsurePasswordIsChanged::class])->group(f
         ->name('api.notifications.poll');
 });
 
-// Direct file access route ensuring zero 403/symlink failures
+// Direct file access route strictly for public assets (e.g. user profile avatars)
 Route::get('/storage/{filename}', function (string $filename) {
-    if (file_exists(public_path('uploads/'.$filename))) {
-        return response()->file(public_path('uploads/'.$filename));
-    }
     if (Storage::disk('public')->exists($filename)) {
         return response()->file(Storage::disk('public')->path($filename));
     }

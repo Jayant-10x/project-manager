@@ -195,14 +195,11 @@ class PaymentModal extends Component
             $ext = strtolower($this->receipt_file->getClientOriginalExtension());
             $storedName = "{$slug}_{$timestamp}.{$ext}";
 
-            if (Storage::disk('uploads')->exists($storedName) || Storage::disk('public')->exists($storedName)) {
+            if (Storage::disk('documents')->exists($storedName) || Storage::disk('public')->exists($storedName)) {
                 $storedName = "{$slug}_{$timestamp}_".bin2hex(random_bytes(3)).".{$ext}";
             }
 
-            $this->receipt_file->storeAs('', $storedName, 'uploads');
-            if (Storage::disk('uploads')->exists($storedName)) {
-                Storage::disk('public')->put($storedName, Storage::disk('uploads')->get($storedName));
-            }
+            $this->receipt_file->storeAs('', $storedName, 'documents');
 
             $doc = Document::create([
                 'customer_id' => $project->customer_id,

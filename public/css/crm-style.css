@@ -30,7 +30,13 @@
     --greySoft: #eef1f7;
     --shadow: 0 1px 2px rgba(11, 61, 145, .05), 0 8px 24px -12px rgba(11, 61, 145, .18);
     --shadow2: 0 14px 34px -16px rgba(11, 61, 145, .34);
+    --r-sm: 8px;
+    --r-md: 10px;
     --r: 14px;
+    --r-lg: 16px;
+    --r-pill: 9999px;
+    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 0.2s var(--ease-smooth);
 }
 
 /** {
@@ -190,7 +196,7 @@ a {
     position: sticky;
     top: 0;
     height: 100vh;
-    transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1), flex 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.24s var(--ease-smooth), flex 0.24s var(--ease-smooth);
     overflow-x: hidden;
     will-change: width;
 }
@@ -326,7 +332,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 
 .sb-head {
     padding: 16px 14px 10px;
-    transition: padding 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: padding 0.24s var(--ease-smooth);
 }
 
 .sidebar.collapsed .sb-head {
@@ -367,7 +373,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     box-shadow: 0 6px 18px -12px rgba(0, 0, 0, .8);
     min-height: 48px;
     width: 100%;
-    transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1), height 0.24s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.24s cubic-bezier(0.4, 0, 0.2, 1), padding 0.24s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.24s var(--ease-smooth), height 0.24s var(--ease-smooth), min-height 0.24s var(--ease-smooth), padding 0.24s var(--ease-smooth), border-radius 0.24s var(--ease-smooth);
 }
 
 .sidebar.collapsed .logo-plate {
@@ -385,7 +391,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     display: block;
     object-fit: cover;
     object-position: 9%;
-    transition: height 0.24s cubic-bezier(0.4, 0, 0.2, 1), object-position 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: height 0.24s var(--ease-smooth), object-position 0.24s var(--ease-smooth);
 }
 
 .sidebar.collapsed .logo-plate img {
@@ -406,7 +412,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     overflow: hidden;
     opacity: 1;
     max-height: 30px;
-    transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.24s cubic-bezier(0.4, 0, 0.2, 1), padding 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.16s var(--ease-smooth), max-height 0.24s var(--ease-smooth), padding 0.24s var(--ease-smooth);
 }
 
 .sidebar.collapsed .sb-name {
@@ -418,14 +424,14 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     overflow: hidden !important;
     pointer-events: none !important;
     visibility: hidden !important;
-    transition: opacity 0.14s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.24s cubic-bezier(0.4, 0, 0.2, 1), padding 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.14s var(--ease-smooth), max-height 0.24s var(--ease-smooth), padding 0.24s var(--ease-smooth);
 }
 
 .nav {
     padding: 4px 10px 10px;
     overflow-y: auto;
     flex: 1;
-    transition: padding 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: padding 0.24s var(--ease-smooth);
 }
 
 .sidebar.collapsed .nav {
@@ -445,7 +451,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     opacity: 1;
     max-height: 38px;
     transform: translateY(0);
-    transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.24s cubic-bezier(0.4, 0, 0.2, 1), padding 0.24s cubic-bezier(0.4, 0, 0.2, 1), margin 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.16s var(--ease-smooth), max-height 0.24s var(--ease-smooth), padding 0.24s var(--ease-smooth), margin 0.24s var(--ease-smooth), transform 0.16s var(--ease-smooth);
 }
 
 .sidebar.collapsed .nav-label {
@@ -458,7 +464,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     pointer-events: none !important;
     visibility: hidden !important;
     transform: translateY(-4px);
-    transition: opacity 0.14s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.24s cubic-bezier(0.4, 0, 0.2, 1), padding 0.24s cubic-bezier(0.4, 0, 0.2, 1), margin 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.14s var(--ease-smooth), max-height 0.24s var(--ease-smooth), padding 0.24s var(--ease-smooth), margin 0.24s var(--ease-smooth);
 }
 
 .nav-item {
@@ -473,7 +479,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     font-size: 13.1px;
     margin-bottom: 1px;
     position: relative;
-    transition: background 0.14s ease, color 0.14s ease, padding 0.24s cubic-bezier(0.4, 0, 0.2, 1), gap 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background 0.14s ease, color 0.14s ease, padding 0.24s var(--ease-smooth), gap 0.24s var(--ease-smooth);
 }
 
 .nav-item .lbl {
@@ -485,7 +491,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     opacity: 1;
     max-width: 160px;
     transform: translateX(0);
-    transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.18s var(--ease-smooth), max-width 0.24s var(--ease-smooth), transform 0.18s var(--ease-smooth);
 }
 
 .sidebar.collapsed .nav-item {
@@ -510,12 +516,12 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     visibility: hidden !important;
     flex: 0 0 0 !important;
     transform: translateX(-6px);
-    transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1), margin 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.16s var(--ease-smooth), max-width 0.24s var(--ease-smooth), transform 0.16s var(--ease-smooth), margin 0.24s var(--ease-smooth);
 }
 
 .sidebar.collapsed .nav-item .nav-ico {
     margin: 0 auto;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.2s var(--ease-smooth);
 }
 
 .sidebar.collapsed .nav-item.active::before {
@@ -525,7 +531,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 .sb-foot {
     border-top: 1px solid #12325f;
     padding: 12px 14px 14px;
-    transition: padding 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: padding 0.24s var(--ease-smooth);
 }
 
 .sidebar.collapsed .sb-foot {
@@ -540,7 +546,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     border-radius: 10px;
     padding: 6px;
     margin: -6px;
-    transition: background 0.15s ease, padding 0.24s cubic-bezier(0.4, 0, 0.2, 1), gap 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background 0.15s ease, padding 0.24s var(--ease-smooth), gap 0.24s var(--ease-smooth);
 }
 
 .me-txt {
@@ -551,7 +557,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     opacity: 1;
     max-width: 140px;
     transform: translateX(0);
-    transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.18s var(--ease-smooth), max-width 0.24s var(--ease-smooth), transform 0.18s var(--ease-smooth);
 }
 
 .sidebar.collapsed .me {
@@ -574,7 +580,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 
 .sidebar.collapsed .me .avatar {
     margin: 0 auto !important;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.2s var(--ease-smooth);
 }
 
 .sidebar.collapsed .me-txt {
@@ -589,7 +595,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     visibility: hidden !important;
     flex: 0 0 0 !important;
     transform: translateX(-6px);
-    transition: opacity 0.16s cubic-bezier(0.4, 0, 0.2, 1), max-width 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 0.16s var(--ease-smooth), max-width 0.24s var(--ease-smooth), transform 0.16s var(--ease-smooth);
 }
 
 .sidebar.collapsed #sidebar-logout-form {
@@ -1010,81 +1016,104 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     color: #fff;
 }
 
-/* --- Bordered / Outline Variants (Fill On Hover) --- */
-.btn-outline,
-.btn-outline-secondary {
-    background: #fff;
-    border: 1.5px solid #cbd5e1;
-    color: #475569;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
-}
-
-.btn-outline:hover,
-.btn-outline-secondary:hover {
-    background: #475569;
-    border-color: #475569;
-    color: #fff;
-    box-shadow: 0 4px 12px -3px rgba(71, 85, 105, .35);
-}
-
-.btn-outline-primary {
-    background: #fff;
-    border: 1.5px solid var(--navy);
-    color: var(--navy);
-    box-shadow: 0 1px 3px rgba(11, 61, 145, .08);
-}
-
-.btn-outline-primary:hover {
+.btn-info {
     background: var(--navy);
     border-color: var(--navy);
     color: #fff;
-    box-shadow: 0 6px 18px -4px rgba(11, 61, 145, .45);
+    box-shadow: 0 4px 14px -4px rgba(11, 61, 145, .5);
+}
+
+.btn-info:hover {
+    background: var(--navyDark);
+    border-color: var(--navyDark);
+    color: #fff;
+    box-shadow: 0 6px 18px -4px rgba(11, 61, 145, .6);
+}
+
+/* --- Bordered / Outline Variants (Fill On Hover via CSS Custom Properties) --- */
+.btn-outline,
+.btn-outline-secondary,
+.btn-outline-primary,
+.btn-outline-green,
+.btn-outline-success,
+.btn-outline-amber,
+.btn-outline-warning,
+.btn-outline-danger,
+.btn-outline-blue,
+.btn-outline-info,
+[class*="btn-outline-"] {
+    --btn-color: #475569;
+    --btn-border: #cbd5e1;
+    background: #fff;
+    border: 1.5px solid var(--btn-border, var(--btn-color));
+    color: var(--btn-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
+    transition: all .16s var(--ease-smooth);
+}
+
+.btn-outline:hover,
+.btn-outline-secondary:hover,
+.btn-outline-primary:hover,
+.btn-outline-green:hover,
+.btn-outline-success:hover,
+.btn-outline-amber:hover,
+.btn-outline-warning:hover,
+.btn-outline-danger:hover,
+.btn-outline-blue:hover,
+.btn-outline-info:hover,
+[class*="btn-outline-"]:hover {
+    background: var(--btn-color);
+    border-color: var(--btn-color);
+    color: #fff;
+    box-shadow: 0 6px 18px -4px var(--btn-color);
+}
+
+.btn-outline svg,
+[class*="btn-outline-"] svg {
+    color: currentColor;
+    transition: stroke .16s ease-in-out, fill .16s ease-in-out, color .16s ease-in-out;
+}
+
+.btn-outline:hover svg,
+[class*="btn-outline-"]:hover svg {
+    color: #fff !important;
+}
+
+.btn-outline-secondary {
+    --btn-color: #475569;
+    --btn-border: #cbd5e1;
+}
+
+.btn-outline-primary {
+    --btn-color: var(--navy);
+    --btn-border: var(--navy);
 }
 
 .btn-outline-green,
 .btn-outline-success {
-    background: #fff;
-    border: 1.5px solid var(--green);
-    color: var(--green);
-    box-shadow: 0 1px 3px rgba(90, 162, 54, .08);
-}
-
-.btn-outline-green:hover,
-.btn-outline-success:hover {
-    background: var(--green);
-    border-color: var(--green);
-    color: #fff;
-    box-shadow: 0 6px 18px -4px rgba(90, 162, 54, .45);
+    --btn-color: var(--green);
+    --btn-border: var(--green);
 }
 
 .btn-outline-amber,
 .btn-outline-warning {
-    background: #fff;
-    border: 1.5px solid var(--amber);
-    color: var(--amber);
-    box-shadow: 0 1px 3px rgba(224, 161, 58, .08);
-}
-
-.btn-outline-amber:hover,
-.btn-outline-warning:hover {
-    background: var(--amber);
-    border-color: var(--amber);
-    color: #fff;
-    box-shadow: 0 6px 18px -4px rgba(224, 161, 58, .45);
+    --btn-color: var(--amber);
+    --btn-border: var(--amber);
 }
 
 .btn-outline-danger {
-    background: #fff;
-    border: 1.5px solid var(--red);
-    color: var(--red);
-    box-shadow: 0 1px 3px rgba(217, 75, 75, .08);
+    --btn-color: var(--red);
+    --btn-border: var(--red);
 }
 
-.btn-outline-danger:hover {
-    background: var(--red);
-    border-color: var(--red);
-    color: #fff;
-    box-shadow: 0 6px 18px -4px rgba(217, 75, 75, .45);
+.btn-outline-blue {
+    --btn-color: var(--cyan);
+    --btn-border: var(--cyan);
+}
+
+.btn-outline-info {
+    --btn-color: var(--navy);
+    --btn-border: var(--navy);
 }
 
 /* --- Sizes --- */
@@ -2800,7 +2829,7 @@ textarea.i {
         top: 0;
         bottom: 0;
         transform: translateX(-100%);
-        transition: transform .22s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: transform .22s var(--ease-smooth);
         box-shadow: 0 0 25px rgba(0, 0, 0, .25);
     }
 

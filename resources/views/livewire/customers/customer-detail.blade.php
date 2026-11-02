@@ -125,7 +125,7 @@
                     </div>
                     <div style="margin-top:8px;display:flex;gap:7px;flex-wrap:wrap">
                         <span
-                            class="badge {{ $customer->status === 'Active' ? 'b-green' : ($customer->status === 'Churned' ? 'b-red' : 'b-grey') }}">
+                            class="badge {{ status_badge_class($customer->status) }}">
                             {{ $customer->status }}
                         </span>
                         @if($customer->isPendingApproval())
@@ -454,7 +454,7 @@
                                 <span>{{ ucfirst($term->trigger_type) }}</span>
                                 <span>Due {{ $term->due_date?->format('d M') ?? '—' }}</span>
                                 <span
-                                    class="badge {{ $term->status === 'Paid' ? 'b-green' : ($term->status === 'Overdue' ? 'b-red' : 'b-amber') }}">{{ $term->status }}</span>
+                                    class="badge {{ status_badge_class($term->status) }}">{{ $term->status }}</span>
                             </div>
                         </div>
                         <div class="term-amt" style="display:flex;align-items:center;gap:10px">
@@ -623,9 +623,7 @@
                         </div>
                         <span class="pill mr-2">{{ $doc->category }}</span>
                         @php
-                            $fileUrl = file_exists(public_path('uploads/' . $doc->stored_as))
-                                ? asset('uploads/' . $doc->stored_as)
-                                : asset('storage/' . $doc->stored_as);
+                            $fileUrl = route('documents.preview', $doc->id, absolute: false);
                         @endphp
                         <button type="button"
                                 class="btn btn-outline-primary btn-xs mr-1"

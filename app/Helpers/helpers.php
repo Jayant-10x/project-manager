@@ -99,6 +99,54 @@ if (! function_exists('is_tech_person')) {
     }
 }
 
+if (! function_exists('current_user_downline_ids')) {
+    /**
+     * Get the downline user IDs for the current authenticated user.
+     * Optionally exclude the current user's ID.
+     */
+    function current_user_downline_ids(bool $excludeSelf = false): array
+    {
+        $user = logged_in_user();
+        if (! $user) {
+            return [];
+        }
+
+        $ids = $user->getDownlineUserIds();
+
+        return $excludeSelf ? array_values(array_diff($ids, [$user->id])) : $ids;
+    }
+}
+
+if (! function_exists('status_badge_class')) {
+    /**
+     * Resolve the CSS badge class for a given entity status.
+     */
+    function status_badge_class(?string $status): string
+    {
+        return match ($status) {
+            'Active', 'Completed', 'Approved', 'Paid' => 'b-green',
+            'On Hold', 'Pending', 'In Progress', 'Partial' => 'b-amber',
+            'Churned', 'Cancelled', 'Rejected', 'Overdue' => 'b-red',
+            default => 'b-grey',
+        };
+    }
+}
+
+if (! function_exists('health_badge_class')) {
+    /**
+     * Resolve the CSS badge class for a given project delivery health.
+     */
+    function health_badge_class(?string $health): string
+    {
+        return match ($health) {
+            'On Track' => 'b-green',
+            'At Risk' => 'b-amber',
+            'Delayed' => 'b-red',
+            default => 'b-grey',
+        };
+    }
+}
+
 if (! function_exists('audit_service')) {
     /**
      * Retrieve the singleton instance of the AuditNotificationService.

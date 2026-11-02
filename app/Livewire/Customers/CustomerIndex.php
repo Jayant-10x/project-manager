@@ -325,7 +325,7 @@ class CustomerIndex extends Component
 
         $salesPeopleQuery = User::where('role', 'Sales')->where('status', 'Active');
         if ($user->role === 'Manager') {
-            $salesPeopleQuery->whereIn('id', $user->getDownlineUserIds());
+            $salesPeopleQuery->whereIn('id', current_user_downline_ids());
         } elseif ($user->role === 'Sales') {
             $salesPeopleQuery->where('id', $user->id);
         }

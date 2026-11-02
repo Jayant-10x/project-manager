@@ -228,7 +228,7 @@ class ProjectIndex extends Component
 
         $salesPeopleQuery = User::where('role', 'Sales')->where('status', 'Active');
         if ($user->role === 'Manager') {
-            $salesPeopleQuery->whereIn('id', $user->getDownlineUserIds());
+            $salesPeopleQuery->whereIn('id', current_user_downline_ids());
         }
         $salesPeople = ($user->role === 'Sales') ? collect() : $salesPeopleQuery->orderBy('name')->get();
 

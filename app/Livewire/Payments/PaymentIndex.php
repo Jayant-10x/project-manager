@@ -81,9 +81,7 @@ class PaymentIndex extends Component
     public function deletePayment(int $id): void
     {
         $user = auth()->user();
-        $payment = Payment::query()
-            ->whereHas('project', fn ($q) => $q->forUser($user))
-            ->findOrFail($id);
+        $payment = Payment::forUser($user)->findOrFail($id);
 
         // Coordinators can only delete their own entries unless Admin
         if ($user->role !== 'Admin' && $payment->created_by !== $user->id) {
@@ -144,8 +142,7 @@ class PaymentIndex extends Component
     public function exportCsv()
     {
         $user = auth()->user();
-        $payments = Payment::query()
-            ->whereHas('project', fn ($q) => $q->forUser($user))
+        $payments = Payment::forUser($user)
             ->with(['project.customer', 'customer', 'term', 'enteredBy'])
             ->when($user->role === 'Coordinator', function ($q) {
                 $q->whereHas('project.terms', function ($t) {
@@ -209,8 +206,7 @@ class PaymentIndex extends Component
     {
         $user = auth()->user();
 
-        $query = Payment::query()
-            ->whereHas('project', fn ($projectQuery) => $projectQuery->forUser($user))
+        $query = Payment::forUser($user)
             ->with(['project.customer', 'customer', 'term', 'enteredBy'])
             ->when($user->role === 'Coordinator', function ($coordinatorQuery) {
                 // Coordinators only see payments with active due balances

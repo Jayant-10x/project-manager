@@ -96,10 +96,12 @@ class CustomerDetail extends Component
 
         // Clean up files on disk
         foreach ($this->customer->documents as $doc) {
-            if (Storage::disk('uploads')->exists($doc->stored_as)) {
-                Storage::disk('uploads')->delete($doc->stored_as);
+            if (Storage::disk('documents')->exists($doc->stored_as)) {
+                Storage::disk('documents')->delete($doc->stored_as);
             }
-            Storage::disk('public')->delete($doc->stored_as);
+            if (Storage::disk('public')->exists($doc->stored_as)) {
+                Storage::disk('public')->delete($doc->stored_as);
+            }
         }
 
         $code = $this->customer->customer_code;
@@ -275,10 +277,12 @@ class CustomerDetail extends Component
     {
         $doc = $this->customer->documents()->findOrFail($docId);
         $docName = $doc->file_name;
-        if (Storage::disk('uploads')->exists($doc->stored_as)) {
-            Storage::disk('uploads')->delete($doc->stored_as);
+        if (Storage::disk('documents')->exists($doc->stored_as)) {
+            Storage::disk('documents')->delete($doc->stored_as);
         }
-        Storage::disk('public')->delete($doc->stored_as);
+        if (Storage::disk('public')->exists($doc->stored_as)) {
+            Storage::disk('public')->delete($doc->stored_as);
+        }
         $doc->delete();
 
         app(AuditNotificationService::class)->log(

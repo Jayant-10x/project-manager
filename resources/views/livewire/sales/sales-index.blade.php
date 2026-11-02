@@ -55,7 +55,7 @@
                         <div class="text-xs text-[#8894ac]">{{ $sp->phone ?: ($sp->email ?: '—') }}</div>
                         <div class="mt-1">
                             <span
-                                class="badge {{ $sp->status === 'Active' ? 'b-green' : 'b-grey' }}">{{ $sp->status }}</span>
+                                class="badge {{ status_badge_class($sp->status) }}">{{ $sp->status }}</span>
                         </div>
                     </div>
                 </div>

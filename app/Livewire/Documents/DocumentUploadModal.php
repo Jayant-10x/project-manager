@@ -106,17 +106,12 @@ class DocumentUploadModal extends Component
         $ext = strtolower($this->file->getClientOriginalExtension());
         $storedName = "{$slug}_{$timestamp}.{$ext}";
 
-        if (Storage::disk('uploads')->exists($storedName) || Storage::disk('public')->exists($storedName)) {
+        if (Storage::disk('documents')->exists($storedName) || Storage::disk('public')->exists($storedName)) {
             $storedName = "{$slug}_{$timestamp}_".bin2hex(random_bytes(3)).".{$ext}";
         }
 
-        // Store directly to public uploads directory for simple, symlink-free web access
-        $this->file->storeAs('', $storedName, 'uploads');
-
-        // Also replicate explicitly to the public storage disk root (storage/app/public)
-        if (Storage::disk('uploads')->exists($storedName)) {
-            Storage::disk('public')->put($storedName, Storage::disk('uploads')->get($storedName));
-        }
+        // Store directly to private documents storage disk
+        $this->file->storeAs('', $storedName, 'documents');
 
         $doc = Document::create([
             'customer_id' => $this->customer_id,

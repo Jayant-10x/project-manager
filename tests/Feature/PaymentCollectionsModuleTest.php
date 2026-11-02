@@ -44,7 +44,7 @@ class PaymentCollectionsModuleTest extends TestCase
     {
         parent::setUp();
 
-        Storage::fake('uploads');
+        Storage::fake('documents');
         Storage::fake('public');
 
         $this->admin = User::factory()->create([
@@ -229,8 +229,7 @@ class PaymentCollectionsModuleTest extends TestCase
         $this->assertEquals('bank_advice.pdf', $document->file_name);
         $this->assertEquals($payment->attachment, $document->stored_as);
 
-        Storage::disk('uploads')->assertExists($payment->attachment);
-        Storage::disk('public')->assertExists($payment->attachment);
+        Storage::disk('documents')->assertExists($payment->attachment);
     }
 
     public function test_smart_followup_milestone_chase_modal_persists_notes_and_followup(): void

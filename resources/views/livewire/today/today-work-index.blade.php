@@ -86,7 +86,7 @@
                                     <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path d="M12 5v14M5 12h14"/>
                                     </svg>
-                                    + Payment
+                                    Payment
                                 </button>
                             </div>
                         </div>
@@ -169,7 +169,7 @@
                                     <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path d="M12 5v14M5 12h14"/>
                                     </svg>
-                                    + Payment
+                                    Payment
                                 </button>
                             </div>
                         </div>

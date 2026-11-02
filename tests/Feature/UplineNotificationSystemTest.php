@@ -351,7 +351,7 @@ class UplineNotificationSystemTest extends TestCase
 
     public function test_uploading_project_document_notifies_stakeholders_and_uplines(): void
     {
-        Storage::fake('uploads');
+        Storage::fake('documents');
         Storage::fake('public');
 
         $project = Project::create([

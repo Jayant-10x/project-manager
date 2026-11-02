@@ -50,7 +50,7 @@ class DashboardIndex extends Component
                 ->orderBy('name', 'asc')
                 ->get();
         } elseif ($role === 'Manager' || $role === 'Coordinator') {
-            $downlineIds = array_diff($user->getDownlineUserIds(), [$user->id]);
+            $downlineIds = current_user_downline_ids(excludeSelf: true);
             $accessibleUsers = User::whereIn('id', $downlineIds)
                 ->where('status', 'Active')
                 ->where('role', '!=', 'TechPerson')

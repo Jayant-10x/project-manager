@@ -33,7 +33,7 @@ class TeamIndex extends Component
     public function resetUserPassword(int $id): void
     {
         $currentUser = auth()->user();
-        $downlineIds = $currentUser->getDownlineUserIds();
+        $downlineIds = current_user_downline_ids();
 
         if (! in_array($id, $downlineIds, true) && $currentUser->role !== 'Admin') {
             $this->dispatch('toast', ['msg' => 'Unauthorized to reset credentials for this member.', 'type' => 'err']);
@@ -161,8 +161,7 @@ class TeamIndex extends Component
         $currentUser = auth()->user();
 
         // Downline resolution: Manager sees all team members down the hierarchy; Coordinator sees subordinates
-        $downlineIds = $currentUser->getDownlineUserIds();
-        $teamMemberIds = array_values(array_diff($downlineIds, [$currentUser->id]));
+        $teamMemberIds = current_user_downline_ids(excludeSelf: true);
 
         $query = User::query()
             ->whereIn('id', $teamMemberIds)

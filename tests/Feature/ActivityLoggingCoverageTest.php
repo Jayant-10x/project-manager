@@ -219,12 +219,12 @@ class ActivityLoggingCoverageTest extends TestCase
 
     public function test_document_download_logs_activity(): void
     {
-        Storage::fake('uploads');
+        Storage::fake('documents');
         Storage::fake('public');
 
         $this->actingAs($this->admin);
 
-        Storage::disk('uploads')->put('test-contracts/doc.pdf', 'dummy content');
+        Storage::disk('documents')->put('test-contracts/doc.pdf', 'dummy content');
 
         $doc = Document::create([
             'title' => 'Client Agreement',

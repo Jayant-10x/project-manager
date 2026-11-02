@@ -55,10 +55,8 @@ class ScheduleIndex extends Component
     public function exportCsv()
     {
         $user = auth()->user();
-        $projectIds = Project::forUser($user)->pluck('id');
 
-        $allTerms = PaymentTerm::query()
-            ->whereIn('project_id', $projectIds)
+        $allTerms = PaymentTerm::forUser($user)
             ->with(['project.customer'])
             ->orderByRaw("CASE status WHEN 'Overdue' THEN 1 WHEN 'Pending' THEN 2 WHEN 'Partial' THEN 3 WHEN 'Paid' THEN 4 WHEN 'Cancelled' THEN 5 ELSE 6 END")
             ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC')
@@ -138,12 +136,9 @@ class ScheduleIndex extends Component
     {
         $user = auth()->user();
         $today = Carbon::today()->toDateString();
-        $projectsQuery = Project::forUser($user);
-        $projectIds = (clone $projectsQuery)->pluck('id');
-        $totalProjectsCount = (clone $projectsQuery)->count();
+        $totalProjectsCount = Project::forUser($user)->count();
 
-        $allTerms = PaymentTerm::query()
-            ->whereIn('project_id', $projectIds)
+        $allTerms = PaymentTerm::forUser($user)
             ->with(['project.customer'])
             ->orderByRaw("CASE status WHEN 'Overdue' THEN 1 WHEN 'Pending' THEN 2 WHEN 'Partial' THEN 3 WHEN 'Paid' THEN 4 WHEN 'Cancelled' THEN 5 ELSE 6 END")
             ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC')

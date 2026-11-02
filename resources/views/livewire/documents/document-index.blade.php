@@ -76,9 +76,7 @@
                         'Other'          => '#8894ac',
                     ];
                     $col = $catColors[$doc->category] ?? '#8894ac';
-                    $fileUrl = file_exists(public_path('uploads/' . $doc->stored_as))
-                        ? asset('uploads/' . $doc->stored_as)
-                        : asset('storage/' . $doc->stored_as);
+                    $fileUrl = route('documents.preview', $doc->id, absolute: false);
                 @endphp
                 <div
                     class="doc flex items-center gap-3 p-3.5 border-b last:border-b-0 border-[#eef2f9] hover:bg-slate-50 transition">

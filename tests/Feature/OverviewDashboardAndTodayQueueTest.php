@@ -270,7 +270,7 @@ class OverviewDashboardAndTodayQueueTest extends TestCase
             ->assertSee('Upcoming payments')
             ->assertSee('Phase 2 Progress')
             ->assertSee('Log Chase Note')
-            ->assertSee('+ Payment');
+            ->assertSee('Payment');
     }
 
     public function test_milestone_chase_modal_triggered_by_term_id_creates_milestone_if_missing_and_saves_note(): void
