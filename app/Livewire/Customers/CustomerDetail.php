@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\PaymentTerm;
 use App\Services\AuditNotificationService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -94,40 +95,45 @@ class CustomerDetail extends Component
             return;
         }
 
-        // Clean up files on disk
-        foreach ($this->customer->documents as $doc) {
-            if (Storage::disk('documents')->exists($doc->stored_as)) {
-                Storage::disk('documents')->delete($doc->stored_as);
-            }
-            if (Storage::disk('public')->exists($doc->stored_as)) {
-                Storage::disk('public')->delete($doc->stored_as);
-            }
-        }
-
         $code = $this->customer->customer_code;
         $company = $this->customer->display_name;
         $id = $this->customer->id;
 
+        $filesToDelete = $this->customer->documents->pluck('stored_as')->filter()->values()->all();
         $auditService = app(AuditNotificationService::class);
-        $auditService->notifyCustomerStakeholders(
-            $this->customer,
-            'Customer Deleted',
-            "Customer Deleted: {$company}",
-            "Customer {$company} ({$code}) was permanently deleted by ".auth()->user()->name.'.',
-            'customer',
-            $id
-        );
 
-        $this->customer->delete();
+        DB::transaction(function () use ($id, $code, $company, $auditService, $filesToDelete) {
+            $auditService->notifyCustomerStakeholders(
+                $this->customer,
+                'Customer Deleted',
+                "Customer Deleted: {$company}",
+                "Customer {$company} ({$code}) was permanently deleted by ".auth()->user()->name.'.',
+                'customer',
+                $id
+            );
 
-        $auditService->log(
-            auth()->id(),
-            'Deleted Customer',
-            'Customer',
-            $id,
-            $code,
-            "Deleted customer {$company} and associated records"
-        );
+            $this->customer->delete();
+
+            $auditService->log(
+                auth()->id(),
+                'Deleted Customer',
+                'Customer',
+                $id,
+                $code,
+                "Deleted customer {$company} and associated records"
+            );
+
+            DB::afterCommit(function () use ($filesToDelete) {
+                foreach ($filesToDelete as $storedAs) {
+                    if (Storage::disk('documents')->exists($storedAs)) {
+                        Storage::disk('documents')->delete($storedAs);
+                    }
+                    if (Storage::disk('public')->exists($storedAs)) {
+                        Storage::disk('public')->delete($storedAs);
+                    }
+                }
+            });
+        });
 
         $this->redirect(route('customers.index'), navigate: true);
     }
@@ -230,14 +236,7 @@ class CustomerDetail extends Component
 
         if ($termId) {
             $term = PaymentTerm::find($termId);
-            if ($term) {
-                $remPaid = (float) Payment::where('term_id', $termId)->sum('amount');
-                $remTds = (float) Payment::where('term_id', $termId)->sum('tds');
-                $term->received = $remPaid;
-                $term->tds = $remTds;
-                $term->status = ($remPaid + $remTds >= $term->amount - 0.01) ? 'Paid' : ($remPaid > 0 ? 'Partial' : 'Pending');
-                $term->save();
-            }
+            $term?->recalculateStatus();
         }
 
         $auditService = app(AuditNotificationService::class);

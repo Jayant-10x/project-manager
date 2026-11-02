@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Customers\CustomerDetail;
 use App\Livewire\Payments\PaymentIndex;
 use App\Livewire\Payments\PaymentModal;
 use App\Livewire\Projects\MilestoneChaseModal;
+use App\Livewire\Projects\ProjectDetail;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Followup;
@@ -303,5 +305,114 @@ class PaymentCollectionsModuleTest extends TestCase
         $this->term->refresh();
         $this->assertEquals(0.00, (float) $this->term->received);
         $this->assertEquals('Pending', $this->term->status);
+    }
+
+    public function test_customer_detail_payment_deletion_sets_status_to_overdue_when_term_past_due(): void
+    {
+        $overdueTerm = PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'label' => 'Overdue Milestone',
+            'seq' => 2,
+            'percent' => 50,
+            'amount' => 25000.00,
+            'received' => 25000.00,
+            'status' => 'Paid',
+            'due_date' => now()->subDays(5)->toDateString(),
+            'grace_days' => 0,
+        ]);
+
+        $payment = Payment::create([
+            'code' => 'RCP-CUST-DEL',
+            'project_id' => $this->project->id,
+            'customer_id' => $this->customer->id,
+            'term_id' => $overdueTerm->id,
+            'amount' => 25000.00,
+            'tds' => 0.00,
+            'mode' => 'UPI',
+            'reference' => 'UPI-DEL-001',
+            'paid_on' => now()->toDateString(),
+            'created_by' => $this->coordinator->id,
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(CustomerDetail::class, ['customer' => $this->customer])
+            ->call('deletePayment', $payment->id)
+            ->assertDispatched('payment-deleted');
+
+        $this->assertDatabaseMissing('payments', ['id' => $payment->id]);
+
+        $overdueTerm->refresh();
+        $this->assertEquals(0.00, (float) $overdueTerm->received);
+        $this->assertEquals('Overdue', $overdueTerm->status);
+    }
+
+    public function test_project_detail_payment_deletion_sets_status_to_overdue_when_term_past_due(): void
+    {
+        $overdueTerm = PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'label' => 'Overdue Project Milestone',
+            'seq' => 3,
+            'percent' => 50,
+            'amount' => 15000.00,
+            'received' => 15000.00,
+            'status' => 'Paid',
+            'due_date' => now()->subDays(7)->toDateString(),
+            'grace_days' => 0,
+        ]);
+
+        $payment = Payment::create([
+            'code' => 'RCP-PROJ-DEL',
+            'project_id' => $this->project->id,
+            'customer_id' => $this->customer->id,
+            'term_id' => $overdueTerm->id,
+            'amount' => 15000.00,
+            'tds' => 0.00,
+            'mode' => 'Cheque',
+            'reference' => 'CHQ-DEL-002',
+            'paid_on' => now()->toDateString(),
+            'created_by' => $this->coordinator->id,
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(ProjectDetail::class, ['project' => $this->project])
+            ->call('deletePayment', $payment->id);
+
+        $this->assertDatabaseMissing('payments', ['id' => $payment->id]);
+
+        $overdueTerm->refresh();
+        $this->assertEquals(0.00, (float) $overdueTerm->received);
+        $this->assertEquals('Overdue', $overdueTerm->status);
+    }
+
+    public function test_project_deletion_cleans_stored_documents_atomically_using_db_transaction_and_after_commit(): void
+    {
+        Storage::fake('documents');
+        Storage::fake('public');
+
+        $storedDocName = 'documents/pjt-attachment-test.pdf';
+        Storage::disk('documents')->put($storedDocName, 'SECURE PROJECT DOC');
+        Storage::disk('public')->put($storedDocName, 'PUBLIC COPY OF DOC');
+
+        Document::create([
+            'customer_id' => $this->customer->id,
+            'project_id' => $this->project->id,
+            'category' => 'Proposal',
+            'title' => 'Project SOW Agreement',
+            'file_name' => 'pjt-attachment-test.pdf',
+            'stored_as' => $storedDocName,
+            'uploaded_by' => $this->admin->id,
+        ]);
+
+        Storage::disk('documents')->assertExists($storedDocName);
+        Storage::disk('public')->assertExists($storedDocName);
+
+        Livewire::actingAs($this->admin)
+            ->test(ProjectDetail::class, ['project' => $this->project])
+            ->call('deleteProject')
+            ->assertRedirect(route('projects.index'));
+
+        $this->assertDatabaseMissing('projects', ['id' => $this->project->id]);
+        Storage::disk('documents')->assertMissing($storedDocName);
+        Storage::disk('public')->assertMissing($storedDocName);
     }
 }

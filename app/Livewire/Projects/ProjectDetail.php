@@ -8,6 +8,7 @@ use App\Models\PaymentTerm;
 use App\Models\Project;
 use App\Services\AuditNotificationService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -166,14 +167,7 @@ class ProjectDetail extends Component
 
         if ($termId) {
             $term = PaymentTerm::find($termId);
-            if ($term) {
-                $remPaid = (float) Payment::where('term_id', $termId)->sum('amount');
-                $remTds = (float) Payment::where('term_id', $termId)->sum('tds');
-                $term->received = $remPaid;
-                $term->tds = $remTds;
-                $term->status = ($remPaid + $remTds >= $term->amount - 0.01) ? 'Paid' : ($remPaid > 0 ? 'Partial' : 'Pending');
-                $term->save();
-            }
+            $term?->recalculateStatus();
         }
 
         app(AuditNotificationService::class)->log(
@@ -219,39 +213,45 @@ class ProjectDetail extends Component
             abort(403, 'Only administrators can delete projects.');
         }
 
-        foreach ($this->project->documents as $doc) {
-            if (Storage::disk('documents')->exists($doc->stored_as)) {
-                Storage::disk('documents')->delete($doc->stored_as);
-            }
-            if (Storage::disk('public')->exists($doc->stored_as)) {
-                Storage::disk('public')->delete($doc->stored_as);
-            }
-        }
-
         $name = $this->project->name;
         $code = $this->project->code;
         $id = $this->project->id;
 
+        $filesToDelete = $this->project->documents->pluck('stored_as')->filter()->values()->all();
         $auditService = app(AuditNotificationService::class);
-        $auditService->notifyProjectStakeholders(
-            $this->project,
-            'Project Deleted',
-            "Project Deleted: {$name}",
-            "Project {$name} ({$code}) was deleted by ".auth()->user()->name.'.',
-            'project',
-            $id
-        );
 
-        $this->project->delete();
+        DB::transaction(function () use ($id, $code, $name, $auditService, $filesToDelete) {
+            $auditService->notifyProjectStakeholders(
+                $this->project,
+                'Project Deleted',
+                "Project Deleted: {$name}",
+                "Project {$name} ({$code}) was deleted by ".auth()->user()->name.'.',
+                'project',
+                $id
+            );
 
-        $auditService->log(
-            auth()->id(),
-            'Deleted Project',
-            'Project',
-            $id,
-            $code,
-            "Deleted project {$name} and associated records"
-        );
+            $this->project->delete();
+
+            $auditService->log(
+                auth()->id(),
+                'Deleted Project',
+                'Project',
+                $id,
+                $code,
+                "Deleted project {$name} and associated records"
+            );
+
+            DB::afterCommit(function () use ($filesToDelete) {
+                foreach ($filesToDelete as $storedAs) {
+                    if (Storage::disk('documents')->exists($storedAs)) {
+                        Storage::disk('documents')->delete($storedAs);
+                    }
+                    if (Storage::disk('public')->exists($storedAs)) {
+                        Storage::disk('public')->delete($storedAs);
+                    }
+                }
+            });
+        });
 
         $this->redirect(route('projects.index'), navigate: true);
     }

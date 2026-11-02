@@ -6,7 +6,6 @@ use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\PaymentTerm;
 use App\Services\AuditNotificationService;
-use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -96,23 +95,7 @@ class PaymentIndex extends Component
 
         if ($termId) {
             $term = PaymentTerm::find($termId);
-            if ($term) {
-                $remPaid = (float) Payment::where('term_id', $termId)->sum('amount');
-                $remTds = (float) Payment::where('term_id', $termId)->sum('tds');
-                $term->received = $remPaid;
-                $term->tds = $remTds;
-
-                if (($remPaid + $remTds) >= ($term->amount - 0.01)) {
-                    $term->status = 'Paid';
-                } elseif ($remPaid > 0) {
-                    $term->status = 'Partial';
-                } else {
-                    $dueDate = $term->due_date ? Carbon::parse($term->due_date) : null;
-                    $limit = $dueDate ? $dueDate->copy()->addDays($term->grace_days)->toDateString() : null;
-                    $term->status = ($limit && $limit < now()->toDateString()) ? 'Overdue' : 'Pending';
-                }
-                $term->save();
-            }
+            $term?->recalculateStatus();
         }
 
         $auditService = app(AuditNotificationService::class);
