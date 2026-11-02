@@ -31,19 +31,21 @@
                 Enter your registered email address. Your request will be forwarded to the system administrator for temporary credential provisioning.
             </div>
 
-            <form method="POST" action="{{ route('password.email') }}">
+            <form method="POST" action="{{ route('password.email') }}" novalidate>
                 @csrf
 
                 <label class="f" style="display:block;margin-top:16px">
                     <span>Email address</span>
-                    <input class="i"
+                    <input class="i @error('email') border-red-500! bg-red-50/20! @enderror"
                            id="email"
                            type="email"
                            name="email"
                            value="{{ old('email') }}"
                            placeholder="you@the10xagency.in"
-                           required
                            autofocus>
+                    @error('email')
+                        <span class="text-xs text-red-500! block mt-1">{{ $message }}</span>
+                    @enderror
                 </label>
 
                 <button type="submit"
