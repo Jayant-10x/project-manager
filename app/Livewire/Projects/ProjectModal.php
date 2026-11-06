@@ -482,10 +482,10 @@ class ProjectModal extends Component
 
         return view('livewire.projects.project-modal', [
             'customers' => Customer::query()
-                ->where(function ($q) {
-                    $q->where('status', 'Active');
+                ->where(function ($customerQuery) {
+                    $customerQuery->where('status', 'Active');
                     if ($this->customer_id) {
-                        $q->orWhere('id', $this->customer_id);
+                        $customerQuery->orWhere('id', $this->customer_id);
                     }
                 })
                 ->orderByRaw('COALESCE(NULLIF(company, ""), contact_name) ASC')

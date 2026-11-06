@@ -139,7 +139,7 @@ class PaymentCalendarIndex extends Component
         $terms = PaymentTerm::query()
             ->whereIn('project_id', $projectIds)
             ->whereBetween('due_date', [$gridStart->toDateString(), $gridEnd->toDateString()])
-            ->with(['project.customer', 'payments'])
+            ->with(['project.customer', 'milestone', 'payments'])
             ->orderBy('due_date')
             ->get();
 
@@ -147,13 +147,13 @@ class PaymentCalendarIndex extends Component
         $payments = Payment::query()
             ->whereIn('project_id', $projectIds)
             ->whereBetween('paid_on', [$gridStart->toDateString(), $gridEnd->toDateString()])
-            ->with(['project.customer', 'customer', 'term'])
+            ->with(['project.customer', 'customer', 'term.milestone'])
             ->orderBy('paid_on')
             ->get();
 
         // Monthly KPI sums (for the current month view)
-        $monthTerms = $terms->filter(fn ($t) => $t->due_date && $t->due_date->format('Y-m') === $this->month);
-        $monthPayments = $payments->filter(fn ($p) => $p->paid_on && $p->paid_on->format('Y-m') === $this->month);
+        $monthTerms = $terms->filter(fn ($term) => $term->due_date && $term->due_date->format('Y-m') === $this->month);
+        $monthPayments = $payments->filter(fn ($payment) => $payment->paid_on && $payment->paid_on->format('Y-m') === $this->month);
 
         $monthlyScheduled = (float) $monthTerms->sum('amount');
         $monthlyReceived = (float) $monthPayments->sum('amount');
@@ -161,8 +161,8 @@ class PaymentCalendarIndex extends Component
         $monthlyOverdue = (float) $monthTerms->where('status', 'Overdue')->sum('balance');
 
         // Group by Y-m-d
-        $termsByDate = $terms->groupBy(fn ($t) => $t->due_date ? Carbon::parse($t->due_date)->toDateString() : '');
-        $paymentsByDate = $payments->groupBy(fn ($p) => $p->paid_on ? Carbon::parse($p->paid_on)->toDateString() : '');
+        $termsByDate = $terms->groupBy(fn ($term) => $term->due_date ? Carbon::parse($term->due_date)->toDateString() : '');
+        $paymentsByDate = $payments->groupBy(fn ($payment) => $payment->paid_on ? Carbon::parse($payment->paid_on)->toDateString() : '');
 
         // Build grid days array
         $days = [];
@@ -186,7 +186,7 @@ class PaymentCalendarIndex extends Component
                 'scheduledBalance' => (float) $dayTerms->sum('balance'),
                 'receivedCount' => $dayPayments->count(),
                 'receivedAmount' => (float) $dayPayments->sum('amount'),
-                'hasOverdue' => $dayTerms->contains(fn ($t) => $t->status === 'Overdue' || ($t->balance > 0 && $dateStr < $todayStr)),
+                'hasOverdue' => $dayTerms->contains(fn ($term) => $term->status === 'Overdue' || ($term->balance > 0 && $dateStr < $todayStr)),
                 'terms' => $dayTerms,
                 'payments' => $dayPayments,
             ];
@@ -200,12 +200,12 @@ class PaymentCalendarIndex extends Component
         if ($this->selectedDate) {
             $selectedDateTerms = $termsByDate->get($this->selectedDate) ?? PaymentTerm::whereIn('project_id', $projectIds)
                 ->whereDate('due_date', $this->selectedDate)
-                ->with(['project.customer'])
+                ->with(['project.customer', 'milestone'])
                 ->get();
 
             $selectedDatePayments = $paymentsByDate->get($this->selectedDate) ?? Payment::whereIn('project_id', $projectIds)
                 ->whereDate('paid_on', $this->selectedDate)
-                ->with(['project.customer', 'customer', 'term'])
+                ->with(['project.customer', 'customer', 'term.milestone'])
                 ->get();
         }
 

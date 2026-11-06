@@ -22,6 +22,160 @@ class DashboardIndex extends Component
     #[Url]
     public ?int $selectedUserId = null;
 
+    #[Url(as: 'period')]
+    public string $datePreset = 'today';
+
+    #[Url(as: 'from')]
+    public ?string $dateFrom = null;
+
+    #[Url(as: 'to')]
+    public ?string $dateTo = null;
+
+    public function mount(): void
+    {
+        if (empty($this->datePreset)) {
+            $this->datePreset = 'today';
+        }
+
+        if ($this->datePreset !== 'custom') {
+            [$from, $to] = $this->calculateDatesForPreset($this->datePreset);
+            $this->dateFrom = $from;
+            $this->dateTo = $to;
+        } elseif (! $this->dateFrom || ! $this->dateTo) {
+            $this->dateFrom = Carbon::today()->toDateString();
+            $this->dateTo = Carbon::today()->toDateString();
+        }
+    }
+
+    public function selectPreset(string $preset): void
+    {
+        $this->datePreset = $preset;
+        if ($preset !== 'custom') {
+            [$from, $to] = $this->calculateDatesForPreset($preset);
+            $this->dateFrom = $from;
+            $this->dateTo = $to;
+        }
+    }
+
+    public function applyCustomRange(?string $from = null, ?string $to = null): void
+    {
+        $from = $from ?: ($this->dateFrom ?: Carbon::today()->toDateString());
+        $to = $to ?: ($this->dateTo ?: Carbon::today()->toDateString());
+
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        $this->datePreset = 'custom';
+        $this->dateFrom = $from;
+        $this->dateTo = $to;
+    }
+
+    public function calculateDatesForPreset(string $preset): array
+    {
+        return match ($preset) {
+            'today' => [
+                Carbon::today()->toDateString(),
+                Carbon::today()->toDateString(),
+            ],
+            'yesterday' => [
+                Carbon::yesterday()->toDateString(),
+                Carbon::yesterday()->toDateString(),
+            ],
+            'last_7_days' => [
+                Carbon::today()->subDays(6)->toDateString(),
+                Carbon::today()->toDateString(),
+            ],
+            'last_30_days' => [
+                Carbon::today()->subDays(29)->toDateString(),
+                Carbon::today()->toDateString(),
+            ],
+            'this_week' => [
+                Carbon::now()->startOfWeek()->toDateString(),
+                Carbon::now()->endOfWeek()->toDateString(),
+            ],
+            'last_week' => [
+                Carbon::now()->subWeek()->startOfWeek()->toDateString(),
+                Carbon::now()->subWeek()->endOfWeek()->toDateString(),
+            ],
+            'this_month' => [
+                Carbon::now()->startOfMonth()->toDateString(),
+                Carbon::now()->endOfMonth()->toDateString(),
+            ],
+            'last_month' => [
+                Carbon::now()->subMonthNoOverflow()->startOfMonth()->toDateString(),
+                Carbon::now()->subMonthNoOverflow()->endOfMonth()->toDateString(),
+            ],
+            'this_quarter' => [
+                Carbon::now()->startOfQuarter()->toDateString(),
+                Carbon::now()->endOfQuarter()->toDateString(),
+            ],
+            'last_quarter' => [
+                Carbon::now()->subQuarter()->startOfQuarter()->toDateString(),
+                Carbon::now()->subQuarter()->endOfQuarter()->toDateString(),
+            ],
+            'ytd' => [
+                Carbon::now()->startOfYear()->toDateString(),
+                Carbon::today()->toDateString(),
+            ],
+            'last_year' => [
+                Carbon::now()->subYear()->startOfYear()->toDateString(),
+                Carbon::now()->subYear()->endOfYear()->toDateString(),
+            ],
+            'all_time' => [
+                null,
+                null,
+            ],
+            default => [
+                Carbon::today()->toDateString(),
+                Carbon::today()->toDateString(),
+            ],
+        };
+    }
+
+    public function resolveActiveDateRange(): array
+    {
+        if ($this->datePreset === 'all_time') {
+            return [null, null];
+        }
+
+        if ($this->datePreset === 'custom') {
+            if ($this->dateFrom && $this->dateTo) {
+                return [
+                    min($this->dateFrom, $this->dateTo),
+                    max($this->dateFrom, $this->dateTo),
+                ];
+            }
+
+            return [Carbon::today()->toDateString(), Carbon::today()->toDateString()];
+        }
+
+        return $this->calculateDatesForPreset($this->datePreset);
+    }
+
+    public function getPeriodLabel(): string
+    {
+        return match ($this->datePreset) {
+            'today' => 'Today',
+            'yesterday' => 'Yesterday',
+            'last_7_days' => 'Last 7 Days',
+            'last_30_days' => 'Last 30 Days',
+            'this_week' => 'This Week',
+            'last_week' => 'Last Week',
+            'this_month' => 'This Month',
+            'last_month' => 'Last Month',
+            'this_quarter' => 'This Quarter',
+            'last_quarter' => 'Last Quarter',
+            'ytd' => 'Year to Date (YTD)',
+            'last_year' => 'Last Year',
+            'all_time' => 'All Time',
+            'custom' => ($this->dateFrom && $this->dateTo)
+                ? Carbon::parse($this->dateFrom)->format('d M Y').' – '.Carbon::parse($this->dateTo)->format('d M Y')
+                : 'Custom Range',
+            default => 'Today',
+        };
+    }
+
     #[On('payment-saved')]
     #[On('payment-deleted')]
     #[On('project-saved')]
@@ -69,25 +223,50 @@ class DashboardIndex extends Component
         $projectsQuery = Project::query()->forUser($activeViewingUser);
         $projectIds = (clone $projectsQuery)->pluck('id');
 
-        // Common Core Money metrics (scoped to visible projects)
+        [$startDate, $endDate] = $this->resolveActiveDateRange();
+
+        // Common Core Money metrics (scoped to visible projects & active date range)
         $sched = (float) PaymentTerm::whereIn('project_id', $projectIds)
             ->where('status', '!=', 'Cancelled')
             ->sum('amount');
 
-        $rec = (float) Payment::whereIn('project_id', $projectIds)->sum('amount');
-        $tds = (float) Payment::whereIn('project_id', $projectIds)->sum('tds');
+        $paymentsQuery = Payment::query()
+            ->whereIn('project_id', $projectIds);
+
+        if ($startDate && $endDate) {
+            $paymentsQuery->whereBetween('paid_on', [$startDate, $endDate]);
+        }
+
+        $rec = (float) (clone $paymentsQuery)->sum('amount');
+        $tds = (float) (clone $paymentsQuery)->sum('tds');
         $settled = round($rec + $tds, 2);
-        $due = round(max(0, $sched - $rec - $tds), 2);
+
+        $dueQuery = PaymentTerm::query()
+            ->whereIn('project_id', $projectIds)
+            ->where('status', '!=', 'Cancelled')
+            ->whereIn('status', ['Pending', 'Partial', 'Overdue']);
+
+        if ($startDate && $endDate) {
+            $dueQuery->whereBetween('due_date', [$startDate, $endDate]);
+        }
+
+        $due = (float) $dueQuery->selectRaw('COALESCE(SUM(CASE WHEN amount > (COALESCE(received, 0) + COALESCE(tds, 0)) THEN amount - COALESCE(received, 0) - COALESCE(tds, 0) ELSE 0 END), 0) as val')->value('val');
+        $due = round(max(0, $due), 2);
 
         $overdueTermsQuery = PaymentTerm::query()
             ->whereIn('project_id', $projectIds)
+            ->where('status', '!=', 'Cancelled')
             ->where('status', 'Overdue');
 
-        $overdueSum = (float) (clone $overdueTermsQuery)->selectRaw('COALESCE(SUM(amount - received - tds), 0) as val')->value('val');
+        if ($startDate && $endDate) {
+            $overdueTermsQuery->where('due_date', '<=', $endDate);
+        }
+
+        $overdueSum = (float) (clone $overdueTermsQuery)->selectRaw('COALESCE(SUM(CASE WHEN amount > (COALESCE(received, 0) + COALESCE(tds, 0)) THEN amount - COALESCE(received, 0) - COALESCE(tds, 0) ELSE 0 END), 0) as val')->value('val');
         $overdueCount = (clone $overdueTermsQuery)->count();
 
         $thisMonthRec = (float) Payment::whereIn('project_id', $projectIds)
-            ->where('paid_on', '>=', Carbon::now()->startOfMonth()->toDateString())
+            ->whereBetween('paid_on', [Carbon::now()->startOfMonth()->toDateString(), Carbon::now()->endOfMonth()->toDateString()])
             ->sum('amount');
 
         $collectionRate = $sched > 0 ? round(($settled / $sched) * 100, 1) : 0;
@@ -113,16 +292,16 @@ class DashboardIndex extends Component
         if ($role !== 'Sales' && ! $user->isTechPerson()) {
             for ($i = 5; $i >= 0; $i--) {
                 $monthObj = Carbon::now()->subMonths($i);
-                $startM = $monthObj->copy()->startOfMonth()->toDateString();
-                $endM = $monthObj->copy()->endOfMonth()->toDateString();
+                $startOfMonth = $monthObj->copy()->startOfMonth()->toDateString();
+                $endOfMonth = $monthObj->copy()->endOfMonth()->toDateString();
 
-                $val = (float) Payment::whereIn('project_id', $projectIds)
-                    ->whereBetween('paid_on', [$startM, $endM])
+                $monthlyValue = (float) Payment::whereIn('project_id', $projectIds)
+                    ->whereBetween('paid_on', [$startOfMonth, $endOfMonth])
                     ->sum('amount');
 
                 $trend[] = [
                     'label' => $monthObj->format('M'),
-                    'value' => $val,
+                    'value' => $monthlyValue,
                 ];
             }
         }
@@ -136,7 +315,15 @@ class DashboardIndex extends Component
                 $salesScopeQuery->whereIn('id', $downlineIds);
             }
 
-            $salesPeople = $salesScopeQuery->with(['salesProjects' => fn ($subQuery) => $subQuery->with(['terms', 'payments', 'customer'])])
+            $salesPeople = $salesScopeQuery->with(['salesProjects' => function ($subQuery) use ($startDate, $endDate) {
+                $subQuery->with(['terms' => function ($tq) {
+                    $tq->where('status', '!=', 'Cancelled');
+                }, 'payments' => function ($pq) use ($startDate, $endDate) {
+                    if ($startDate && $endDate) {
+                        $pq->whereBetween('paid_on', [$startDate, $endDate]);
+                    }
+                }, 'customer']);
+            }])
                 ->orderBy('name')
                 ->get();
 
@@ -163,7 +350,7 @@ class DashboardIndex extends Component
             usort($salesRows, fn ($firstRow, $secondRow) => $secondRow['value'] <=> $firstRow['value']);
         }
 
-        // Payment Ageing (for Admin & Manager)
+        // Payment Aging (for Admin & Manager)
         $ageing = ['0-30' => 0.0, '31-60' => 0.0, '61-90' => 0.0, '90+' => 0.0];
         if (in_array($role, ['Admin', 'Manager'])) {
             $allOverdue = (clone $overdueTermsQuery)->get(['amount', 'received', 'tds', 'due_date']);
@@ -191,9 +378,9 @@ class DashboardIndex extends Component
                 ->whereIn('id', $downlineIds)
                 ->where('status', 'Active')
                 ->withCount([
-                    'projects as active_projects_count' => fn ($q) => $q->where('status', 'In Progress'),
-                    'projects as delayed_projects_count' => fn ($q) => $q->where('health', 'Delayed'),
-                    'projects as on_track_projects_count' => fn ($q) => $q->where('health', 'On Track'),
+                    'projects as active_projects_count' => fn ($projectQuery) => $projectQuery->where('status', 'In Progress'),
+                    'projects as delayed_projects_count' => fn ($projectQuery) => $projectQuery->where('health', 'Delayed'),
+                    'projects as on_track_projects_count' => fn ($projectQuery) => $projectQuery->where('health', 'On Track'),
                 ])
                 ->orderBy('name')
                 ->get();
@@ -209,8 +396,8 @@ class DashboardIndex extends Component
 
             $totalMilestones = Milestone::whereIn('project_id', $projectIds)->count();
             $completedMilestones = Milestone::whereIn('project_id', $projectIds)
-                ->where(function ($q) {
-                    $q->where('done', true)->orWhere('status', 'Done');
+                ->where(function ($milestoneQuery) {
+                    $milestoneQuery->where('done', true)->orWhere('status', 'Done');
                 })->count();
             $milestoneRate = $totalMilestones > 0 ? round(($completedMilestones / $totalMilestones) * 100) : 0;
 
@@ -242,8 +429,8 @@ class DashboardIndex extends Component
             $target = (float) ($user->target ?? 0.0);
             $targetProgress = $target > 0 ? min(100, round(($totalDealsValue / $target) * 100)) : 0;
 
-            $cashRealized = (float) Payment::whereIn('project_id', $projectIds)->sum('amount');
-            $tdsRealized = (float) Payment::whereIn('project_id', $projectIds)->sum('tds');
+            $cashRealized = (float) (clone $paymentsQuery)->sum('amount');
+            $tdsRealized = (float) (clone $paymentsQuery)->sum('tds');
             $grossRealized = round($cashRealized + $tdsRealized, 2);
             $realizationRate = $totalDealsValue > 0 ? min(100, round(($grossRealized / $totalDealsValue) * 100)) : 0;
             $customersAcquired = Customer::where('sales_person_id', $user->id)->count();
@@ -254,12 +441,28 @@ class DashboardIndex extends Component
                 ->limit(4)
                 ->get();
 
-            $dueAmount = round(max(0, $totalDealsValue - $grossRealized), 2);
+            $salesDueQuery = PaymentTerm::query()
+                ->whereIn('project_id', $projectIds)
+                ->where('status', '!=', 'Cancelled')
+                ->whereIn('status', ['Pending', 'Partial', 'Overdue']);
+
+            if ($startDate && $endDate) {
+                $salesDueQuery->whereBetween('due_date', [$startDate, $endDate]);
+            }
+
+            $dueAmount = (float) $salesDueQuery->selectRaw('COALESCE(SUM(CASE WHEN amount > (COALESCE(received, 0) + COALESCE(tds, 0)) THEN amount - COALESCE(received, 0) - COALESCE(tds, 0) ELSE 0 END), 0) as val')->value('val');
+            $dueAmount = round(max(0, $dueAmount), 2);
 
             $salesOverdueTerms = PaymentTerm::query()
                 ->whereIn('project_id', $projectIds)
+                ->where('status', '!=', 'Cancelled')
                 ->where('status', 'Overdue');
-            $salesOverdueSum = (float) (clone $salesOverdueTerms)->selectRaw('COALESCE(SUM(amount - received - tds), 0) as val')->value('val');
+
+            if ($startDate && $endDate) {
+                $salesOverdueTerms->where('due_date', '<=', $endDate);
+            }
+
+            $salesOverdueSum = (float) (clone $salesOverdueTerms)->selectRaw('COALESCE(SUM(CASE WHEN amount > (COALESCE(received, 0) + COALESCE(tds, 0)) THEN amount - COALESCE(received, 0) - COALESCE(tds, 0) ELSE 0 END), 0) as val')->value('val');
             $salesOverdueCount = (clone $salesOverdueTerms)->count();
 
             $thisMonthCollections = (float) Payment::whereIn('project_id', $projectIds)
@@ -286,6 +489,12 @@ class DashboardIndex extends Component
         }
 
         return view('livewire.dashboard.dashboard-index', [
+            'datePreset' => $this->datePreset,
+            'dateFrom' => $this->dateFrom,
+            'dateTo' => $this->dateTo,
+            'periodLabel' => $this->getPeriodLabel(),
+            'startDate' => $startDate,
+            'endDate' => $endDate,
             'm' => [
                 'scheduled' => $sched,
                 'received' => $settled,

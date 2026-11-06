@@ -18,8 +18,8 @@
                 <select wire:model.blur="customer_id" @disabled($projectId)
                 class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">*** Select Customer ***</option>
-                    @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
+                    @foreach($customers as $customerOption)
+                        <option value="{{ $customerOption->id }}">{{ $customerOption->display_name }}</option>
                     @endforeach
                 </select>
                 @error('customer_id') <span
@@ -69,8 +69,8 @@
                     <select wire:model.blur="coordinator_id"
                             class="i @error('coordinator_id') border-red-500! bg-red-50/20! @enderror">
                         <option value="">*** Select Project Coordinator ***</option>
-                        @foreach($coordinators as $coord)
-                            <option value="{{ $coord->id }}">{{ $coord->name }} ({{ $coord->designation }})</option>
+                        @foreach($coordinators as $coordinator)
+                            <option value="{{ $coordinator->id }}">{{ $coordinator->name }} ({{ $coordinator->designation }})</option>
                         @endforeach
                     </select>
                     @error('coordinator_id') <span
@@ -179,7 +179,7 @@
         {{-- [Safely commented out legacy AMC & Handover sections to focus on financial milestone delivery]
         <div class="divider"></div>
         <div
-            style="font-size:12.4px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
+            style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
             AMC / Renewal
         </div>
         <div class="form-grid">
@@ -212,7 +212,7 @@
 
         <div class="divider"></div>
         <div
-            style="font-size:12.4px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
+            style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
             Handover & Notes
         </div>
         <div class="checkline flex items-center gap-2 mb-3">
@@ -237,8 +237,10 @@
 
         <div class="mt-6 flex justify-end gap-3">
             <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
-            <button type="submit" class="btn btn-primary min-w-[150px] justify-center" wire:loading.attr="disabled" wire:target="save">
-                <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">{{ $projectId ? ($isRejected ? 'Update & Resubmit' : 'Save changes') : 'Create project' }}</span>
+            <button type="submit" class="btn btn-primary min-w-37.5 justify-center" wire:loading.attr="disabled"
+                    wire:target="save">
+                <span wire:loading.remove wire:target="save"
+                      class="inline-flex items-center justify-center gap-1.5">{{ $projectId ? ($isRejected ? 'Update & Resubmit' : 'Save changes') : 'Create project' }}</span>
                 <span wire:loading.inline-flex wire:target="save" class="items-center justify-center gap-1.5">
                     <svg class="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"

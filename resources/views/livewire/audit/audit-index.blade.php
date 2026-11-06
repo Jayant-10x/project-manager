@@ -55,7 +55,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-xs text-left border-collapse">
                 <thead>
-                    <tr class="bg-slate-50/80 border-b border-[#eef2f9] text-[#8894ac] uppercase text-[10.5px] font-bold tracking-wider">
+                    <tr class="bg-slate-50/80 border-b border-[#eef2f9] text-[#8894ac] uppercase text-[11px] font-bold tracking-wider">
                         <th class="py-2.5 px-3 whitespace-nowrap w-36">Time</th>
                         <th class="py-2.5 px-3 whitespace-nowrap w-44">User</th>
                         <th class="py-2.5 px-3 whitespace-nowrap w-36">Action</th>
@@ -95,7 +95,7 @@
                                         {{ strtoupper(substr($actor, 0, 2)) }}
                                     </div>
                                     <div class="min-w-0">
-                                        <div class="font-semibold truncate max-w-[130px]" title="{{ $actor }}">{{ $actor }}</div>
+                                        <div class="font-semibold truncate max-w-32" title="{{ $actor }}">{{ $actor }}</div>
                                         @if($activityLog->user?->role)
                                             <div class="text-[10px] text-gray-400">{{ $activityLog->user->role }}</div>
                                         @endif
@@ -119,12 +119,12 @@
                                     @if($activityLog->entity_code)
                                         @if($entityUrl)
                                             <a href="{{ $entityUrl }}" wire:navigate
-                                               class="pill hover:bg-blue-100 hover:text-blue-800 transition font-semibold text-[10.5px]"
+                                               class="pill hover:bg-blue-100 hover:text-blue-800 transition font-semibold text-[11px]"
                                                title="View Item">
                                                 {{ $activityLog->entity_code }} ↗
                                             </a>
                                         @else
-                                            <span class="pill text-[10.5px]">{{ $activityLog->entity_code }}</span>
+                                            <span class="pill text-[11px]">{{ $activityLog->entity_code }}</span>
                                         @endif
                                     @endif
                                 </div>
@@ -205,7 +205,7 @@
              x-transition:leave="transition ease-in duration-200 transform"
              x-transition:leave-start="translate-x-0"
              x-transition:leave-end="translate-x-full"
-             class="fixed top-0 right-0 bottom-0 w-full sm:w-[520px] bg-white shadow-2xl flex flex-col z-[141] border-l border-[#e2e8f3] overflow-hidden">
+             class="fixed top-0 right-0 bottom-0 w-full sm:w-130 bg-white shadow-2xl flex flex-col z-[141] border-l border-[#e2e8f3] overflow-hidden">
 
             <!-- Drawer Header -->
             <div class="px-6 py-4.5 bg-gradient-to-r from-[#0b3d91] to-[#12325f] text-white flex items-center justify-between shrink-0 shadow-xs">

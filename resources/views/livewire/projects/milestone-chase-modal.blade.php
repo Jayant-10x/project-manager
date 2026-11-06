@@ -32,7 +32,7 @@
 
         <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
             <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
-            <button type="submit" class="btn btn-primary min-w-[170px] justify-center" wire:loading.attr="disabled" wire:target="save">
+            <button type="submit" class="btn btn-primary min-w-44 justify-center" wire:loading.attr="disabled" wire:target="save">
                 <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">
                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                         <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>

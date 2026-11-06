@@ -94,6 +94,22 @@ class NotificationDrawer extends Component
 
                 return $this->redirect(route('settings.index', $params), navigate: true);
             }
+
+            if ($notif->link_type === 'team') {
+                return $this->redirect(route('team.index'), navigate: true);
+            }
+
+            if ($notif->link_type === 'tasks') {
+                return $this->redirect(route('tasks.index'), navigate: true);
+            }
+
+            if ($notif->link_type === 'payments') {
+                return $this->redirect(route('payments.index'), navigate: true);
+            }
+
+            if ($notif->link_type === 'followups') {
+                return $this->redirect(route('followups.index'), navigate: true);
+            }
         }
 
         return $this->redirect(route('notifications.show', $notif->id), navigate: true);

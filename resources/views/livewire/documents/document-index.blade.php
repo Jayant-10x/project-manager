@@ -26,16 +26,16 @@
 
                 <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
                     <option value="">All customers</option>
-                    @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
+                    @foreach($customers as $customer)
+                        <option value="{{ $customer->id }}">{{ $customer->display_name }}</option>
                     @endforeach
                 </select>
 
                 @if($projects->isNotEmpty())
                     <select wire:model.live="project_id" class="i" style="width:auto; max-width: 180px;">
                         <option value="">All projects</option>
-                        @foreach($projects as $p)
-                            <option value="{{ $p->id }}">{{ $p->code ?? $p->project_code }} — {{ $p->name }}</option>
+                        @foreach($projects as $project)
+                            <option value="{{ $project->id }}">{{ $project->code ?? $project->project_code }} — {{ $project->name }}</option>
                         @endforeach
                     </select>
                 @endif
@@ -80,7 +80,7 @@
                 @endphp
                 <div
                     class="doc flex items-center gap-3 p-3.5 border-b last:border-b-0 border-[#eef2f9] hover:bg-slate-50 transition">
-                    <span class="doc-ico flex-shrink-0" style="background: {{ $col }}1a; color: {{ $col }}">
+                    <span class="doc-ico shrink-0" style="background: {{ $col }}1a; color: {{ $col }}">
                         {{ substr($ext, 0, 4) }}
                     </span>
 
@@ -101,9 +101,9 @@
                         </div>
                     </div>
 
-                    <span class="pill flex-shrink-0">{{ $doc->category }}</span>
+                    <span class="pill shrink-0">{{ $doc->category }}</span>
 
-                    <div class="row-actions flex items-center justify-end gap-1.5 flex-shrink-0">
+                    <div class="row-actions flex items-center justify-end gap-1.5 shrink-0">
                         <button type="button"
                                 class="btn btn-outline-primary btn-xs"
                                 @click="Livewire.dispatch('open-document-preview', {

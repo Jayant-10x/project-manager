@@ -131,7 +131,7 @@
 
             <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
                 <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
-                <button type="submit" class="btn btn-primary min-w-[140px] justify-center" wire:loading.attr="disabled" wire:target="addTask">
+                <button type="submit" class="btn btn-primary min-w-36 justify-center" wire:loading.attr="disabled" wire:target="addTask">
                     <span wire:loading.remove wire:target="addTask" class="inline-flex items-center justify-center gap-1.5">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M12 5v14M5 12h14"/>
@@ -332,7 +332,7 @@
                                     <span class="text-xs text-[#8894ac]">&middot; {{ $mc->project->customer->display_name }}</span>
                                 @endif
                             </div>
-                            <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <div class="flex items-center gap-1.5 shrink-0">
                                 <span class="badge {{ $isOverdueChase ? 'b-red' : 'b-navy' }}">
                                     Chase: {{ $mcDate ? $mcDate->format('d M') : '—' }}
                                 </span>
@@ -377,46 +377,46 @@
                 </div>
             </div>
             <div class="space-y-3">
-                @foreach($followups as $f)
+                @foreach($followups as $followup)
                     @php
-                        $fDate = $f->next_date ? \Carbon\Carbon::parse($f->next_date) : null;
-                        $isOverdueFup = $fDate && $fDate->toDateString() < $today;
-                        $message = $f->detail ?: $f->summary;
+                        $followupDate = $followup->next_date ? \Carbon\Carbon::parse($followup->next_date) : null;
+                        $isOverdueFup = $followupDate && $followupDate->toDateString() < $today;
+                        $message = $followup->detail ?: $followup->summary;
                     @endphp
                     <div class="p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition">
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex items-center gap-2 flex-wrap">
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold {{ $f->type === 'Call' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-700 border border-slate-200' }}">
-                                    @if($f->type === 'Call')
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold {{ $followup->type === 'Call' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-700 border border-slate-200' }}">
+                                    @if($followup->type === 'Call')
                                         <svg viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
                                     @else
                                         <svg viewBox="0 0 24 24" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                                     @endif
-                                    {{ $f->type }}
+                                    {{ $followup->type }}
                                 </span>
-                                <a href="{{ route('customers.show', $f->customer_id) }}" wire:navigate class="font-semibold text-sm text-[#0d1b34] hover:text-[#0b3d91] hover:underline">
-                                    {{ $f->customer?->display_name ?? '—' }}
+                                <a href="{{ route('customers.show', $followup->customer_id) }}" wire:navigate class="font-semibold text-sm text-[#0d1b34] hover:text-[#0b3d91] hover:underline">
+                                    {{ $followup->customer?->display_name ?? '—' }}
                                 </a>
-                                @if($f->project)
-                                    <a href="{{ route('projects.show', $f->project_id) }}" wire:navigate class="text-xs text-[#8894ac] hover:text-[#0b3d91] hover:underline">
-                                        &middot; {{ $f->project->code }}
+                                @if($followup->project)
+                                    <a href="{{ route('projects.show', $followup->project_id) }}" wire:navigate class="text-xs text-[#8894ac] hover:text-[#0b3d91] hover:underline">
+                                        &middot; {{ $followup->project->code }}
                                     </a>
                                 @endif
-                                @if($f->customer?->phone)
-                                    <a href="tel:{{ $f->customer->phone }}" class="text-xs text-blue-600 hover:underline flex items-center gap-1 font-medium" title="Call {{ $f->customer->phone }}">
+                                @if($followup->customer?->phone)
+                                    <a href="tel:{{ $followup->customer->phone }}" class="text-xs text-blue-600 hover:underline flex items-center gap-1 font-medium" title="Call {{ $followup->customer->phone }}">
                                         <svg viewBox="0 0 24 24" class="w-3 h-3 fill-none stroke-current stroke-2">
                                             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                                         </svg>
-                                        <span>{{ $f->customer->phone }}</span>
+                                        <span>{{ $followup->customer->phone }}</span>
                                     </a>
                                 @endif
                             </div>
-                            <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <div class="flex items-center gap-1.5 shrink-0">
                                 <span class="badge {{ $isOverdueFup ? 'b-red' : 'b-navy' }}">
-                                    {{ $fDate ? $fDate->format('d M') : '—' }}
+                                    {{ $followupDate ? $followupDate->format('d M') : '—' }}
                                 </span>
                                 <button type="button" class="btn btn-outline-primary btn-xs whitespace-nowrap inline-flex items-center gap-1" title="Log Follow-up"
-                                        @click.stop="Livewire.dispatch('open-followup-modal', { customerId: {{ $f->customer_id }}, projectId: {{ $f->project_id ?? 'null' }} })">
+                                        @click.stop="Livewire.dispatch('open-followup-modal', { customerId: {{ $followup->customer_id }}, projectId: {{ $followup->project_id ?? 'null' }} })">
                                     <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path d="M12 5v14M5 12h14"/>
                                     </svg>

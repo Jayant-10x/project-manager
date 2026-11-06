@@ -77,6 +77,19 @@ Whenever you attempt to delete a record, sign out, or close a form where you typ
 - Click **"Keep Editing"** to stay right where you are with your typed data safe.
 - Click **"Discard Changes"** or **"Confirm"** only when you are sure you want to proceed.
 
+### Global Toast Notifications
+The application features a modern in-app notification system that appears as floating toast popups in the bottom-right corner of your workspace:
+- **Green (Success)**: Confirms actions like creating a project, approving a customer, logging a payment, or updating settings.
+- **Amber (Warning)**: Alerts you to potential issues, such as trying to delete a customer with active projects or exceeding limits.
+- **Red (Error)**: Clearly displays error messages if an operation fails or permission is denied.
+- **Auto-Dismiss & Click-to-Close**: Notifications automatically disappear after **4.5 seconds** so they don't block your workflow, or you can click any toast to dismiss it instantly.
+
+### Reactive Login & Account Lockout Defense
+When signing in at `/login`:
+- **Real-Time Validation**: Email and password fields validate in real time as you interact with them, with clear inline error messages and no intrusive browser popups.
+- **Smart Loading Indicator**: While your credentials are authenticated, the "Sign in" button displays a live loading spinner and temporarily disables itself to prevent accidental multiple submissions.
+- **Progressive Account Lockout**: To prevent brute-force attacks, the system tracks consecutive failed attempts. If you type the wrong password, an alert banner indicates your remaining attempts. After **5 failed attempts**, the account locks automatically for **30 minutes**. Administrators can unlock your account at any time by issuing a temporary password from the Users directory.
+
 ---
 
 ## 3. Module 1: Dashboard & Today's Work Queue
@@ -168,6 +181,11 @@ Have an existing client list in Excel?
 3. Format columns as: `company,contact,phone,email,city,state,gst_number,source`.
 4. The system validates each row, creates the customer records, and automatically skips any duplicate entries.
 
+#### 7. Deleting a Customer & Linked Project Safeguards
+To safeguard against accidental data loss or breaking financial histories, the CRM provides strict safeguards when deleting customer profiles:
+- **Linked Project Protection**: If a customer has one or more projects attached to their record, clicking the red **"Delete"** button opens an informative amber warning modal. The modal informs you that the customer cannot be deleted while linked projects exist, details the active project names, and instructs you to reassign or delete the projects first.
+- **Clean Customer Deletion**: If a customer has zero linked projects (or all projects have been reallocated), clicking **"Delete"** displays a standard red confirmation prompt. Confirming will permanently and cleanly remove the customer record, contact logs, and customer-level files atomically in a single secure operation.
+
 ---
 
 ## 5. Module 3: Projects
@@ -246,6 +264,9 @@ Large projects should never be treated as one massive deliverable. The **Milesto
 - The project's overall completion progress bar automatically updates.
 - If this milestone was linked to a payment trigger, the corresponding payment term automatically moves to **"Due"**, notifying your team to send the invoice!
 
+> [!NOTE]
+> **Single Instance Retention Safeguard**: To prevent accidental empty form submissions, the milestone editor always retains at least one row. When only one milestone exists, its delete button is hidden, and attempting to clear all rows triggers an informational warning notice.
+
 ---
 
 ## 7. Module 5: Payment Schedules & Invoicing Terms
@@ -279,6 +300,9 @@ For fast, standardized billing setup, the system provides automated milestone sp
 #### 3. Preserved Due Dates Across Schedule Modes
 When switching payment term modes (for example, switching from milestone-linked billing to date-based calendar billing), your previously set due dates are safely retained in the form, preventing accidental date loss while restructuring terms.
 
+> [!NOTE]
+> **Single Instance Retention Safeguard**: Payment installment schedules require at least one term. When only a single installment exists, its removal button is hidden to safeguard against empty schedule submissions.
+
 ---
 
 ## 8. Module 6: Payments & Collection Ledger
@@ -304,6 +328,14 @@ When a customer sends money via bank transfer, cheque, or UPI:
 2. Apply any desired date filters (e.g., *Current Month* or *Specific Customer*).
 3. Click the **"Export CSV"** button in the header.
 4. A clean `.csv` file downloads immediately to your computer, ready to import into Tally, Zoho Books, QuickBooks, or share with your agency accountant.
+
+#### 3. Deleting a Payment & Automatic Status Synchronization
+If a payment receipt was entered mistakenly and is deleted by an authorized administrator:
+- The system automatically triggers an instant financial synchronization on the attached scheduled payment term.
+- If remaining payments and TDS cover the full installment amount, the term stays **Paid**.
+- If partial funds remain, the term reflects **Partial**.
+- If zero payments remain, the system evaluates the installment's due date: if today has passed the due date (plus grace days), it accurately restores **Overdue**; otherwise, it returns to **Pending**.
+- All customer and project receivable balances update immediately across dashboards and invoices.
 
 ---
 
@@ -506,7 +538,7 @@ Click your avatar in the top header to slide open your personal **Profile Drawer
 - **Random Password Generator**: Click the key/generator button inside the drawer or user creation modal to instantly generate a secure, compliant password.
 
 ### Account Lockout Security
-To protect customer data and financial records, your account will automatically lock for **15 minutes** if an incorrect password is typed 5 times in a row. If this happens to you, ask your Administrator to generate a temporary password from `/users` to unlock your account immediately.
+To protect customer data and financial records, your account will automatically lock for **30 minutes** if an incorrect password is typed 5 times in a row. If this happens to you, ask your Administrator to generate a temporary password from `/users` to unlock your account immediately.
 
 ---
 

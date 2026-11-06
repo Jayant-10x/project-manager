@@ -27,5 +27,6 @@
 <body class="font-sans antialiased">
 {{ $slot ?? '' }}
 @yield('content')
+<x-toast-container/>
 </body>
 </html>

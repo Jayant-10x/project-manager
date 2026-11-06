@@ -51,7 +51,7 @@
 
         <div class="mt-6 flex justify-end gap-3">
             <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
-            <button type="submit" class="btn btn-primary min-w-[180px] justify-center" wire:loading.attr="disabled" wire:target="generate">
+            <button type="submit" class="btn btn-primary min-w-48 justify-center" wire:loading.attr="disabled" wire:target="generate">
                 <span wire:loading.remove wire:target="generate" class="inline-flex items-center justify-center gap-1.5">Generate Schedule</span>
                 <span wire:loading.inline-flex wire:target="generate" class="items-center justify-center gap-1.5">
                     <svg class="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">

@@ -442,4 +442,43 @@ class ComprehensiveAppAuditTest extends TestCase
         $this->assertEquals($this->sales->id, $imported->sales_person_id);
         $this->assertEquals('Pending', $imported->approval_status);
     }
+
+    public function test_customer_deletion_is_blocked_when_customer_has_linked_projects(): void
+    {
+        $customer = Customer::create([
+            'customer_code' => 'CUST-DEL-PROJ',
+            'company' => 'Project Linked Client',
+            'contact_name' => 'Alice Corp',
+            'phone' => '9876543210',
+            'email' => 'alice@corp.com',
+            'city' => 'Delhi',
+            'state' => 'DL',
+            'approval_status' => 'Approved',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $project = Project::create([
+            'project_code' => 'PJT-DEL-GUARD',
+            'name' => 'Active Guard Project',
+            'customer_id' => $customer->id,
+            'coordinator_id' => $this->coordinator->id,
+            'tech_person_id' => $this->techPerson->id,
+            'value' => 50000.00,
+            'status' => 'In Progress',
+            'created_by' => $this->admin->id,
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(CustomerDetail::class, ['customer' => $customer])
+            ->assertSee('Cannot Delete Customer')
+            ->assertSee('linked project(s)')
+            ->call('deleteCustomer')
+            ->assertDispatched('toast', [
+                'msg' => 'Cannot delete customer with 1 active project(s). Delete or reassign projects first.',
+                'type' => 'err',
+            ]);
+
+        $this->assertNotNull(Customer::find($customer->id));
+        $this->assertNotNull(Project::find($project->id));
+    }
 }

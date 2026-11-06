@@ -221,8 +221,8 @@ class ProjectIndex extends Component
             ->whereIn('id', Project::forUser($user)->whereNotNull('coordinator_id')->distinct()->pluck('coordinator_id'));
         $coordinators = ($user->role === 'Coordinator') ? collect() : $coordinatorsQuery->orderBy('name')->get();
 
-        $techPersons = ($user->isTechPerson()) ? collect() : User::where(function ($q) use ($user) {
-            $q->where('role', 'TechPerson')
+        $techPersons = ($user->isTechPerson()) ? collect() : User::where(function ($techQuery) use ($user) {
+            $techQuery->where('role', 'TechPerson')
                 ->orWhereIn('id', Project::forUser($user)->whereNotNull('tech_person_id')->distinct()->pluck('tech_person_id'));
         })->where('status', 'Active')->orderBy('name')->get();
 

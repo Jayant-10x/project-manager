@@ -8,8 +8,8 @@
                 <select wire:model.live="customer_id"
                         class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">*** Select Customer ***</option>
-                    @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
+                    @foreach($customers as $customer)
+                        <option value="{{ $customer->id }}">{{ $customer->display_name }}</option>
                     @endforeach
                 </select>
                 @error('customer_id')
@@ -22,8 +22,8 @@
                 <select wire:model.live="project_id"
                         class="i @error('project_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">*** No Project ***</option>
-                    @foreach($projects as $p)
-                        <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }}</option>
+                    @foreach($projects as $project)
+                        <option value="{{ $project->id }}">{{ $project->code }} — {{ $project->name }}</option>
                     @endforeach
                 </select>
                 @error('project_id')
@@ -154,7 +154,7 @@
                                 <span class="text-[#0b3d91] underline decoration-[#0b3d91]/30 ml-1">browse</span>
                             </div>
 
-                            <div class="text-[11.5px] text-[#8894ac] mt-1.5 space-y-0.5">
+                            <div class="text-[12px] text-[#8894ac] mt-1.5 space-y-0.5">
                                 <div>Supported: <span class="font-semibold text-gray-600">PDF, DOC, DOCX, XLS, XLSX, CSV, TXT, PPT, Images, ZIP</span>
                                 </div>
                                 <div>Maximum file size: <span class="font-semibold text-gray-600">10 MB</span></div>
@@ -259,7 +259,7 @@
 
         <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
             <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
-            <button type="submit" class="btn btn-primary min-w-[130px] justify-center" wire:loading.attr="disabled" wire:target="save">
+            <button type="submit" class="btn btn-primary min-w-32 justify-center" wire:loading.attr="disabled" wire:target="save">
                 <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">Upload</span>
                 <span wire:loading.inline-flex wire:target="save" class="items-center justify-center gap-1.5">
                     <svg class="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">

@@ -211,7 +211,7 @@ class UserModal extends Component
         };
 
         return User::where('status', 'Active')
-            ->when($this->userId, fn ($q) => $q->where('id', '!=', $this->userId))
+            ->when($this->userId, fn ($userQuery) => $userQuery->where('id', '!=', $this->userId))
             ->whereIn('role', $allowedRoles)
             ->orderByRaw("CASE role WHEN 'Admin' THEN 1 WHEN 'Manager' THEN 2 WHEN 'Coordinator' THEN 3 ELSE 4 END")
             ->orderBy('name')

@@ -102,14 +102,15 @@ class NotificationIndex extends Component
         $user = auth()->user();
 
         $notifications = Notification::where('user_id', $user->id)
-            ->when($this->type, fn ($q) => $q->where('type', $this->type))
-            ->when($this->status === 'unread', fn ($q) => $q->where('is_read', false))
-            ->when($this->status === 'read', fn ($q) => $q->where('is_read', true))
-            ->when($this->search, function ($q) {
+            ->ofType($this->type)
+            ->when($this->status === 'unread', fn ($statusQuery) => $statusQuery->where('is_read', false))
+            ->when($this->status === 'read', fn ($statusQuery) => $statusQuery->where('is_read', true))
+            ->when($this->search, function ($searchQuery) {
                 $term = '%'.trim($this->search).'%';
-                $q->where(function ($sub) use ($term) {
-                    $sub->where('title', 'like', $term)
-                        ->orWhere('body', 'like', $term);
+                $searchQuery->where(function ($filterQuery) use ($term) {
+                    $filterQuery->where('title', 'like', $term)
+                        ->orWhere('body', 'like', $term)
+                        ->orWhere('type', 'like', $term);
                 });
             })
             ->orderByDesc('id')
@@ -124,7 +125,7 @@ class NotificationIndex extends Component
             'unreadCount' => $unreadCount,
         ])->layoutData([
             'header' => 'Notifications',
-            'subtitle' => 'Payment due, overdue, AMC and follow-up alerts',
+            'subtitle' => 'Payment due, overdue, milestone, security and project alerts',
         ]);
     }
 }

@@ -6,9 +6,9 @@
                 <select wire:model.live="project_id"
                         class="i @error('project_id') border-red-500! bg-red-50/20! @enderror">
                     <option value="">*** Select Assigned Project ***</option>
-                    @foreach($projects as $p)
-                        <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }} (due
-                            ₹{{ number_format($p->money['due'], 0) }})
+                    @foreach($projects as $project)
+                        <option value="{{ $project->id }}">{{ $project->code }} — {{ $project->name }} (due
+                            ₹{{ number_format($project->money['due'], 0) }})
                         </option>
                     @endforeach
                 </select>
@@ -22,13 +22,11 @@
                     <select wire:model.live="term_id"
                             class="i @error('term_id') border-red-500! bg-red-50/20! @enderror">
                         <option value="">*** No Installment (on account) ***</option>
-                        @foreach($terms as $t)
-                            @php $bal = max(0, $t->amount - $t->received - $t->tds); @endphp
-                            <option value="{{ $t->id }}">
-                                #{{ $t->seq }} {{ $t->label }} — ₹{{ number_format($bal, 2) }}
-                                remaining @if($t->due_date)
-                                    (due {{ $t->due_date->format('d M') }})
-                                @endif
+                        @foreach($terms as $term)
+                            @php $termBalance = max(0, $term->amount - $term->received - $term->tds); @endphp
+                            <option value="{{ $term->id }}">
+                                #{{ $term->seq }} {{ $term->label }} — ₹{{ number_format($termBalance, 2) }}
+                                remaining ({{ ucfirst($term->trigger_type) }}{{ $term->milestone ? ' • Milestone: ' . $term->milestone->title : '' }})@if($term->due_date) [due {{ $term->due_date->format('d M') }}]@endif
                             </option>
                         @endforeach
                     </select>
@@ -123,7 +121,7 @@
 
         <div class="mt-6 flex justify-end gap-3">
             <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
-            <button type="submit" class="btn btn-green min-w-[150px] justify-center" wire:loading.attr="disabled" wire:target="save">
+            <button type="submit" class="btn btn-green min-w-40 justify-center" wire:loading.attr="disabled" wire:target="save">
                 <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">
                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                         <path d="M20 6L9 17l-5-5"/>

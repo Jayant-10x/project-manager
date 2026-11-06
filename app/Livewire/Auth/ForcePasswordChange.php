@@ -100,7 +100,7 @@ class ForcePasswordChange extends Component
             request()->session()->regenerateToken();
         }
 
-        return $this->redirect(route('login'), navigate: true);
+        return $this->redirect(route('login'));
     }
 
     public function render()

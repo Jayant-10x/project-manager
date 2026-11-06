@@ -25,18 +25,7 @@
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-            <a href="{{ route('dashboard') }}" wire:navigate
-               class="btn btn-outline-primary btn-sm flex items-center gap-1.5 shadow-xs">
-                <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="7" height="7"/>
-                    <rect x="14" y="3" width="7" height="7"/>
-                    <rect x="14" y="14" width="7" height="7"/>
-                    <rect x="3" y="14" width="7" height="7"/>
-                </svg>
-                <span>Dashboard</span>
-            </a>
-
+        <div class="flex items-center gap-2">
             <!-- Month Navigator Controls -->
             <div
                 class="inline-flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-0.5 shadow-xs">
@@ -154,9 +143,9 @@
                             wire:model.live="selectedUserId"
                             class="i text-xs py-1.5 px-3 min-w-50 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-lg">
                         <option value="">Entire Team / Portfolio</option>
-                        @foreach($accessibleUsers as $u)
-                            <option value="{{ $u->id }}">
-                                {{ $u->name }} ({{ $u->role }})
+                        @foreach($accessibleUsers as $userOption)
+                            <option value="{{ $userOption->id }}">
+                                {{ $userOption->name }} ({{ $userOption->role }})
                             </option>
                         @endforeach
                     </select>
@@ -233,7 +222,7 @@
                                     </svg>
                                     <span>Due</span>
                                 </span>
-                                <x-money :value="number_format($day['scheduledAmount'])"/>
+                                <x-money :value="$day['scheduledAmount']"/>
                             </div>
                         @endif
 
@@ -248,7 +237,7 @@
                                     </svg>
                                     <span>Paid</span>
                                 </span>
-                                <x-money :value="number_format($day['receivedAmount'])"/>
+                                <x-money :value="$day['receivedAmount']"/>
                             </div>
                         @endif
                     </div>
@@ -350,15 +339,29 @@
                                                 <td class="py-2.5 px-3">
                                                     <div
                                                         class="font-semibold text-slate-900 dark:text-white">{{ $term->label }}</div>
-                                                    <div class="text-2xs text-slate-400">{{ $term->trigger_type }}</div>
+                                                    <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                                        <span class="inline-flex items-center gap-1 text-2xs font-semibold {{ $term->trigger_type === 'milestone' ? 'text-[#2e75b6] dark:text-blue-400' : ($term->trigger_type === 'recurring' ? 'text-[#7a5af8] dark:text-purple-400' : 'text-slate-500 dark:text-slate-400') }}">
+                                                            {{ match($term->trigger_type) { 'milestone' => 'Milestone', 'recurring' => 'Recurring', default => 'Fixed' } }}
+                                                        </span>
+                                                        @if($term->milestone)
+                                                            <span class="text-slate-300 dark:text-slate-600">·</span>
+                                                            <span class="inline-flex items-center gap-0.5 text-2xs font-medium text-[#2e75b6] dark:text-blue-400" title="Milestone: {{ $term->milestone->title }}">
+                                                                <svg class="w-2.5 h-2.5 inline shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                                                                    <line x1="4" y1="22" x2="4" y2="15"/>
+                                                                </svg>
+                                                                <span>{{ $term->milestone->title }}</span>
+                                                            </span>
+                                                        @endif
+                                                    </div>
                                                 </td>
                                                 <td class="py-2.5 px-3">
                                                     <div
                                                         class="font-medium text-slate-800 dark:text-slate-200">{{ $term->project?->customer?->display_name ?? '—' }}</div>
                                                     <div class="text-2xs text-blue-600 dark:text-blue-400">
-                                                        <a href="{{ route('projects.show', $term->project_id) }}"
+                                                        <a href="{{ route('projects.show', $term->project_id).'?tab=schedule' }}"
                                                            wire:navigate class="hover:underline">
-                                                            {{ $term->project?->code }} - {{ $term->project?->name }}
+                                                            {{ $term->project?->name ?: ($term->project?->code ?? '—') }}
                                                         </a>
                                                     </div>
                                                 </td>
@@ -383,7 +386,7 @@
                                                         </span>
                                                 </td>
                                                 <td class="py-2.5 px-3 text-right whitespace-nowrap">
-                                                    <a href="{{ route('projects.show', $term->project_id) }}"
+                                                    <a href="{{ route('projects.show', $term->project_id).'?tab=schedule' }}"
                                                        wire:navigate
                                                        class="btn btn-outline-primary btn-xs">
                                                         View Project
@@ -427,15 +430,31 @@
                                                         class="font-bold text-slate-900 dark:text-white">{{ $payment->code }}</div>
                                                     <div
                                                         class="text-2xs text-slate-400">{{ $payment->reference ?: 'No reference' }}</div>
+                                                    @if($payment->term)
+                                                        <div class="mt-1 text-2xs font-medium text-slate-700 dark:text-slate-300">
+                                                            For: <span class="font-semibold">{{ $payment->term->label }}</span>
+                                                            <span class="text-slate-400">({{ ucfirst($payment->term->trigger_type) }})</span>
+                                                        </div>
+                                                        @if($payment->term->milestone)
+                                                            <div class="text-2xs text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-0.5">
+                                                                <svg class="w-2.5 h-2.5 inline shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                                                                    <line x1="4" y1="22" x2="4" y2="15"/>
+                                                                </svg>
+                                                                <span>Milestone: {{ $payment->term->milestone->title }}</span>
+                                                            </div>
+                                                        @endif
+                                                    @else
+                                                        <div class="mt-1 text-2xs text-slate-400 italic">For: On account</div>
+                                                    @endif
                                                 </td>
                                                 <td class="py-2.5 px-3">
                                                     <div
                                                         class="font-medium text-slate-800 dark:text-slate-200">{{ $payment->customer?->display_name ?? '—' }}</div>
                                                     <div class="text-2xs text-blue-600 dark:text-blue-400">
-                                                        <a href="{{ route('projects.show', $payment->project_id) }}"
+                                                        <a href="{{ route('projects.show', $payment->project_id).'?tab=payments' }}"
                                                            wire:navigate class="hover:underline">
-                                                            {{ $payment->project?->code }}
-                                                            - {{ $payment->project?->name }}
+                                                            {{ $payment->project?->name ?: ($payment->project?->code ?? '—') }}
                                                         </a>
                                                     </div>
                                                 </td>
@@ -452,7 +471,7 @@
                                                     <x-money :value="$payment->amount"/>
                                                 </td>
                                                 <td class="py-2.5 px-3 text-right whitespace-nowrap">
-                                                    <a href="{{ route('projects.show', $payment->project_id) }}"
+                                                    <a href="{{ route('projects.show', $payment->project_id).'?tab=payments' }}"
                                                        wire:navigate
                                                        class="btn btn-outline-primary btn-xs">
                                                         View

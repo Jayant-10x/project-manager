@@ -208,6 +208,7 @@
         <!-- Modal Footer Actions with Clean Spacing -->
         <div class="px-6 py-4 bg-[#f8fafc] border-t border-[#eef2f9] flex items-center justify-end gap-3">
             <button type="button"
+                    x-show="cancelText && cancelText.trim().length > 0"
                     @click.stop="cancel()"
                     class="btn btn-outline-secondary btn-sm px-4 py-2 text-xs font-semibold"
                     x-text="cancelText">

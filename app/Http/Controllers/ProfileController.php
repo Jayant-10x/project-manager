@@ -41,8 +41,8 @@ class ProfileController extends Controller
 
         if (! empty($structuredChanges)) {
             $details = [];
-            foreach ($structuredChanges as $f => $d) {
-                $details[] = "{$f}: {$d['old']} -> {$d['new']}";
+            foreach ($structuredChanges as $field => $changeData) {
+                $details[] = "{$field}: {$changeData['old']} -> {$changeData['new']}";
             }
             $diffText = ! empty($details) ? ' ('.implode(', ', $details).')' : '';
 

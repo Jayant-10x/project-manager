@@ -73,8 +73,8 @@ class TodayWorkIndex extends Component
         $followups = Followup::query()
             ->whereNotNull('next_date')
             ->where('next_date', '<=', $followupSoon)
-            ->where(function ($q) use ($projectIds, $customerIds) {
-                $q->whereIn('project_id', $projectIds)
+            ->where(function ($followupQuery) use ($projectIds, $customerIds) {
+                $followupQuery->whereIn('project_id', $projectIds)
                     ->orWhere(function ($subQuery) use ($customerIds) {
                         $subQuery->whereNull('project_id')
                             ->whereIn('customer_id', $customerIds);
@@ -93,8 +93,8 @@ class TodayWorkIndex extends Component
             ->get();
 
         // Financial totals
-        $totalOverdue = (float) $overdue->sum(fn ($t) => max(0, (float) $t->amount - (float) $t->received - (float) $t->tds));
-        $totalSoon = (float) $soon->sum(fn ($t) => max(0, (float) $t->amount - (float) $t->received - (float) $t->tds));
+        $totalOverdue = (float) $overdue->sum(fn ($term) => max(0, (float) $term->amount - (float) $term->received - (float) $term->tds));
+        $totalSoon = (float) $soon->sum(fn ($term) => max(0, (float) $term->amount - (float) $term->received - (float) $term->tds));
         $openTasksCount = Task::where('assigned_to', $user->id)->where('done', false)->count();
 
         return view('livewire.today.today-work-index', [

@@ -18,12 +18,22 @@ class Payment extends Model
 
     public function scopeForUser(Builder $query, ?User $user = null): Builder
     {
-        return $query->whereHas('project', fn (Builder $q) => $q->forUser($user));
+        return $query->whereHas('project', fn (Builder $projectQuery) => $projectQuery->forUser($user));
     }
 
     public function setPaidOnAttribute($value): void
     {
         $this->attributes['paid_on'] = ! empty($value) ? $value : null;
+    }
+
+    public function setPaymentTermIdAttribute($value): void
+    {
+        $this->attributes['term_id'] = $value;
+    }
+
+    public function getPaymentTermIdAttribute()
+    {
+        return $this->attributes['term_id'] ?? null;
     }
 
     public function customer(): BelongsTo

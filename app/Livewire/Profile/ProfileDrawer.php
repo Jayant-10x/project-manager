@@ -224,8 +224,8 @@ class ProfileDrawer extends Component
 
         if (! empty($structuredChanges) || $avatarChanged) {
             $details = [];
-            foreach ($structuredChanges as $f => $d) {
-                $details[] = "{$f}: {$d['old']} -> {$d['new']}";
+            foreach ($structuredChanges as $field => $changeData) {
+                $details[] = "{$field}: {$changeData['old']} -> {$changeData['new']}";
             }
             if ($this->avatarFile) {
                 $details[] = 'avatar: uploaded new photo';

@@ -89,9 +89,9 @@ class UserIndex extends Component
             try {
                 Mail::to($target->email)->send(new TemporaryPasswordMail($target, $temporaryPassword, 'Manager'));
                 $adminEmails = User::where('role', 'Admin')->where('status', 'Active')->pluck('email');
-                foreach ($adminEmails as $admEmail) {
-                    if ($admEmail !== $target->email) {
-                        Mail::to($admEmail)->send(new TemporaryPasswordMail($target, $temporaryPassword, 'Admin'));
+                foreach ($adminEmails as $adminEmail) {
+                    if ($adminEmail !== $target->email) {
+                        Mail::to($adminEmail)->send(new TemporaryPasswordMail($target, $temporaryPassword, 'Admin'));
                     }
                 }
             } catch (\Throwable) {
@@ -270,8 +270,8 @@ class UserIndex extends Component
 
         if ($this->search !== '') {
             $term = '%'.trim($this->search).'%';
-            $query->where(function ($q) use ($term) {
-                $q->where('name', 'like', $term)
+            $query->where(function ($searchQuery) use ($term) {
+                $searchQuery->where('name', 'like', $term)
                     ->orWhere('email', 'like', $term)
                     ->orWhere('phone', 'like', $term)
                     ->orWhere('designation', 'like', $term)

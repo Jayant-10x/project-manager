@@ -37,43 +37,59 @@
                 </div>
             </div>
             <div class="card-body">
-                @forelse($overdue as $t)
+                @forelse($overdue as $term)
                     @php
-                        $bal = max(0, (float)$t->amount - (float)$t->received - (float)$t->tds);
-                        $dueDate = $t->due_date ? \Carbon\Carbon::parse($t->due_date) : null;
+                        $termBalance = max(0, (float)$term->amount - (float)$term->received - (float)$term->tds);
+                        $dueDate = $term->due_date ? \Carbon\Carbon::parse($term->due_date) : null;
                         $daysLate = $dueDate ? (int) round(abs(\Carbon\Carbon::parse($today)->startOfDay()->diffInDays($dueDate->startOfDay(), false))) : 0;
                     @endphp
                     <div class="term over clickable"
-                         @click="Livewire.navigate('{{ route('projects.show', $t->project_id) }}')">
-                        <div class="term-no" style="background:#fdeaea;color:#d94b4b">{{ $t->seq }}</div>
+                         @click="Livewire.navigate('{{ route('projects.show', $term->project_id) }}')">
+                        <div class="term-no" style="background:#fdeaea;color:#d94b4b">{{ $term->seq }}</div>
                         <div class="term-body">
-                            <div class="term-title">{{ $t->project?->customer?->display_name ?? '—' }}</div>
-                            <div class="term-meta">
-                                <span>{{ $t->label }}</span>
-                                <span>{{ $t->project?->code }}</span>
+                            <div class="term-title">{{ $term->project?->customer?->display_name ?? '—' }}</div>
+                            <div class="term-meta flex items-center gap-2 flex-wrap">
+                                <span class="font-medium text-slate-800 dark:text-slate-200">{{ $term->label }}</span>
+                                <span class="text-slate-300 dark:text-slate-600">·</span>
+                                <span class="inline-flex items-center gap-1 text-[10px] font-semibold {{ $term->trigger_type === 'milestone' ? 'text-[#2e75b6] dark:text-blue-400' : ($term->trigger_type === 'recurring' ? 'text-[#7a5af8] dark:text-purple-400' : 'text-slate-500 dark:text-slate-400') }}">
+                                    {{ match($term->trigger_type) { 'milestone' => 'Milestone', 'recurring' => 'Recurring', default => 'Fixed' } }}
+                                </span>
+                                @if($term->milestone)
+                                    <span class="text-slate-300 dark:text-slate-600">·</span>
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-medium text-[#2e75b6] dark:text-blue-400" title="Milestone: {{ $term->milestone->title }}">
+                                        <svg class="w-2.5 h-2.5 inline shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                                            <line x1="4" y1="22" x2="4" y2="15"/>
+                                        </svg>
+                                        <span>{{ $term->milestone->title }}</span>
+                                    </span>
+                                @endif
+                                <span class="text-slate-300 dark:text-slate-600">·</span>
+                                <span>{{ $term->project?->name ?: ($term->project?->code ?? '') }}</span>
+                                <span class="text-slate-300 dark:text-slate-600">·</span>
                                 <span style="color:#d94b4b;font-weight:650">{{ $daysLate }} days late</span>
                             </div>
-                            @if($t->milestone && $t->milestone->chase_notes)
+                            @if($term->milestone && $term->milestone->chase_notes)
                                 <div
                                     class="mt-1.5 text-xs text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1.5 max-w-md">
                                     <span class="font-semibold text-amber-900">Chase Note:</span>
-                                    <span class="truncate">{{ $t->milestone->chase_notes }}</span>
-                                    @if($t->milestone->next_chase_date)
+                                    <span class="truncate">{{ $term->milestone->chase_notes }}</span>
+                                    @if($term->milestone->next_chase_date)
                                         <span
-                                            class="text-amber-700 ml-1">· Next: {{ \Carbon\Carbon::parse($t->milestone->next_chase_date)->format('d M') }}</span>
+                                            class="text-amber-700 ml-1">· Next: {{ \Carbon\Carbon::parse($term->milestone->next_chase_date)->format('d M') }}</span>
                                     @endif
                                 </div>
                             @endif
                         </div>
                         <div class="term-amt flex flex-col items-end gap-1.5">
                             <div class="a">
-                                <x-money :value="$bal"/>
+                                <x-money :value="$termBalance"/>
                             </div>
                             <div class="flex items-center gap-1.5">
                                 <button type="button"
                                         class="btn btn-outline-primary btn-xs whitespace-nowrap"
                                         title="Log Chase Note"
-                                        @click.stop="Livewire.dispatch('open-chase-modal', { milestoneId: {{ $t->milestone_id ?: 'null' }}, termId: {{ $t->id }} })">
+                                        @click.stop="Livewire.dispatch('open-chase-modal', { milestoneId: {{ $term->milestone_id ?: 'null' }}, termId: {{ $term->id }} })">
                                     <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
                                     </svg>
@@ -82,7 +98,7 @@
                                 <button type="button"
                                         class="btn btn-outline-green btn-xs whitespace-nowrap"
                                         title="Record Payment"
-                                        @click.stop="Livewire.dispatch('open-payment-modal', { projectId: {{ $t->project_id }}, termId: {{ $t->id }} })">
+                                        @click.stop="Livewire.dispatch('open-payment-modal', { projectId: {{ $term->project_id }}, termId: {{ $term->id }} })">
                                     <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path d="M12 5v14M5 12h14"/>
                                     </svg>
@@ -123,40 +139,54 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    @forelse($soon as $t)
+                    @forelse($soon as $term)
                         @php
-                            $bal = max(0, (float)$t->amount - (float)$t->received - (float)$t->tds);
-                            $dueDate = $t->due_date ? \Carbon\Carbon::parse($t->due_date) : null;
+                            $termBalance = max(0, (float)$term->amount - (float)$term->received - (float)$term->tds);
+                            $dueDate = $term->due_date ? \Carbon\Carbon::parse($term->due_date) : null;
                         @endphp
                         <div
                             class="mini-item clickable flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition mb-2"
-                            @click="Livewire.navigate('{{ route('projects.show', $t->project_id) }}')">
+                            @click="Livewire.navigate('{{ route('projects.show', $term->project_id) }}')">
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between mb-1">
                                     <span
-                                        class="font-semibold text-sm text-[#0d1b34]">{{ $t->project?->customer?->display_name ?? '—' }}</span>
+                                        class="font-semibold text-sm text-[#0d1b34]">{{ $term->project?->customer?->display_name ?? '—' }}</span>
                                     <span class="badge b-amber">{{ $dueDate ? $dueDate->format('d M') : '—' }}</span>
                                 </div>
-                                <div class="text-xs text-[#8894ac] flex items-center gap-2">
-                                    <span>{{ $t->label }}</span>
-                                    <span>&middot;</span>
-                                    <span>{{ $t->project?->code }}</span>
-                                    <span>&middot;</span>
-                                    <span class="font-semibold text-[#0d1b34]"><x-money :value="$bal"/></span>
+                                <div class="text-xs text-[#8894ac] flex items-center gap-2 flex-wrap">
+                                    <span class="font-medium text-slate-800 dark:text-slate-200">{{ $term->label }}</span>
+                                    <span class="text-slate-300 dark:text-slate-600">·</span>
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-semibold {{ $term->trigger_type === 'milestone' ? 'text-[#2e75b6] dark:text-blue-400' : ($term->trigger_type === 'recurring' ? 'text-[#7a5af8] dark:text-purple-400' : 'text-slate-500 dark:text-slate-400') }}">
+                                        {{ match($term->trigger_type) { 'milestone' => 'Milestone', 'recurring' => 'Recurring', default => 'Fixed' } }}
+                                    </span>
+                                    @if($term->milestone)
+                                        <span class="text-slate-300 dark:text-slate-600">·</span>
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-medium text-[#2e75b6] dark:text-blue-400" title="Milestone: {{ $term->milestone->title }}">
+                                            <svg class="w-2.5 h-2.5 inline shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                                                <line x1="4" y1="22" x2="4" y2="15"/>
+                                            </svg>
+                                            <span>{{ $term->milestone->title }}</span>
+                                        </span>
+                                    @endif
+                                    <span class="text-slate-300 dark:text-slate-600">·</span>
+                                    <span>{{ $term->project?->name ?: ($term->project?->code ?? '') }}</span>
+                                    <span class="text-slate-300 dark:text-slate-600">·</span>
+                                    <span class="font-semibold text-[#0d1b34]"><x-money :value="$termBalance"/></span>
                                 </div>
-                                @if($t->milestone && $t->milestone->chase_notes)
+                                @if($term->milestone && $term->milestone->chase_notes)
                                     <div
                                         class="mt-1 text-xs text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-flex items-center gap-1 max-w-sm truncate">
                                         <span>💬</span>
-                                        <span class="truncate">{{ $t->milestone->chase_notes }}</span>
+                                        <span class="truncate">{{ $term->milestone->chase_notes }}</span>
                                     </div>
                                 @endif
                             </div>
-                            <div class="r flex items-center gap-1.5 flex-shrink-0">
+                            <div class="r flex items-center gap-1.5 shrink-0">
                                 <button type="button"
                                         class="btn btn-outline-primary btn-xs whitespace-nowrap"
                                         title="Log Chase Note"
-                                        @click.stop="Livewire.dispatch('open-chase-modal', { milestoneId: {{ $t->milestone_id ?: 'null' }}, termId: {{ $t->id }} })">
+                                        @click.stop="Livewire.dispatch('open-chase-modal', { milestoneId: {{ $term->milestone_id ?: 'null' }}, termId: {{ $term->id }} })">
                                     <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
                                     </svg>
@@ -165,7 +195,7 @@
                                 <button type="button"
                                         class="btn btn-outline-green btn-xs whitespace-nowrap"
                                         title="Record Payment"
-                                        @click.stop="Livewire.dispatch('open-payment-modal', { projectId: {{ $t->project_id }}, termId: {{ $t->id }} })">
+                                        @click.stop="Livewire.dispatch('open-payment-modal', { projectId: {{ $term->project_id }}, termId: {{ $term->id }} })">
                                     <svg viewBox="0 0 24 24" class="w-3 h-3">
                                         <path d="M12 5v14M5 12h14"/>
                                     </svg>
@@ -235,7 +265,7 @@
                                     @if($f->project)
                                         <a href="{{ route('projects.show', $f->project_id) }}" wire:navigate
                                            class="text-xs text-[#8894ac] hover:text-[#0b3d91] hover:underline">
-                                            &middot; {{ $f->project->code }}
+                                            &middot; {{ $f->project->name ?: $f->project->code }}
                                         </a>
                                     @endif
                                     @if($f->customer?->phone)
@@ -250,7 +280,7 @@
                                         </a>
                                     @endif
                                 </div>
-                                <div class="flex items-center gap-1.5 flex-shrink-0">
+                                <div class="flex items-center gap-1.5 shrink-0">
                                     <span class="badge {{ $isOverdueFup ? 'b-red' : 'b-navy' }}">
                                         {{ $fDate ? $fDate->format('d M') : '—' }}
                                     </span>
@@ -318,21 +348,21 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($lateProjects as $p)
-                    @php $delDate = $p->delivery_date ? \Carbon\Carbon::parse($p->delivery_date) : null; @endphp
-                    <tr class="clickable" @click="Livewire.navigate('{{ route('projects.show', $p->id) }}')">
+                @forelse($lateProjects as $project)
+                    @php $delDate = $project->delivery_date ? \Carbon\Carbon::parse($project->delivery_date) : null; @endphp
+                    <tr class="clickable" @click="Livewire.navigate('{{ route('projects.show', $project->id) }}')">
                         <td>
-                            <div class="strong">{{ $p->name }}</div>
-                            <div class="muted" style="font-size:10.8px">{{ $p->code }}</div>
+                            <div class="strong">{{ $project->name }}</div>
+                            <div class="muted" style="font-size:11px">{{ $project->code }}</div>
                         </td>
-                        <td>{{ $p->customer?->display_name ?? '—' }}</td>
+                        <td>{{ $project->customer?->display_name ?? '—' }}</td>
                         <td>
-                            <x-health-badge :health="$p->health"/>
+                            <x-health-badge :health="$project->health"/>
                         </td>
                         <td class="nowrap muted">{{ $delDate ? $delDate->format('d M') : '—' }}</td>
-                        <td class="muted">{{ $p->delay_reason ?: '—' }}</td>
+                        <td class="muted">{{ $project->delay_reason ?: '—' }}</td>
                         <td class="num font-bold text-[#e0a13a]">
-                            <x-money :value="$p->money['due']"/>
+                            <x-money :value="$project->money['due']"/>
                         </td>
                     </tr>
                 @empty

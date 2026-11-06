@@ -68,7 +68,7 @@ class Setting extends Model
 
         $clean = array_values(array_unique(array_filter(
             array_map('intval', $days),
-            fn ($d) => $d >= 0 && $d <= 180
+            fn ($dayValue) => $dayValue >= 0 && $dayValue <= 180
         )));
 
         rsort($clean);

@@ -233,7 +233,7 @@ class OverviewDashboardAndTodayQueueTest extends TestCase
         $response->assertSee('Sales Quota Target');
         $response->assertSee($this->project->name);
 
-        // Sales does not see backend financial ledgers, ageing, or restricted schedules
+        // Sales does not see backend financial ledgers, aging, or restricted schedules
         $response->assertDontSee('Payment Ageing');
         $response->assertDontSee(route('schedule.index'));
         $response->assertDontSee(route('payments.index'));

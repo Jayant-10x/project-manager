@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/PHP-8.4-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.4">
   <img src="https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL 8.0+">
   <img src="https://img.shields.io/badge/Frontend-Alpine.js%20%26%20Tailwind-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
-  <img src="https://img.shields.io/badge/Tests-288%20Passed-2ea44f?style=for-the-badge&logo=githubactions&logoColor=white" alt="288 Tests Passed">
+  <img src="https://img.shields.io/badge/Tests-345%20Passed-2ea44f?style=for-the-badge&logo=githubactions&logoColor=white" alt="345 Tests Passed">
   <img src="https://img.shields.io/badge/License-Proprietary-0B3D91?style=for-the-badge" alt="Proprietary License">
 </p>
 
@@ -103,6 +103,12 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
   * Admin-mediated resets generate a 16-character high-entropy temporary password (`PasswordGeneratorService`), delivered instantly via branded email (`TemporaryPasswordMail`) and displayed in a secure copyable dialog.
 * **Mandatory First-Time Password Change:** Automatically intercepts logins and redirects newly created staff or administratively reset accounts to the **/change-password** screen before granting access.
 * **Password Complexity Rules:** Enforces a minimum of 8 characters containing at least 1 uppercase letter, 1 lowercase letter, and 1 numeric digit.
+* **Livewire-Powered Authentication & Security Defenses:**
+  * **Reactive Login Component (`App\Livewire\Auth\Login`)**: Fully reactive Livewire component with real-time blur validation, loading states, and defense-in-depth security.
+  * **Account Lockout & Rate-Limiting**: Automatically tracks failed attempts, providing real-time feedback with remaining attempts (`X attempts left`). 5 failed attempts trigger an automatic 30-minute lockout with supervisor alerts and rate-limiting.
+  * **Universal Elimination of HTML5 `required`**: All login, registration, password recovery, and profile forms strictly enforce `novalidate` without native browser bubbles, utilizing server-side and real-time Livewire validation with prominent `@error` red-border styling and field-level labels.
+* **Global Toast Notification System (`<x-toast-container />`):**
+  * Built-in Alpine.js notification container integrated into `layouts/app.blade.php` listening to `toast` events, displaying slide-in banners for success (`ok`), warnings (`warning`), and errors (`err`) with automatic 4.5s dismissal and click-to-dismiss support.
 
 ### 🎯 4. Today's Work Command Center
 
@@ -128,6 +134,9 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 * **Deterministic Display Fallback:** Automatically displays company name when available, or cleanly falls back to **"{Contact Name} (Client)"** (or customer code) across all tables, search dropdowns, and activity feeds.
 * **Sales Targets & Quotas:** Tracks onboarding attribution and monitors collection progress against monthly quotas configured in user settings `(% Achieved = (Received / Target) * 100)`.
 * **Bulk Import & CSV Export:** Upload customer lists via spreadsheet CSV file or direct copy-paste with automated duplicate checking, or stream filtered client records to Excel-compatible CSV.
+* **Customer Deletion Safeguard & Atomic Cascades:**
+  * **Linked-Project Protection (Option B)**: Prevents accidental destruction of project and financial history. When a customer has active linked projects, clicking Delete opens an informative warning modal explaining that projects must be reassigned or deleted first, backed by server-side rejection and error toasts.
+  * **Atomic Cascade Deletions (ISS-106)**: When 0 projects remain, deletion executes inside an atomic `DB::transaction(...)` block, ensuring customer records, audit logs, and stakeholder notifications commit before physical file unlinking is triggered via `DB::afterCommit(...)`.
 
 ### 🚀 6. Project Coordination, Milestones & Maintenance
 
@@ -143,6 +152,11 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
   * **Locked Payment Term Preservation**: Existing locked installments (terms with recorded payments or TDS deductions) are strictly preserved intact; auto-split distributes only the remaining uncollected balance (`Project Value - Locked Total`) across the new terms.
   * Automatically maps due dates to milestones or staggers them (+0, +15, +30 days) from project start.
 * **Milestone Checklist & Chase Tracker:** Interactive milestone tracker with due dates, payment trigger linking, 1-click completion checkmarks, and a dedicated **Milestone Chase Modal** to record follow-up notes and schedule next chase dates (with resilient empty-date normalization).
+* **Locked Milestones Linked to Payment Schedules:**
+  * **Schedule Connection Safeguard**: Milestones linked to any payment schedule term (`payment_terms.milestone_id`) are automatically locked just like installments with recorded payments.
+  * **Destruction Protection**: Locked milestones cannot be removed manually via `removeRow()` (triggering a friendly warning) and are strictly protected against deletion during database synchronization.
+  * **Template Preservation**: Loading standard 5-stage milestone templates strictly preserves all locked milestones, adding only non-duplicate template stages.
+  * **Visual Indicators**: Displays an amber "Locked" badge with padlock icon, tooltip detailing the connected schedule installments, disabled name field with `(Locked to Schedule)` indicator, and a `Schedule Linked` badge on the project overview tab.
 * **Annual Maintenance Contracts (AMC):** Dedicated contract duration tracking with automated renewal warnings before expiration.
 * **Handover Governance:** Post-delivery checklist and formal client handover notes.
 
@@ -157,12 +171,13 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 * **Smart Payment Receipts:** Attach client remittance slips and bank advices directly within the payment modal; files are stored securely and automatically catalogued into the Document Vault as linked invoices.
 * **Triple Notification Dispatch:** Recording a payment automatically dispatches high-priority in-app alerts to the Project Coordinator, the Onboarding Salesperson, and System Administrators.
 * **Payment Schedule Master View:** Centralized chronological timeline tracking **Upcoming**, **Overdue**, **Collected**, and **Total Scheduled** installments across all agency projects.
-* **Automatic Installment Status Transitions:**
-  * **Paid**: Fully cleared when `Received + TDS Deducted >= Installment Amount`
+* **Automatic Installment Status Transitions & Deletion Recalculation (ISS-105):**
+  * **Paid**: Fully cleared when `Received + TDS Deducted >= Installment Amount - 0.01`
   * **Partial**: Partially settled when payments are logged but a balance remains
   * **Overdue**: Automatically marked late when `Today > Due Date + Grace Days` and balance is unpaid
-  * **Pending**: Scheduled upcoming term with zero payments logged
+  * **Pending**: Scheduled upcoming term with zero payments logged and due date + grace days in the future
   * **Cancelled**: Voided installment excluded from active receivables.
+  * **Synchronized Payment Deletion (`PaymentTerm::recalculateStatus()`):** Deleting a payment receipt automatically invokes model-level status recalculation across `CustomerDetail`, `ProjectDetail`, and `PaymentIndex`, accurately determining whether a cleared term resets to `Partial`, `Pending`, or `Overdue` based on due date and grace period.
 * **Zero-Default TDS Handling:** Normalized tax inputs credit withheld TDS directly against invoice balances alongside received cash.
 * **Dual Currency Display:** Instant navbar toggle between Indian Rupees (`₹`) and US Dollars (`$`) with real-time conversion across all monetary views.
 
@@ -306,7 +321,8 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
 │   │   ├── Audit/
 │   │   │   └── AuditIndex.php                      # System activity log timeline viewer with field diffs
 │   │   ├── Auth/
-│   │   │   └── ForcePasswordChange.php             # Dedicated password update screen for flagged users
+│   │   │   ├── ForcePasswordChange.php             # Dedicated password update screen for flagged users
+│   │   │   └── Login.php                           # Reactive Livewire login component with blur validation
 │   │   ├── Components/
 │   │   │   ├── DynamicCounter.php                  # Real-time event-driven badge counter component
 │   │   │   ├── GlobalSearch.php                    # Universal debounced search dropdown
@@ -384,7 +400,7 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
 │   ├── css/app.css                                 # Tailwind CSS setup
 │   ├── js/app.js                                   # Clean JS entry without manual Alpine imports
 │   └── views/
-│       ├── components/                             # Blade UI components (money, kpi-card, health-badge, modal, confirm-modal)
+│       ├── components/                             # Blade UI components (money, kpi-card, health-badge, modal, confirm-modal, toast-container)
 │       ├── emails/
 │       │   └── temporary-password.blade.php        # Branded HTML email template for temporary credentials
 │       ├── errors/                                 # Context-aware error views (403, 404, 419, 500, 503) extending workspace shell
@@ -516,7 +532,8 @@ All operational modules are built as dedicated Livewire 4 full-page components, 
 | **System** | **15. Notifications** | `notifications.index`<br>`notifications.show` | `Notifications\NotificationIndex`<br>`Notifications\NotificationDetail` | `Components\NotificationBell`, `Components\NotificationDrawer`, `DynamicCounter`, deep linking |
 | | **16. Activity Log** | `audit.index` | `Audit\AuditIndex` | Color-coded action timeline, field-level structured diffs (`ActivityLog`) |
 | | **17. Settings** | `settings.index` | `Settings\SettingIndex` | `UserModal` with granular permissions editor, threshold configurations |
-| **Auth** | **Password Change** | `password.change` | `Auth\ForcePasswordChange` | Mandatory first-time password change screen triggered by `EnsurePasswordIsChanged` |
+| **Auth** | **Login** | `login` | `Auth\Login` | Reactive login screen, real-time validation, rate limiting & lockout defenses |
+| | **Password Change** | `password.change` | `Auth\ForcePasswordChange` | Mandatory first-time password change screen triggered by `EnsurePasswordIsChanged` |
 
 ---
 
@@ -595,6 +612,14 @@ Available inside the **Schedule** modal on any project, this wizard divides the 
 
 * **Formula**: `Temporary Password = Cryptographically Random 16-character string (mixed case, numbers, symbols)`
 * **Working**: Generates a high-entropy compliant temporary password on-demand (`PasswordGeneratorService::generate(16)`), resets failed login counters (`fail_count = 0`), clears lockout timestamps (`locked_until = null`), flags `must_change = true`, resolves pending in-app `PasswordResetRequest` records, delivers credentials via branded email (`TemporaryPasswordMail`), records an audit log entry, and presents credentials in a secure copyable dialog.
+
+### 7. Clone Form Retain-Instance Safeguards (`Milestones`, `Payment Terms`, `Reminder Days`)
+
+* **Formula**: `Active Instances >= 1`
+* **Working**: Every repeatable clone/repeater form throughout the application is protected against accidental empty state deletion:
+  1. **UI Delete Button Suppression**: When a form has only a single instance (`count <= 1`), the removal/delete button is cleanly removed from the DOM to prevent accidental clicks.
+  2. **Server-Side Removal Guard**: Invoking row deletion on a single item is blocked with specific field-level validation errors (`items`, `terms`, or `reminderDays`) and dispatches a warning toast notification (`type: 'warning'`).
+  3. **Empty Form Submission Guard**: Submitting a form without any rows is blocked at the start of `save()`, preventing blank form submissions or orphaned financial/milestone states.
 
 ---
 

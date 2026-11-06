@@ -121,8 +121,8 @@
                     <select wire:model.live="sales_person_id"
                             class="i @error('sales_person_id') border-red-500! bg-red-50/20! @enderror">
                         <option value="">*** Select Sales Person ***</option>
-                        @foreach($salesPeople as $sp)
-                            <option value="{{ $sp->id }}">{{ $sp->name }}</option>
+                        @foreach($salesPeople as $salesPerson)
+                            <option value="{{ $salesPerson->id }}">{{ $salesPerson->name }}</option>
                         @endforeach
                     </select>
                     @error('sales_person_id')
@@ -180,7 +180,7 @@
 
         <div class="mt-6 flex justify-end gap-3">
             <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
-            <button type="submit" class="btn btn-primary min-w-[150px] justify-center" wire:loading.attr="disabled" wire:target="save">
+            <button type="submit" class="btn btn-primary min-w-40 justify-center" wire:loading.attr="disabled" wire:target="save">
                 <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">{{ $customerId ? ($isRejected ? 'Update & Resubmit' : 'Save changes') : 'Create customer' }}</span>
                 <span wire:loading.inline-flex wire:target="save" class="items-center justify-center gap-1.5">
                     <svg class="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">

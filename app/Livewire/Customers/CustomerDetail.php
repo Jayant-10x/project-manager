@@ -86,9 +86,10 @@ class CustomerDetail extends Component
             abort(403, 'Only administrators can delete customers.');
         }
 
-        if ($this->customer->projects()->exists()) {
+        $projectCount = $this->customer->projects()->count();
+        if ($projectCount > 0) {
             $this->dispatch('toast', [
-                'msg' => 'Cannot delete customer with active projects. Delete or reassign projects first.',
+                'msg' => "Cannot delete customer with {$projectCount} active project(s). Delete or reassign projects first.",
                 'type' => 'err',
             ]);
 
@@ -227,6 +228,13 @@ class CustomerDetail extends Component
 
     public function deletePayment(int $paymentId): void
     {
+        $user = auth()->user();
+        if ($user->role !== 'Admin' && ! $user->hasPermission('payments', 'delete')) {
+            $this->dispatch('toast', ['msg' => 'Only Admin can delete payments.', 'type' => 'err']);
+
+            return;
+        }
+
         $pay = Payment::with('project')->where('customer_id', $this->customer->id)->findOrFail($paymentId);
         $termId = $pay->term_id;
         $payCode = $pay->code;
@@ -274,7 +282,15 @@ class CustomerDetail extends Component
 
     public function deleteDocument(int $docId): void
     {
+        $user = auth()->user();
         $doc = $this->customer->documents()->findOrFail($docId);
+
+        if ($user->role !== 'Admin' && $doc->uploaded_by !== $user->id) {
+            $this->dispatch('toast', ['msg' => 'You can only remove files you uploaded.', 'type' => 'err']);
+
+            return;
+        }
+
         $docName = $doc->file_name;
         if (Storage::disk('documents')->exists($doc->stored_as)) {
             Storage::disk('documents')->delete($doc->stored_as);
@@ -292,22 +308,34 @@ class CustomerDetail extends Component
             $this->customer->customer_code,
             "Deleted document '{$docName}' from customer {$this->customer->display_name}"
         );
+
+        $this->dispatch('toast', ['msg' => 'Document removed', 'type' => 'ok']);
     }
 
-    public function deleteFollowup(int $fuId): void
+    public function deleteFollowup(int $followupId): void
     {
-        $fu = $this->customer->followups()->findOrFail($fuId);
-        $summary = $fu->summary;
-        $fu->delete();
+        $user = auth()->user();
+        $followup = $this->customer->followups()->findOrFail($followupId);
+
+        if ($user->role !== 'Admin' && $followup->created_by !== $user->id) {
+            $this->dispatch('toast', ['msg' => 'You can only remove follow-ups you logged.', 'type' => 'err']);
+
+            return;
+        }
+
+        $summary = $followup->summary;
+        $followup->delete();
 
         app(AuditNotificationService::class)->log(
             auth()->id(),
             'Deleted Follow-up',
             'Followup',
-            $fuId,
+            $followupId,
             $this->customer->customer_code,
             "Deleted follow-up '{$summary}' for customer {$this->customer->display_name}"
         );
+
+        $this->dispatch('toast', ['msg' => 'Follow-up removed', 'type' => 'ok']);
     }
 
     public function render()
@@ -331,12 +359,12 @@ class CustomerDetail extends Component
         $collRate = $sched > 0 ? min(100, round(($rec / $sched) * 100)) : 0;
 
         $terms = PaymentTerm::whereIn('project_id', $projectIds)
-            ->with('project')
+            ->with(['project', 'milestone'])
             ->orderBy('due_date')
             ->get();
 
         $payments = Payment::where('customer_id', $this->customer->id)
-            ->with('project')
+            ->with(['project', 'term.milestone', 'enteredBy', 'document'])
             ->orderByDesc('paid_on')
             ->get();
 
@@ -344,8 +372,8 @@ class CustomerDetail extends Component
             ->with(['project', 'uploadedBy'])
             ->when($this->docSearch !== '', function ($builder) {
                 $term = '%'.trim($this->docSearch).'%';
-                $builder->where(function ($q) use ($term) {
-                    $q->where('title', 'like', $term)
+                $builder->where(function ($subQuery) use ($term) {
+                    $subQuery->where('title', 'like', $term)
                         ->orWhere('file_name', 'like', $term);
                 });
             })

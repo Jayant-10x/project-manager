@@ -126,10 +126,10 @@ class PaymentIndex extends Component
     {
         $user = auth()->user();
         $payments = Payment::forUser($user)
-            ->with(['project.customer', 'customer', 'term', 'enteredBy'])
-            ->when($user->role === 'Coordinator', function ($q) {
-                $q->whereHas('project.terms', function ($t) {
-                    $t->whereIn('status', ['Pending', 'Partial', 'Overdue']);
+            ->with(['project.customer', 'customer', 'term.milestone', 'enteredBy'])
+            ->when($user->role === 'Coordinator', function ($coordinatorQuery) {
+                $coordinatorQuery->whereHas('project.terms', function ($termQuery) {
+                    $termQuery->whereIn('status', ['Pending', 'Partial', 'Overdue']);
                 });
             })
             ->when($this->mode, fn ($builder) => $builder->where('mode', $this->mode))
@@ -190,7 +190,7 @@ class PaymentIndex extends Component
         $user = auth()->user();
 
         $query = Payment::forUser($user)
-            ->with(['project.customer', 'customer', 'term', 'enteredBy'])
+            ->with(['project.customer', 'customer', 'term.milestone', 'enteredBy'])
             ->when($user->role === 'Coordinator', function ($coordinatorQuery) {
                 // Coordinators only see payments with active due balances
                 $coordinatorQuery->whereHas('project.terms', function ($termQuery) {

@@ -72,8 +72,23 @@ class PasswordResetLinkController extends Controller
 
             try {
                 Mail::to($user->email)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Admin'));
-            } catch (\Throwable $e) {
-                Log::error('Admin password reset mail error: '.$e->getMessage(), ['exception' => $e]);
+            } catch (\Throwable $exception) {
+                Log::error('Admin password reset mail error: '.$exception->getMessage(), ['exception' => $exception]);
+            }
+
+            // In-app alert for all active Admins (including self)
+            $adminIds = User::where('role', 'Admin')->where('status', 'Active')->pluck('id');
+            foreach ($adminIds as $adminId) {
+                $auditService->notify(
+                    $adminId,
+                    'Password Reset Requested',
+                    'Admin Password Reset Alert',
+                    $adminId === $user->id
+                        ? 'You requested a password reset. Temporary credentials have been emailed to you.'
+                        : "Administrator {$user->name} ({$user->email}) requested a password reset. Temporary credentials were sent.",
+                    'settings',
+                    $user->id
+                );
             }
 
             $auditService->log(
@@ -110,13 +125,13 @@ class PasswordResetLinkController extends Controller
                 Mail::to($user->email)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Manager'));
 
                 $adminEmails = User::where('role', 'Admin')->where('status', 'Active')->pluck('email');
-                foreach ($adminEmails as $admEmail) {
-                    if ($admEmail !== $user->email) {
-                        Mail::to($admEmail)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Admin'));
+                foreach ($adminEmails as $adminEmail) {
+                    if ($adminEmail !== $user->email) {
+                        Mail::to($adminEmail)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Admin'));
                     }
                 }
-            } catch (\Throwable $e) {
-                Log::error('Manager password reset mail error: '.$e->getMessage(), ['exception' => $e]);
+            } catch (\Throwable $exception) {
+                Log::error('Manager password reset mail error: '.$exception->getMessage(), ['exception' => $exception]);
             }
 
             // In-app alert for all active Admins
@@ -177,6 +192,16 @@ class PasswordResetLinkController extends Controller
                 );
             }
         }
+
+        // 3. In-app confirmation for requesting user
+        $auditService->notify(
+            $user->id,
+            'Password Reset Requested',
+            'Password Reset Request Logged',
+            'Your password reset request has been logged and sent to your manager/administrator for review.',
+            'settings',
+            $user->id
+        );
 
         $auditService->log(
             $user->id,

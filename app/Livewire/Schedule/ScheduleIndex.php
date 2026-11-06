@@ -57,7 +57,7 @@ class ScheduleIndex extends Component
         $user = auth()->user();
 
         $allTerms = PaymentTerm::forUser($user)
-            ->with(['project.customer'])
+            ->with(['project.customer', 'milestone'])
             ->orderByRaw("CASE status WHEN 'Overdue' THEN 1 WHEN 'Pending' THEN 2 WHEN 'Partial' THEN 3 WHEN 'Paid' THEN 4 WHEN 'Cancelled' THEN 5 ELSE 6 END")
             ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC')
             ->get();
@@ -101,7 +101,7 @@ class ScheduleIndex extends Component
         return response()->streamDownload(function () use ($terms) {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF"); // BOM for Excel UTF-8
-            fputcsv($handle, ['Customer', 'Project Code', 'Project', '#', 'Installment', 'Trigger', 'Amount', 'Received', 'TDS', 'Balance', 'Due Date', 'Status']);
+            fputcsv($handle, ['Customer', 'Project Code', 'Project', '#', 'Installment', 'Trigger', 'Milestone', 'Amount', 'Received', 'TDS', 'Balance', 'Due Date', 'Status']);
 
             foreach ($terms as $term) {
                 $balance = max(0, (float) $term->amount - (float) $term->received - (float) $term->tds);
@@ -120,6 +120,7 @@ class ScheduleIndex extends Component
                     $term->seq,
                     $term->label,
                     $triggerLabel,
+                    $term->milestone?->title ?? '',
                     $term->amount,
                     $term->received,
                     $term->tds,
@@ -139,7 +140,7 @@ class ScheduleIndex extends Component
         $totalProjectsCount = Project::forUser($user)->count();
 
         $allTerms = PaymentTerm::forUser($user)
-            ->with(['project.customer'])
+            ->with(['project.customer', 'milestone'])
             ->orderByRaw("CASE status WHEN 'Overdue' THEN 1 WHEN 'Pending' THEN 2 WHEN 'Partial' THEN 3 WHEN 'Paid' THEN 4 WHEN 'Cancelled' THEN 5 ELSE 6 END")
             ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC')
             ->get();

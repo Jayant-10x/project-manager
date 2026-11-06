@@ -48,7 +48,11 @@
                     localStorage.setItem('pjt_cur', this.cur);
                 },
                 format(val, short = false) {
+                    if (typeof val === 'string') {
+                        val = val.replace(/,/g, '');
+                    }
                     let n = Number(val || 0);
+                    if (isNaN(n)) n = 0;
                     if (this.cur === 'USD') {
                         n = n / this.rate;
                         if (short && Math.abs(n) >= 1000) return '$' + (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'K';
@@ -307,7 +311,11 @@
                 localStorage.setItem('pjt_cur', this.cur);
             },
             format(val, short = false) {
+                if (typeof val === 'string') {
+                    val = val.replace(/,/g, '');
+                }
                 let n = Number(val || 0);
+                if (isNaN(n)) n = 0;
                 if (this.cur === 'USD') {
                     n = n / this.rate;
                     if (short && Math.abs(n) >= 1000) return '$' + (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'K';
@@ -421,20 +429,20 @@
 <livewire:documents.document-preview-modal/>
 <livewire:followups.followup-modal/>
 <x-confirm-modal/>
+<x-toast-container/>
 
 @livewireScripts
 
-<!-- Native Desktop Browser Notification Poller -->
-<div x-data="browserNotifier({{ auth()->id() }})" x-init="initNotifier()"></div>
-
+@auth
 <script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('browserNotifier', (userId) => ({
-            pollInterval: 5000, // 30 seconds
+    window.browserNotifier = function(userId) {
+        return {
+            pollInterval: 30000, // 30 seconds
             timer: null,
             storageKey: `crm_last_seen_notif_${userId}`,
             lastSeenId: 0,
             alertedIds: new Set(),
+            isInitialized: false,
 
             initNotifier() {
                 const stored = localStorage.getItem(this.storageKey);
@@ -528,8 +536,20 @@
                     window.location.href = `/notifications/${item.id}`;
                 };
             }
-        }));
-    });
+        };
+    };
+
+    if (window.Alpine) {
+        window.Alpine.data('browserNotifier', window.browserNotifier);
+    } else {
+        document.addEventListener('alpine:init', () => {
+            window.Alpine.data('browserNotifier', window.browserNotifier);
+        });
+    }
 </script>
+
+<!-- Native Desktop Browser Notification Poller -->
+<div x-data="browserNotifier({{ auth()->id() }})" x-init="initNotifier()"></div>
+@endauth
 </body>
 </html>

@@ -285,7 +285,7 @@ class TaskIndex extends Component
         $doneCount = $baseTasks->where('done', true)->count();
         $urgentCount = $baseTasks->where('done', false)->whereIn('priority', ['Urgent', 'High'])->count();
         $overdueCount = $baseTasks->where('done', false)
-            ->filter(fn ($t) => ! empty($t->due_date) && Carbon::parse($t->due_date)->lt(Carbon::parse($today)))
+            ->filter(fn ($task) => ! empty($task->due_date) && Carbon::parse($task->due_date)->lt(Carbon::parse($today)))
             ->count();
 
         // Milestone chases due within 14 days (vital for Coordinator & Delivery managers)
@@ -306,9 +306,9 @@ class TaskIndex extends Component
         $followups = Followup::query()
             ->whereNotNull('next_date')
             ->where('next_date', '<=', Carbon::today()->addDays(7)->toDateString())
-            ->when($currentUser->role !== 'Admin', function ($q) use ($currentUser) {
-                $q->where('created_by', $currentUser->id)
-                    ->orWhereHas('customer', fn ($cq) => $cq->forUser($currentUser));
+            ->when($currentUser->role !== 'Admin', function ($followupQuery) use ($currentUser) {
+                $followupQuery->where('created_by', $currentUser->id)
+                    ->orWhereHas('customer', fn ($customerQuery) => $customerQuery->forUser($currentUser));
             })
             ->with(['customer', 'project'])
             ->orderBy('next_date')

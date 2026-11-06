@@ -156,15 +156,15 @@
                 <div class="card-body">
                     @php $maxVal = max(array_merge([1], array_column($trend, 'value'))); @endphp
                     <div class="spark-chart" style="display:flex;gap:6px;align-items:flex-end">
-                        @foreach($trend as $t)
-                            @php $barHeight = max(4, round(($t['value'] / $maxVal) * 100)); @endphp
+                        @foreach($trend as $trendItem)
+                            @php $barHeight = max(4, round(($trendItem['value'] / $maxVal) * 100)); @endphp
                             <div class="spark-col">
-                                <div class="spark-val" x-text="$store.currency.format({{ (float)$t['value'] }}, true)"></div>
+                                <div class="spark-val" x-text="$store.currency.format({{ (float)$trendItem['value'] }}, true)"></div>
                                 <div class="spark-bar-wrap">
                                     <i style="height:{{ $barHeight }}%"
-                                       :title="'{{ $t['label'] }}: ' + $store.currency.format({{ (float)$t['value'] }}, false)"></i>
+                                       :title="'{{ $trendItem['label'] }}: ' + $store.currency.format({{ (float)$trendItem['value'] }}, false)"></i>
                                 </div>
-                                <div class="spark-label">{{ $t['label'] }}</div>
+                                <div class="spark-label">{{ $trendItem['label'] }}</div>
                             </div>
                         @endforeach
                     </div>
@@ -190,12 +190,12 @@
                         </div>
                     @else
                         <div style="display:flex;flex-direction:column;gap:13px">
-                            @foreach($modes as $m)
-                                @php $pct = round(($m['value'] / $maxMode) * 100, 1); @endphp
+                            @foreach($modes as $modeItem)
+                                @php $pct = round(($modeItem['value'] / $maxMode) * 100, 1); @endphp
                                 <div>
-                                    <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px">
-                                        <span class="font-semibold text-slate-800">{{ $m['label'] }}</span>
-                                        <span class="font-bold text-slate-700" x-text="$store.currency.format({{ (float)$m['value'] }})"></span>
+                                    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+                                        <span class="font-semibold text-slate-800">{{ $modeItem['label'] }}</span>
+                                        <span class="font-bold text-slate-700" x-text="$store.currency.format({{ (float)$modeItem['value'] }})"></span>
                                     </div>
                                     <div class="bar" style="height:7px">
                                         <i style="width:{{ $pct }}%;background:#0b3d91"></i>
@@ -232,16 +232,16 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($teamCoordinators as $coord)
+                            @foreach($teamCoordinators as $coordinator)
                                 <tr>
-                                    <td class="font-semibold text-[#0d1b34]">{{ $coord->name }}</td>
-                                    <td class="font-bold text-slate-800">{{ $coord->active_projects_count }}</td>
-                                    <td class="font-semibold text-emerald-600">{{ $coord->on_track_projects_count }}</td>
-                                    <td class="font-semibold {{ $coord->delayed_projects_count > 0 ? 'text-red-600' : 'text-slate-400' }}">
-                                        {{ $coord->delayed_projects_count }}
+                                    <td class="font-semibold text-[#0d1b34]">{{ $coordinator->name }}</td>
+                                    <td class="font-bold text-slate-800">{{ $coordinator->active_projects_count }}</td>
+                                    <td class="font-semibold text-emerald-600">{{ $coordinator->on_track_projects_count }}</td>
+                                    <td class="font-semibold {{ $coordinator->delayed_projects_count > 0 ? 'text-red-600' : 'text-slate-400' }}">
+                                        {{ $coordinator->delayed_projects_count }}
                                     </td>
                                     <td>
-                                        @if($coord->delayed_projects_count > 0)
+                                        @if($coordinator->delayed_projects_count > 0)
                                             <span class="badge b-red">Attention Needed</span>
                                         @else
                                             <span class="badge b-green">Healthy</span>
@@ -365,40 +365,40 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($varianceRows as $vr)
+                        @forelse($varianceRows as $varianceRow)
                             <tr>
                                 <td>
-                                    <a href="{{ route('projects.show', $vr['project']->id) }}" wire:navigate class="font-bold text-blue-900 hover:underline">
-                                        {{ $vr['project']->name }}
+                                    <a href="{{ route('projects.show', $varianceRow['project']->id) }}" wire:navigate class="font-bold text-blue-900 hover:underline">
+                                        {{ $varianceRow['project']->name }}
                                     </a>
-                                    <div class="text-xs text-[#8894ac]">{{ $vr['project']->customer?->display_name ?? '—' }}</div>
+                                    <div class="text-xs text-[#8894ac]">{{ $varianceRow['project']->customer?->display_name ?? '—' }}</div>
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-2">
-                                        <span class="font-bold text-xs">{{ $vr['msPct'] }}%</span>
+                                        <span class="font-bold text-xs">{{ $varianceRow['msPct'] }}%</span>
                                         <div class="bar flex-1" style="height:5px">
-                                            <i style="width:{{ $vr['msPct'] }}%;background:#2e75b6"></i>
+                                            <i style="width:{{ $varianceRow['msPct'] }}%;background:#2e75b6"></i>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-2">
-                                        <span class="font-bold text-xs">{{ $vr['moneyPct'] }}%</span>
+                                        <span class="font-bold text-xs">{{ $varianceRow['moneyPct'] }}%</span>
                                         <div class="bar flex-1" style="height:5px">
-                                            <i style="width:{{ $vr['moneyPct'] }}%;background:#5aa236"></i>
+                                            <i style="width:{{ $varianceRow['moneyPct'] }}%;background:#5aa236"></i>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    @if($vr['gap'] > 15)
-                                        <span class="badge b-red">⚠️ +{{ $vr['gap'] }}% Ahead</span>
-                                    @elseif($vr['gap'] < -15)
+                                    @if($varianceRow['gap'] > 15)
+                                        <span class="badge b-red">⚠️ +{{ $varianceRow['gap'] }}% Ahead</span>
+                                    @elseif($varianceRow['gap'] < -15)
                                         <span class="badge b-amber">Payment Ahead</span>
                                     @else
                                         <span class="badge b-green">Synchronized</span>
                                     @endif
                                 </td>
-                                <td class="num font-semibold text-slate-800" x-text="$store.currency.format({{ (float)$vr['due'] }})"></td>
+                                <td class="num font-semibold text-slate-800" x-text="$store.currency.format({{ (float)$varianceRow['due'] }})"></td>
                             </tr>
                         @empty
                             <tr>
@@ -470,23 +470,23 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($varianceRows as $vr)
+                            @forelse($varianceRows as $varianceRow)
                                 <tr>
                                     <td>
-                                        <a href="{{ route('projects.show', $vr['project']->id) }}" wire:navigate class="font-bold text-xs text-blue-900 hover:underline">
-                                            {{ $vr['project']->name }}
+                                        <a href="{{ route('projects.show', $varianceRow['project']->id) }}" wire:navigate class="font-bold text-xs text-blue-900 hover:underline">
+                                            {{ $varianceRow['project']->name }}
                                         </a>
                                     </td>
                                     <td>
                                         <div class="flex items-center gap-2">
-                                            <span class="font-bold text-xs">{{ $vr['msPct'] }}%</span>
+                                            <span class="font-bold text-xs">{{ $varianceRow['msPct'] }}%</span>
                                             <div class="bar flex-1" style="height:5px">
-                                                <i style="width:{{ $vr['msPct'] }}%;background:#0b3d91"></i>
+                                                <i style="width:{{ $varianceRow['msPct'] }}%;background:#0b3d91"></i>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <x-health-badge :health="$vr['health']"/>
+                                        <x-health-badge :health="$varianceRow['health']"/>
                                     </td>
                                 </tr>
                             @empty

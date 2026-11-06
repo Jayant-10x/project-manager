@@ -1,6 +1,11 @@
 @props(['value' => 0, 'short' => false])
 
-<span x-data="{ amount: {{ (float) $value }} }"
+@php
+    $cleanedValue = is_string($value) ? preg_replace('/[^\d.-]/', '', $value) : $value;
+    $numericValue = (float) ($cleanedValue ?? 0);
+@endphp
+
+<span x-data="{ amount: {{ $numericValue }} }"
       x-text="$store.currency.format(amount, {{ $short ? 'true' : 'false' }})">
-    ₹{{ number_format((float) $value, 0) }}
+    ₹{{ number_format($numericValue, 0) }}
 </span>

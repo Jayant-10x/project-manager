@@ -113,7 +113,7 @@ class DocumentUploadModal extends Component
         // Store directly to private documents storage disk
         $this->file->storeAs('', $storedName, 'documents');
 
-        $doc = Document::create([
+        $document = Document::create([
             'customer_id' => $this->customer_id,
             'project_id' => $this->project_id,
             'category' => $this->category,
@@ -130,33 +130,33 @@ class DocumentUploadModal extends Component
             auth()->id(),
             'Uploaded Document',
             'Document',
-            $doc->id,
+            $document->id,
             '',
-            "Uploaded {$doc->title} ({$doc->file_name})"
+            "Uploaded {$document->title} ({$document->file_name})"
         );
 
         if ($this->project_id) {
-            $proj = Project::find($this->project_id);
-            if ($proj) {
+            $project = Project::find($this->project_id);
+            if ($project) {
                 $auditService->notifyProjectStakeholders(
-                    $proj,
+                    $project,
                     'Document Uploaded',
-                    "New Document: {$doc->title}",
-                    auth()->user()->name." uploaded document '{$doc->title}' ({$doc->category}) for project {$proj->name}.",
+                    "New Document: {$document->title}",
+                    auth()->user()->name." uploaded document '{$document->title}' ({$document->category}) for project {$project->name}.",
                     'project',
-                    $proj->id
+                    $project->id
                 );
             }
         } elseif ($this->customer_id) {
-            $cust = Customer::find($this->customer_id);
-            if ($cust) {
+            $customer = Customer::find($this->customer_id);
+            if ($customer) {
                 $auditService->notifyCustomerStakeholders(
-                    $cust,
+                    $customer,
                     'Document Uploaded',
-                    "New Document: {$doc->title}",
-                    auth()->user()->name." uploaded document '{$doc->title}' ({$doc->category}) for customer {$cust->display_name}.",
+                    "New Document: {$document->title}",
+                    auth()->user()->name." uploaded document '{$document->title}' ({$document->category}) for customer {$customer->display_name}.",
                     'customer',
-                    $cust->id
+                    $customer->id
                 );
             }
         }

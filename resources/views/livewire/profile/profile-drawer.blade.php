@@ -28,7 +28,7 @@
          x-transition:leave="transition ease-in duration-200 transform"
          x-transition:leave-start="translate-x-0"
          x-transition:leave-end="translate-x-full"
-         class="fixed top-0 right-0 bottom-0 w-full sm:w-[480px] bg-white shadow-2xl flex flex-col z-[131] border-l border-[#e2e8f3] overflow-hidden">
+         class="fixed top-0 right-0 bottom-0 w-full sm:w-120 bg-white shadow-2xl flex flex-col z-[131] border-l border-[#e2e8f3] overflow-hidden">
 
         <!-- Drawer Header -->
         <div class="px-6 py-4.5 bg-gradient-to-r from-[#0b3d91] to-[#12325f] text-white flex items-center justify-between shrink-0 shadow-xs">
@@ -269,7 +269,7 @@
                                     </div>
                                     <button type="button"
                                             wire:click="generateRandomPassword"
-                                            class="btn btn-secondary shrink-0 inline-flex items-center gap-1.5 h-[38px] px-3 text-xs font-semibold cursor-pointer"
+                                            class="btn btn-secondary shrink-0 inline-flex items-center gap-1.5 h-9 px-3 text-xs font-semibold cursor-pointer"
                                             title="Generate secure password">
                                         <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
@@ -320,7 +320,7 @@
                     wire:click="save"
                     wire:loading.attr="disabled"
                     wire:target="save"
-                    class="btn btn-primary min-w-[140px] justify-center inline-flex items-center gap-2">
+                    class="btn btn-primary min-w-36 justify-center inline-flex items-center gap-2">
                 <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">Save Profile</span>
                 <span wire:loading.inline-flex wire:target="save" class="items-center justify-center gap-1.5">
                     <svg class="animate-spin w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

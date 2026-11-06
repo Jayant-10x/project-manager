@@ -37,8 +37,8 @@
 
                 <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
                     <option value="">All customers</option>
-                    @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
+                    @foreach($customers as $customerOption)
+                        <option value="{{ $customerOption->id }}">{{ $customerOption->display_name }}</option>
                     @endforeach
                 </select>
 
@@ -62,8 +62,8 @@
                 @if($coordinators->isNotEmpty())
                     <select wire:model.live="coordinator_id" class="i" style="width:auto; max-width: 160px;">
                         <option value="">All coordinators</option>
-                        @foreach($coordinators as $coord)
-                            <option value="{{ $coord->id }}">{{ $coord->name }}</option>
+                        @foreach($coordinators as $coordinator)
+                            <option value="{{ $coordinator->id }}">{{ $coordinator->name }}</option>
                         @endforeach
                     </select>
                 @endif
@@ -71,8 +71,8 @@
                 @if($techPersons->isNotEmpty())
                     <select wire:model.live="tech_person_id" class="i" style="width:auto; max-width: 160px;">
                         <option value="">All tech persons</option>
-                        @foreach($techPersons as $tp)
-                            <option value="{{ $tp->id }}">{{ $tp->name }}</option>
+                        @foreach($techPersons as $techPerson)
+                            <option value="{{ $techPerson->id }}">{{ $techPerson->name }}</option>
                         @endforeach
                     </select>
                 @endif
@@ -80,8 +80,8 @@
                 @if($salesPeople->isNotEmpty())
                     <select wire:model.live="sales_person_id" class="i" style="width:auto; max-width: 160px;">
                         <option value="">All salespeople</option>
-                        @foreach($salesPeople as $sp)
-                            <option value="{{ $sp->id }}">{{ $sp->name }}</option>
+                        @foreach($salesPeople as $salesPerson)
+                            <option value="{{ $salesPerson->id }}">{{ $salesPerson->name }}</option>
                         @endforeach
                     </select>
                 @endif
@@ -136,7 +136,7 @@
                     <tr class="clickable" @click="Livewire.navigate('{{ route('projects.show', $project) }}')">
                         <td>
                             <div class="strong">{{ $project->name }}</div>
-                            <div class="muted" style="font-size:10.9px">
+                            <div class="muted" style="font-size:11px">
                                 {{ $project->code }}
                                 @if($project->project_type)
                                     · {{ $project->project_type }}

@@ -24,7 +24,7 @@ class PaymentTerm extends Model
 
     public function scopeForUser(Builder $query, ?User $user = null): Builder
     {
-        return $query->whereHas('project', fn (Builder $q) => $q->forUser($user));
+        return $query->whereHas('project', fn (Builder $projectQuery) => $projectQuery->forUser($user));
     }
 
     public function setDueDateAttribute($value): void

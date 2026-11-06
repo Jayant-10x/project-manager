@@ -27,7 +27,7 @@
                 </div>
             @endif
 
-            <div style="font-size:12.6px;color:var(--text2);line-height:1.6;margin-top:20px">
+            <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-top:20px">
                 Enter your registered email address. Your request will be forwarded to the system administrator for temporary credential provisioning.
             </div>
 

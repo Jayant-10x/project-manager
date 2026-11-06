@@ -803,4 +803,117 @@ class ClientsAndProjectsModuleTest extends TestCase
         // Ensure no floating-point day values appear anywhere in the output
         $this->assertDoesNotMatchRegularExpression('/\d+\.\d+\s*days late/i', $html);
     }
+
+    public function test_customer_index_payment_filter_due_overdue_and_clear(): void
+    {
+        // 1. Customer with Overdue term
+        $overdueCustomer = Customer::create([
+            'customer_code' => 'CUS-OVER',
+            'company' => 'Overdue Solutions',
+            'contact_name' => 'Overdue Client',
+            'status' => 'Active',
+            'sales_person_id' => $this->sales->id,
+            'created_by' => $this->sales->id,
+        ]);
+        $overdueProject = Project::create([
+            'project_code' => 'PJT-OVER-1',
+            'customer_id' => $overdueCustomer->id,
+            'name' => 'Overdue App',
+            'value' => 50000,
+            'cost' => 15000,
+            'status' => 'In Progress',
+            'health' => 'Delayed',
+            'sales_person_id' => $this->sales->id,
+        ]);
+        PaymentTerm::create([
+            'project_id' => $overdueProject->id,
+            'seq' => 1,
+            'label' => 'Past Term',
+            'amount' => 50000,
+            'received' => 0,
+            'tds' => 0,
+            'status' => 'Overdue',
+            'due_date' => now()->subDays(10)->toDateString(),
+        ]);
+
+        // 2. Customer with Clear / Fully Paid term
+        $paidCustomer = Customer::create([
+            'customer_code' => 'CUS-PAID',
+            'company' => 'Paid Corp',
+            'contact_name' => 'Paid Client',
+            'status' => 'Active',
+            'sales_person_id' => $this->sales->id,
+            'created_by' => $this->sales->id,
+        ]);
+        $paidProject = Project::create([
+            'project_code' => 'PJT-PAID-1',
+            'customer_id' => $paidCustomer->id,
+            'name' => 'Paid App',
+            'value' => 30000,
+            'cost' => 10000,
+            'status' => 'Delivered',
+            'health' => 'On Track',
+            'sales_person_id' => $this->sales->id,
+        ]);
+        $paidTerm = PaymentTerm::create([
+            'project_id' => $paidProject->id,
+            'seq' => 1,
+            'label' => 'Full Settlement',
+            'amount' => 30000,
+            'received' => 30000,
+            'tds' => 0,
+            'status' => 'Paid',
+            'due_date' => now()->subDays(5)->toDateString(),
+        ]);
+        Payment::create([
+            'code' => 'RCP-TEST-1',
+            'customer_id' => $paidCustomer->id,
+            'project_id' => $paidProject->id,
+            'term_id' => $paidTerm->id,
+            'amount' => 30000,
+            'tds' => 0,
+            'paid_on' => now()->toDateString(),
+            'mode' => 'NEFT',
+            'created_by' => $this->admin->id,
+        ]);
+
+        // Filter: 'over'
+        Livewire::actingAs($this->admin)
+            ->test(CustomerIndex::class)
+            ->set('pay', 'over')
+            ->assertSee('Overdue Solutions')
+            ->assertDontSee('Paid Corp');
+
+        // Filter: 'clear'
+        Livewire::actingAs($this->admin)
+            ->test(CustomerIndex::class)
+            ->set('pay', 'clear')
+            ->assertSee('Paid Corp')
+            ->assertDontSee('Overdue Solutions');
+
+        // Filter: 'due'
+        Livewire::actingAs($this->admin)
+            ->test(CustomerIndex::class)
+            ->set('pay', 'due')
+            ->assertSee('Overdue Solutions')
+            ->assertDontSee('Paid Corp');
+    }
+
+    public function test_customer_index_export_csv_streams_with_lazy_chunking(): void
+    {
+        Customer::create([
+            'customer_code' => 'CUS-CSV-1',
+            'company' => 'Streaming Client Corp',
+            'contact_name' => 'Streaming Contact',
+            'status' => 'Active',
+            'sales_person_id' => $this->sales->id,
+            'created_by' => $this->sales->id,
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(CustomerIndex::class)
+            ->set('search', 'Streaming Client Corp')
+            ->call('exportCsv')
+            ->assertFileDownloaded('customers-'.now()->toDateString().'.csv');
+    }
 }

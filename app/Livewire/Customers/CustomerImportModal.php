@@ -34,7 +34,7 @@ class CustomerImportModal extends Component
         }
 
         $lines = preg_split('/\r?\n/', $raw);
-        $lines = array_filter($lines, fn ($l) => ! empty(trim($l)));
+        $lines = array_filter($lines, fn ($line) => ! empty(trim($line)));
 
         if (count($lines) < 2) {
             $this->addError('pastedData', 'At least one header row and one data row are required.');
@@ -44,9 +44,9 @@ class CustomerImportModal extends Component
 
         $headers = str_getcsv(array_shift($lines));
         $headerMap = [];
-        foreach ($headers as $idx => $h) {
-            $clean = strtolower(preg_replace('/[^a-z]/', '', $h));
-            $headerMap[$clean] = $idx;
+        foreach ($headers as $headerIndex => $headerColumn) {
+            $clean = strtolower(preg_replace('/[^a-z]/', '', $headerColumn));
+            $headerMap[$clean] = $headerIndex;
         }
 
         $created = 0;

@@ -99,7 +99,8 @@ class Login extends Component
                         'Account Locked Alert',
                         "Account Locked: {$user->name}",
                         "Account for {$user->name} ({$user->email}) was locked for 30 minutes after 5 consecutive failed login attempts from IP ".request()->ip().'.',
-                        'settings'
+                        'settings',
+                        $user->id
                     );
 
                     $this->addError('email', 'Account locked for 30 minutes due to 5 failed attempts.');

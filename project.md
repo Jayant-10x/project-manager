@@ -41,12 +41,14 @@ graph TD
         UI["Livewire 4 Reactive Views & Blade Components"]
         ModalGuard["Alpine.js Modal Component & Unsaved Changes Guard (isDirty)"]
         ModalManager["Global ModalManager (Body Scroll Locking & Modals Sync)"]
+        ToastContainer["ToastContainer (x-toast-container Slide-In Banners)"]
         ErrorScroller["Form Error Scroller (window.scrollToFirstError, Pulse & Tab Activation)"]
         AlpineStore["Alpine.js Stores ($store.currency, $store.notifications, Sidebar State)"]
         DesktopNotif["Native Desktop Browser Notifier (Alpine browserNotifier, 30s Polling)"]
         LocalStorage["LocalStorage (pjt_cur, pjt_sidebar_collapsed, crm_last_seen_notif)"]
         UI <--> ModalGuard
         UI <--> ModalManager
+        UI <--> ToastContainer
         UI <--> ErrorScroller
         UI <--> AlpineStore
         AlpineStore <--> LocalStorage
@@ -73,7 +75,7 @@ graph TD
         TeamModules["Team & Hierarchy Modules<br/>(UserIndex, TeamIndex, ProfileDrawer, UserModal)"]
         RecordModules["Record Modules<br/>(DocumentIndex, DocumentUploadModal, DocumentPreviewModal, FollowupIndex, SalesIndex)"]
         SystemModules["System Modules<br/>(NotificationIndex, NotificationDetail, AuditIndex, SettingIndex)"]
-        AuthModules["Security & Auth<br/>(ForcePasswordChange at /change-password)"]
+        AuthModules["Security & Auth<br/>(Login at /login, ForcePasswordChange at /change-password)"]
     end
 
     subgraph DomainServices ["Domain Services Layer"]
@@ -127,6 +129,11 @@ graph TD
 * **Global Helper Functions Architecture (`app/Helpers/helpers.php`)**: Reusable helper functions registered in `composer.json` streamline authorization, role inspection, and service resolution (`logged_in_user()`, `logged_in_user_id()`, `has_permission($module, $action)`, `is_allowed()`, `is_admin()`, `is_manager()`, `is_coordinator()`, `is_sales()`, `is_tech_person()`, `audit_service()`, `format_inr()`), reducing boilerplate and method-chaining in controllers and templates.
 * **Standardized Button Architecture & Icon Actions**: Ad-hoc, hardcoded button classes are replaced by the canonical design system (`.btn`, `.btn-primary`, `.btn-secondary`, `.btn-outline-secondary`, `.btn-success`, `.btn-danger`, `.btn-outline-primary`, `.btn-outline-success`, `.btn-outline-danger`, `.btn-xs`, `.btn-sm`). Repetitive table row actions (View, Edit, Receipt, Additional Info, Preview, Download, Delete) use compact icon buttons with accessible `title` tooltips, ensuring consistent alignment and preventing table cell wrapping.
 * **Early Sidebar State Stabilization (`html.sidebar-collapsed-init`)**: To eliminate layout flash during initial page loads with a collapsed sidebar, an early inline script inspects `localStorage.getItem('pjt_sidebar_collapsed')` and assigns `html.sidebar-collapsed-init` before CSS/DOM hydration.
+* **Livewire Form Validation & Universal Elimination of HTML5 `required`**: Native HTML5 `required` attributes are eliminated across all authentication, profile, and system modal forms. Forms strictly declare `novalidate`, routing all validation through Laravel and Livewire with real-time blur feedback (`wire:model.blur`), loading state indicators (`wire:loading.inline-flex`), and consistent `@error` red-border styling.
+* **Global Toast Notification System (`<x-toast-container />`)**: A dedicated Alpine.js toast container in `layouts/app.blade.php` listens for `window.addEventListener('toast', ...)`. It renders color-coded notifications (`.toast.ok`, `.toast.err`, `.toast.warning`) with SVG icons, auto-dismissal after 4.5 seconds, and click-to-dismiss support.
+* **Customer Linked-Project Deletion Guard (Option B)**: Defensive UI and backend protection prevent accidental deletion of client accounts that contain active projects. When linked projects exist, clicking Delete triggers an amber warning modal explaining that projects must be reassigned or deleted first; when 0 projects exist, the standard permanent deletion confirmation proceeds.
+* **Atomic Multi-Entity Cascades & Deferred Storage Cleanup (ISS-106)**: Multi-entity cascading deletions (`CustomerDetail::deleteCustomer` and `ProjectDetail::deleteProject`) execute inside atomic `DB::transaction(...)` blocks covering notifications, entity deletions, and audit logs. Physical file unlinking from `documents` and `public` storage disks is registered in `DB::afterCommit(...)` callbacks, guaranteeing files are only deleted once the database transaction commits successfully.
+* **Centralized Payment Term Recalculation Engine (`PaymentTerm::recalculateStatus()` - ISS-105)**: Added a unified `recalculateStatus(): void` method directly to `PaymentTerm`. It evaluates remaining receipts and TDS credits against installment amount, accurately setting `Paid`, `Partial`, and evaluating `due_date` + `grace_days` against `now()->toDateString()` for `Overdue` vs `Pending` transitions whenever payment receipts are deleted across `CustomerDetail`, `ProjectDetail`, and `PaymentIndex`.
 
 ---
 
@@ -155,7 +162,8 @@ pjt-crm/
 │   │   ├── Audit/
 │   │   │   └── AuditIndex.php                      # Activity audit log timeline viewer with field diff inspection
 │   │   ├── Auth/
-│   │   │   └── ForcePasswordChange.php             # Mandatory password update component at /change-password
+│   │   │   ├── ForcePasswordChange.php             # Mandatory password update component at /change-password
+│   │   │   └── Login.php                           # Reactive Livewire login component with blur validation
 │   │   ├── Components/
 │   │   │   ├── DynamicCounter.php                  # Real-time event-driven badge counter component
 │   │   │   ├── GlobalSearch.php                    # Universal debounced search dropdown
@@ -244,7 +252,7 @@ pjt-crm/
 │   ├── css/app.css                                 # Tailwind CSS setup
 │   ├── js/app.js                                   # Clean JS entry without manual Alpine imports
 │   └── views/
-│       ├── components/                             # Blade UI components (money, kpi-card, health-badge, modal, confirm-modal)
+│       ├── components/                             # Blade UI components (money, kpi-card, health-badge, modal, confirm-modal, toast-container)
 │       ├── emails/
 │       │   └── temporary-password.blade.php        # Branded HTML email template for temporary credentials
 │       ├── errors/                                 # Context-aware error views (403, 404, 419, 500, 503) extending workspace shell
@@ -603,6 +611,7 @@ erDiagram
 * **`Notifications\NotificationIndex` & `NotificationDetail`**: System alerts inbox and detail inspector.
 * **`Audit\AuditIndex`**: Immutable system audit trail (`ActivityLog`) with field-level structured diffs.
 * **`Settings\SettingIndex`**: System threshold configurations and operational alert window settings.
+* **`Auth\Login`**: Reactive Livewire authentication component (`login` route) featuring real-time field validation, loading spinner (`wire:loading.inline-flex`), progressive account lockout (5 failed attempts locks for 30 minutes with remaining attempt counter), and IP rate-limiting.
 * **`Auth\ForcePasswordChange`**: Mandatory password change screen for initial logins and administrative resets triggered by `EnsurePasswordIsChanged` middleware.
 
 ---
@@ -796,7 +805,7 @@ To reduce repetitive deep method chaining and enhance code readability across Bl
 * **Mandatory Password Change**: The `EnsurePasswordIsChanged` middleware inspects `auth()->user()->must_change`. If flagged, navigation to all routes except `password.change` and `logout` is redirected to `/change-password`.
 * **Account Lockout & Presence Tracking**: Tracks consecutive authentication failures (`fail_count`) with progressive time-based lockouts (`locked_until`), plus real-time online presence monitoring (`is_online`, `last_seen`).
 * **In-App Error Pipeline & Session Resilience**: Unmatched and unauthorized HTTP exceptions are handled via `Route::fallback()` within the `web` session middleware, ensuring user sessions are maintained and errors render inside `<x-app-layout>` without exposing raw stack traces or dropping the authenticated navigation shell.
-* **Comprehensive Test Suite & Quality Verification**: The application is verified by 288 automated feature and unit tests with 1,569 assertions (`php artisan test`), covering authentication, authorization, permissions matrix (including canonical 5-role governance with Tech Person isolation), downline data isolation, error recovery, reactive financial calculations, customer & project approval workflows with rejection tracking, datewise payment calendars, hierarchical upline reporting notifications, global helper layer utilities, and form UX. All PHP source files conform to Laravel Pint coding standards.
+* **Comprehensive Test Suite & Quality Verification**: The application is verified by 300 automated feature and unit tests with 1,655 assertions (`php artisan test`), covering authentication, authorization, permissions matrix (including canonical 5-role governance with Tech Person isolation), downline data isolation, error recovery, reactive financial calculations, customer & project approval workflows with rejection tracking, datewise payment calendars, hierarchical upline reporting notifications, global helper layer utilities, and form UX. All PHP source files conform to Laravel Pint coding standards.
 * **User Guide & Operational Documentation**: A comprehensive, non-technical manual is available in [`project-guide.md`](project-guide.md), explaining every module, action, workflow, and FAQ in plain, approachable language.
 * **Simplified Terminology & Consistent Top KPI Cards**: Replaced technical jargon with intuitive business terminology across all dashboard, report, schedule, and detail views. Key financial metric cards now consistently display standard headings: `Total Receivable`, `Received`, `Due`, and `Overdue`.
 
@@ -804,9 +813,9 @@ To reduce repetitive deep method chaining and enhance code readability across Bl
 
 ## 7. Historical Defect Registry, Technical Resolutions & Legacy Cleanup Archive
 
-### 7.1 Master Historical Defect Registry (ISS-001 through ISS-103)
+### 7.1 Master Historical Defect Registry (ISS-001 through ISS-106 & Key Enhancements)
 
-The following registry catalogues all 103 technical defects, architectural enhancements, and usability refinements resolved across the system's evolutionary migration:
+The following registry catalogues all 106 technical defects, architectural enhancements, and usability refinements resolved across the system's evolutionary migration:
 
 | Issue ID | Severity | Functional Domain | Defect Description & System Impact | Resolution Status |
 |:---|:---|:---|:---|:---|
@@ -914,6 +923,11 @@ The following registry catalogues all 103 technical defects, architectural enhan
 | **ISS-101** | Critical | Schedule Auto-Split & Accounting | Schedule auto-splitting preserves locked payments with recorded collections and distributes only remaining uncollected balance | **[VERIFIED FIXED]** |
 | **ISS-102** | Medium | Payment Calendar Date Math | Eliminated Carbon month arithmetic day-of-month overflow on 31st days by pinning navigation to day `01` | **[VERIFIED FIXED]** |
 | **ISS-103** | Medium | File Storage & Security | Consolidated dual-disk storage into canonical private documents disk with authorized streaming & preview gateway | **[VERIFIED FIXED]** |
+| **ISS-104** | Medium | User Interface & Consistency | Replaced hardcoded CSS button classes with semantic `.btn-*` styles and introduced contextual icon buttons | **[VERIFIED FIXED]** |
+| **ISS-105** | Critical | Financial Ledger & Accounting | Centralized `PaymentTerm::recalculateStatus()` synchronization on payment deletion to maintain accurate installment status | **[VERIFIED FIXED]** |
+| **ISS-106** | Critical | Database Integrity & Storage | Atomic multi-entity cascading deletions using DB transactions and deferred private disk unlinking | **[VERIFIED FIXED]** |
+| **ENH-008** | High | Security & Form Validation | Reactive Livewire Login component, progressive account lockout with attempt counter, and universal removal of HTML5 required | **[VERIFIED FIXED]** |
+| **ENH-009** | High | Data Protection & UX | Customer linked-project deletion guard (Option B) with amber warning modal and Global Toast notification system | **[VERIFIED FIXED]** |
 
 ---
 
@@ -1124,6 +1138,21 @@ The following registry catalogues all 103 technical defects, architectural enhan
   * *Technical Resolution*: Added `status_badge_class()` and `health_badge_class()` in `app/Helpers/helpers.php`, eliminating nested ternary expressions from Blade templates.
 * **ENH-005 – ENH-007 (CSS Architecture Parameterization, Radius Scale & Easing Unification)**:
   * *Technical Resolution*: Parameterized `.btn-outline` using `--btn-color` and `--btn-border` custom properties in `public/css/crm-style.css`, standardized `--r-sm` through `--r-pill` radius scales, and unified 47 repetitive `cubic-bezier(0.4, 0, 0.2, 1)` strings with `--ease-smooth`.
+
+#### 7.2.18 Multi-Entity Transactional Integrity, Status Synchronization & Reactive Auth (ISS-104 through ISS-106 & ENH-008, ENH-009)
+* **ISS-104 (Button Class Standardization & Contextual Icon Enhancement)**:
+  * *Root Cause*: Disparate custom inline styles and non-standard utility classes across Blade views created visual inconsistencies, button overflows, and suboptimal responsive layouts.
+  * *Technical Resolution*: Systematically replaced hardcoded button styling with unified `.btn-*` design system classes (`btn-primary`, `btn-secondary`, `btn-success`, `btn-danger`, `btn-outline`), standardizing sizing, padding, and interactive states. Enhanced dense action areas with contextual icon-only or icon-prefixed buttons featuring accessible `title` and `aria-label` attributes.
+* **ISS-105 (Centralized Payment Term Status Synchronization on Payment Deletion)**:
+  * *Root Cause*: Deleting a payment receipt in `CustomerDetail`, `ProjectDetail`, or `PaymentIndex` recalculated parent customer or project financial aggregates, but left the associated `PaymentTerm` installment in an inaccurate `'Paid'` or `'Partial'` status instead of recalculating its status based on remaining payments and due date.
+  * *Technical Resolution*: Implemented a centralized `recalculateStatus(): void` method directly on the `PaymentTerm` model. Upon payment deletion, the method tallies remaining payments and TDS deductions: if settled sum >= installment amount, it marks `'Paid'`; if settled sum > 0, it marks `'Partial'`; if settled sum == 0, it dynamically evaluates `due_date` plus `grace_days` against `now()->toDateString()` to restore `'Overdue'` or `'Pending'`. Dispatched across all payment deletion triggers.
+* **ISS-106 (Atomic Multi-Entity Cascades & Deferred Storage Cleanup)**:
+  * *Root Cause*: Deleting customers or projects with multiple child relationships (milestones, tasks, documents, payment terms, payments, activity logs, follow-ups) performed uncoordinated sequential deletions. A failure halfway through left orphaned foreign key records in the database and deleted files prematurely from disk before database commits succeeded.
+  * *Technical Resolution*: Wrapped all cascading deletions in atomic `DB::transaction(...)` blocks with pessimistic locking (`lockForUpdate()`). File deletions on the private `documents` disk are registered via `DB::afterCommit(...)` callbacks, guaranteeing that physical storage files are unlinked only after all database records are successfully deleted and committed.
+* **ENH-008 (Reactive Livewire Login Component & Universal Elimination of HTML5 `required`)**:
+  * *Technical Resolution*: Replaced static controller-based login with a fully reactive Livewire component (`App\Livewire\Auth\Login`). Implemented real-time blur validation via Livewire rules, loading spinner on submit (`wire:loading.inline-flex`), progressive lockout (5 failed attempts locks the account for 30 minutes with real-time remaining attempt count warning), and IP rate limiting. Universally stripped browser-native HTML5 `required` attributes and enforced `novalidate` across all application forms, ensuring consistent, accessible server-side error display without browser tooltip interference.
+* **ENH-009 (Customer Linked-Project Deletion Guard & Global Toast Notification System)**:
+  * *Technical Resolution*: Implemented Option B deletion guard in `CustomerDetail`: attempting to delete a customer with linked projects triggers an informative amber warning modal detailing active project attachments and instructing the user to reassign or delete the projects first; backend `deleteCustomer()` enforces this guard and surfaces an error notification. Customers with 0 projects proceed with confirmed atomic deletion. Built a reactive Global Toast Notification System (`<x-toast-container />` in `layouts/app.blade.php`), supporting `.toast.ok`, `.toast.err`, and `.toast.warning` with auto-dismissal (4.5s) and click-to-dismiss.
 
 ---
 

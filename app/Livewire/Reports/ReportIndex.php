@@ -47,7 +47,7 @@ class ReportIndex extends Component
         $overdueTerms = PaymentTerm::whereIn('project_id', $projectIds)
             ->where('status', 'Overdue')
             ->get();
-        $overdueAmt = (float) $overdueTerms->sum(fn ($t) => max(0, $t->amount - $t->received - $t->tds));
+        $overdueAmount = (float) $overdueTerms->sum(fn ($term) => max(0, $term->amount - $term->received - $term->tds));
         $overdueCount = $overdueTerms->count();
 
         $collectionRate = $totalScheduled > 0 ? round(($totalReceived / $totalScheduled) * 100, 1) : 0;
@@ -58,14 +58,14 @@ class ReportIndex extends Component
         $months = [];
         for ($i = 5; $i >= 0; $i--) {
             $monthObj = Carbon::now()->subMonths($i);
-            $startM = $monthObj->copy()->startOfMonth()->toDateString();
-            $endM = $monthObj->copy()->endOfMonth()->toDateString();
+            $startOfMonth = $monthObj->copy()->startOfMonth()->toDateString();
+            $endOfMonth = $monthObj->copy()->endOfMonth()->toDateString();
 
-            $amt = (float) Payment::whereIn('project_id', $projectIds)
-                ->whereBetween('paid_on', [$startM, $endM])
+            $monthlyAmount = (float) Payment::whereIn('project_id', $projectIds)
+                ->whereBetween('paid_on', [$startOfMonth, $endOfMonth])
                 ->sum('amount');
 
-            $months[] = ['label' => $monthObj->format('M'), 'value' => $amt];
+            $months[] = ['label' => $monthObj->format('M'), 'value' => $monthlyAmount];
         }
 
         // 3. Payment Mode Breakdown
@@ -81,7 +81,7 @@ class ReportIndex extends Component
         }
         usort($modes, fn ($firstMode, $secondMode) => $secondMode['value'] <=> $firstMode['value']);
 
-        // 4. Payment Ageing Breakdown (0-30, 31-60, 61-90, 90+)
+        // 4. Payment Aging Breakdown (0-30, 31-60, 61-90, 90+)
         $ageing = ['0-30' => 0.0, '31-60' => 0.0, '61-90' => 0.0, '90+' => 0.0];
         foreach ($overdueTerms as $overdueTerm) {
             $bal = max(0, (float) $overdueTerm->amount - (float) $overdueTerm->received - (float) $overdueTerm->tds);
@@ -108,20 +108,21 @@ class ReportIndex extends Component
         // 6. Milestone vs Payment Variance Rows
         $varianceRows = [];
         foreach ($projects as $project) {
-            $totMs = $project->milestones->count();
-            $doneMs = $project->milestones->where('done', true)->count();
-            $msPct = $totMs > 0 ? min(100, round(($doneMs / $totMs) * 100)) : 0;
+            $totalMilestones = $project->milestones->count();
+            $completedMilestones = $project->milestones->where('done', true)->count();
+            $milestonePercentage = $totalMilestones > 0 ? min(100, round(($completedMilestones / $totalMilestones) * 100)) : 0;
 
-            $pSched = (float) $project->money['scheduled'];
-            $pRec = (float) $project->money['received'];
-            $moneyPct = $pSched > 0 ? min(100, round(($pRec / $pSched) * 100)) : 0;
+            $scheduledProjectAmount = (float) $project->money['scheduled'];
+            $receivedProjectAmount = (float) $project->money['received'];
+            $moneyPercentage = $scheduledProjectAmount > 0 ? min(100, round(($receivedProjectAmount / $scheduledProjectAmount) * 100)) : 0;
 
-            $gap = $msPct - $moneyPct;
+            $gap = $milestonePercentage - $moneyPercentage;
 
             $varianceRows[] = [
                 'project' => $project,
-                'msPct' => $msPct,
-                'moneyPct' => $moneyPct,
+                'msPct' => $milestonePercentage,
+                'milestonePercentage' => $milestonePercentage,
+                'moneyPct' => $moneyPercentage,
                 'gap' => $gap,
                 'due' => (float) $project->money['due'],
                 'health' => $project->health,
@@ -139,24 +140,24 @@ class ReportIndex extends Component
             }
             $salesPeople = $salesPeopleQuery->orderBy('name')->get();
 
-            foreach ($salesPeople as $sp) {
-                $val = (float) $sp->salesProjects->sum('value');
-                $rec = (float) $sp->salesProjects->flatMap->payments->sum('amount');
-                $tds = (float) $sp->salesProjects->flatMap->payments->sum('tds');
-                $settled = round($rec + $tds, 2);
-                $rate = $val > 0 ? round(($settled / $val) * 100) : 0;
+            foreach ($salesPeople as $salesPerson) {
+                $salesValue = (float) $salesPerson->salesProjects->sum('value');
+                $receivedAmount = (float) $salesPerson->salesProjects->flatMap->payments->sum('amount');
+                $tdsAmount = (float) $salesPerson->salesProjects->flatMap->payments->sum('tds');
+                $settled = round($receivedAmount + $tdsAmount, 2);
+                $rate = $salesValue > 0 ? round(($settled / $salesValue) * 100) : 0;
                 $salesRows[] = [
-                    'name' => $sp->name,
-                    'customers' => $sp->salesProjects->pluck('customer_id')->unique()->count(),
-                    'projects' => $sp->salesProjects->count(),
-                    'value' => $val,
+                    'name' => $salesPerson->name,
+                    'customers' => $salesPerson->salesProjects->pluck('customer_id')->unique()->count(),
+                    'projects' => $salesPerson->salesProjects->count(),
+                    'value' => $salesValue,
                     'received' => $settled,
-                    'cash' => $rec,
-                    'tds' => $tds,
+                    'cash' => $receivedAmount,
+                    'tds' => $tdsAmount,
                     'rate' => min(100, $rate),
                 ];
             }
-            usort($salesRows, fn ($a, $b) => $b['value'] <=> $a['value']);
+            usort($salesRows, fn ($rowA, $rowB) => $rowB['value'] <=> $rowA['value']);
         }
 
         // Manager: Coordinator Downline Workload Velocity
@@ -166,9 +167,9 @@ class ReportIndex extends Component
                 ->whereIn('id', $user->getDownlineUserIds())
                 ->where('status', 'Active')
                 ->withCount([
-                    'projects as active_projects_count' => fn ($q) => $q->where('status', 'In Progress'),
-                    'projects as delayed_projects_count' => fn ($q) => $q->where('health', 'Delayed'),
-                    'projects as on_track_projects_count' => fn ($q) => $q->where('health', 'On Track'),
+                    'projects as active_projects_count' => fn ($projectQuery) => $projectQuery->where('status', 'In Progress'),
+                    'projects as delayed_projects_count' => fn ($projectQuery) => $projectQuery->where('health', 'Delayed'),
+                    'projects as on_track_projects_count' => fn ($projectQuery) => $projectQuery->where('health', 'On Track'),
                 ])
                 ->orderBy('name')
                 ->get();
@@ -232,7 +233,7 @@ class ReportIndex extends Component
                 'grossRealized' => $grossRealized,
                 'realizationRate' => $realizationRate,
                 'dueAmount' => $dueAmount,
-                'overdueAmount' => $overdueAmt,
+                'overdueAmount' => $overdueAmount,
                 'overdueCount' => $overdueCount,
                 'customersAcquired' => $customersAcquired,
                 'deals' => $deals,
@@ -246,7 +247,8 @@ class ReportIndex extends Component
             'totalScheduled' => $totalScheduled,
             'totalTds' => $totalTds,
             'totalDue' => $totalDue,
-            'overdueAmt' => $overdueAmt,
+            'overdueAmt' => $overdueAmount,
+            'overdueAmount' => $overdueAmount,
             'overdueCount' => $overdueCount,
             'collectionRate' => $collectionRate,
             'avgProjectValue' => $avgProjectValue,

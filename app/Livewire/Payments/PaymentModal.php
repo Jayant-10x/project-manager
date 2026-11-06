@@ -172,7 +172,7 @@ class PaymentModal extends Component
         // Normalize empty inputs and prevent null constraint violation on numeric columns
         $this->project_id = $this->project_id ? (int) $this->project_id : null;
         $this->term_id = $this->term_id ? (int) $this->term_id : null;
-        $this->amount = ($this->amount === null || $this->amount === '') ? null : (float) $this->amount;
+        $this->amount = ($this->amount === null) ? null : (float) $this->amount;
         $this->tds = ($this->tds === null || $this->tds === '') ? 0.0 : (float) $this->tds;
         $this->reference = trim($this->reference);
         $this->bank = trim($this->bank);
@@ -280,7 +280,7 @@ class PaymentModal extends Component
         }
         $projects = $query->get();
         $terms = $this->project_id
-            ? PaymentTerm::where('project_id', $this->project_id)->where('status', '!=', 'Paid')->orderBy('seq')->get()
+            ? PaymentTerm::where('project_id', $this->project_id)->where('status', '!=', 'Paid')->with('milestone')->orderBy('seq')->get()
             : collect();
 
         return view('livewire.payments.payment-modal', [

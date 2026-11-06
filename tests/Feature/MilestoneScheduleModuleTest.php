@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Livewire\Projects\ProjectMilestoneModal;
+use App\Livewire\Projects\ProjectRecurringModal;
 use App\Livewire\Projects\ProjectScheduleModal;
 use App\Livewire\Schedule\ScheduleIndex;
 use App\Models\Customer;
@@ -10,6 +11,7 @@ use App\Models\Milestone;
 use App\Models\PaymentTerm;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -610,5 +612,474 @@ class MilestoneScheduleModuleTest extends TestCase
         $this->assertCount(1, $terms);
         $this->assertTrue($terms[0]['locked']);
         $this->assertEquals(100000.00, $terms[0]['amount']);
+    }
+
+    public function test_milestone_is_locked_when_connected_to_payment_schedule(): void
+    {
+        $milestoneA = Milestone::create([
+            'project_id' => $this->project->id,
+            'name' => 'Architecture Sign-off',
+            'due_date' => now()->addDays(10)->toDateString(),
+            'status' => 'Pending',
+            'sort_order' => 1,
+        ]);
+
+        $milestoneB = Milestone::create([
+            'project_id' => $this->project->id,
+            'name' => 'Prototype Demo',
+            'due_date' => now()->addDays(20)->toDateString(),
+            'status' => 'Pending',
+            'sort_order' => 2,
+        ]);
+
+        PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 1,
+            'label' => 'Design Installment',
+            'amount' => 25000.00,
+            'trigger_type' => 'milestone',
+            'milestone_id' => $milestoneA->id,
+            'due_date' => now()->addDays(10)->toDateString(),
+            'status' => 'Pending',
+            'received' => 0.00,
+            'tds' => 0.00,
+        ]);
+
+        $this->assertTrue($milestoneA->isLocked());
+        $this->assertFalse($milestoneB->isLocked());
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectMilestoneModal::class)
+            ->call('load', $this->project->id);
+
+        $items = $component->get('items');
+        $this->assertCount(2, $items);
+        $this->assertTrue($items[0]['locked']);
+        $this->assertStringContainsString('Design Installment', $items[0]['lockedReason']);
+        $this->assertFalse($items[1]['locked']);
+        $this->assertNull($items[1]['lockedReason']);
+
+        $component->assertSee('Locked')
+            ->assertSee('(Locked to Schedule)');
+    }
+
+    public function test_cannot_manually_remove_locked_milestone(): void
+    {
+        $milestone = Milestone::create([
+            'project_id' => $this->project->id,
+            'name' => 'Backend Deployment',
+            'due_date' => now()->addDays(15)->toDateString(),
+            'status' => 'Pending',
+            'sort_order' => 1,
+        ]);
+
+        PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 1,
+            'label' => 'Deployment Milestone Payment',
+            'amount' => 50000.00,
+            'trigger_type' => 'milestone',
+            'milestone_id' => $milestone->id,
+            'due_date' => now()->addDays(15)->toDateString(),
+            'status' => 'Pending',
+        ]);
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectMilestoneModal::class)
+            ->call('load', $this->project->id)
+            ->call('removeRow', 0)
+            ->assertHasErrors('items.0.locked')
+            ->assertDispatched('toast');
+
+        $items = $component->get('items');
+        $this->assertCount(1, $items);
+        $this->assertEquals($milestone->id, $items[0]['id']);
+
+        $this->assertNotNull(Milestone::find($milestone->id));
+    }
+
+    public function test_loading_standard_template_preserves_locked_milestones(): void
+    {
+        $lockedMilestone = Milestone::create([
+            'project_id' => $this->project->id,
+            'name' => 'Custom API Integration',
+            'due_date' => now()->addDays(14)->toDateString(),
+            'status' => 'In Progress',
+            'sort_order' => 1,
+        ]);
+
+        $unlockedMilestone = Milestone::create([
+            'project_id' => $this->project->id,
+            'name' => 'Old Draft Task',
+            'due_date' => now()->addDays(20)->toDateString(),
+            'status' => 'Pending',
+            'sort_order' => 2,
+        ]);
+
+        PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 1,
+            'label' => 'API Milestone Payment',
+            'amount' => 30000.00,
+            'trigger_type' => 'milestone',
+            'milestone_id' => $lockedMilestone->id,
+            'due_date' => now()->addDays(14)->toDateString(),
+            'status' => 'Pending',
+        ]);
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectMilestoneModal::class)
+            ->call('load', $this->project->id)
+            ->call('loadStandardTemplate', 'website-development')
+            ->assertDispatched('toast');
+
+        $items = $component->get('items');
+
+        // Verify locked milestone is retained
+        $firstItem = $items[0];
+        $this->assertEquals($lockedMilestone->id, $firstItem['id']);
+        $this->assertEquals('Custom API Integration', $firstItem['name']);
+        $this->assertTrue($firstItem['locked']);
+
+        // Verify standard template stages were appended/merged
+        $names = array_column($items, 'name');
+        $this->assertContains('Kickoff & requirement gathering', $names);
+        $this->assertContains('Wireframe & design approval', $names);
+        $this->assertNotContains('Old Draft Task', $names);
+
+        // Save and verify database integrity
+        $component->call('save')->assertHasNoErrors();
+
+        $this->assertNotNull(Milestone::find($lockedMilestone->id));
+        $this->assertNull(Milestone::find($unlockedMilestone->id));
+
+        $dbMilestones = Milestone::where('project_id', $this->project->id)->get();
+        $this->assertTrue($dbMilestones->contains('id', $lockedMilestone->id));
+    }
+
+    public function test_saving_milestones_never_deletes_milestone_connected_to_payment_schedule(): void
+    {
+        $lockedMilestone = Milestone::create([
+            'project_id' => $this->project->id,
+            'name' => 'Database Schema Approval',
+            'due_date' => now()->addDays(7)->toDateString(),
+            'status' => 'Pending',
+            'sort_order' => 1,
+        ]);
+
+        PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 1,
+            'label' => 'Schema Milestone Payment',
+            'amount' => 20000.00,
+            'trigger_type' => 'milestone',
+            'milestone_id' => $lockedMilestone->id,
+            'due_date' => now()->addDays(7)->toDateString(),
+            'status' => 'Pending',
+        ]);
+
+        // Simulate a scenario where items list only has a newly added milestone
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectMilestoneModal::class)
+            ->call('load', $this->project->id)
+            ->set('items', [
+                [
+                    'id' => null,
+                    'name' => 'Brand New Milestone',
+                    'dueDate' => now()->addDays(30)->toDateString(),
+                    'status' => 'Pending',
+                    'done' => false,
+                    'done_on' => null,
+                    'locked' => false,
+                ],
+            ])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        // The locked milestone must NOT be deleted from the database
+        $this->assertNotNull(Milestone::find($lockedMilestone->id));
+    }
+
+    public function test_schedule_modal_displays_received_and_due_amounts_for_locked_installments(): void
+    {
+        $term = PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 1,
+            'label' => 'Phase 1 Advance',
+            'amount' => 50000.00,
+            'trigger_type' => 'fixed',
+            'due_date' => now()->toDateString(),
+            'status' => 'Partial',
+            'received' => 20000.00,
+            'tds' => 0.00,
+            'grace_days' => 5,
+        ]);
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectScheduleModal::class)
+            ->call('load', $this->project->id);
+
+        $terms = $component->get('terms');
+        $this->assertCount(1, $terms);
+        $this->assertTrue($terms[0]['locked']);
+        $this->assertEquals(20000.00, $terms[0]['received']);
+        $this->assertEquals(30000.00, $terms[0]['due']);
+        $this->assertEquals('Partial', $terms[0]['status']);
+
+        $component->assertSee('Locked Installment')
+            ->assertSee('Received:')
+            ->assertSee('Pending Due:');
+    }
+
+    public function test_milestone_modal_displays_connected_scheduled_payment_details_and_amount(): void
+    {
+        $milestone = Milestone::create([
+            'project_id' => $this->project->id,
+            'name' => 'Architecture Sign-off',
+            'due_date' => now()->addDays(14)->toDateString(),
+            'status' => 'Pending',
+            'sort_order' => 1,
+        ]);
+
+        PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 1,
+            'label' => 'Architecture Payment',
+            'amount' => 45000.00,
+            'trigger_type' => 'milestone',
+            'milestone_id' => $milestone->id,
+            'due_date' => now()->addDays(14)->toDateString(),
+            'status' => 'Paid',
+            'received' => 45000.00,
+            'tds' => 0.00,
+        ]);
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectMilestoneModal::class)
+            ->call('load', $this->project->id);
+
+        $items = $component->get('items');
+        $this->assertCount(1, $items);
+        $this->assertTrue($items[0]['locked']);
+        $this->assertNotEmpty($items[0]['connectedTerms']);
+        $this->assertEquals(45000.00, $items[0]['connectedTerms'][0]['amount']);
+        $this->assertEquals(45000.00, $items[0]['connectedTerms'][0]['received']);
+        $this->assertEquals(0.00, $items[0]['connectedTerms'][0]['due']);
+        $this->assertEquals('Paid', $items[0]['connectedTerms'][0]['status']);
+
+        $component->assertSee('Connected Scheduled Payment')
+            ->assertSee('Architecture Payment')
+            ->assertSee('Paid');
+    }
+
+    public function test_split5050_preserves_recurring_payments_intact_and_does_not_count_them_in_remaining_balance(): void
+    {
+        PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 1,
+            'label' => 'Old Advance',
+            'amount' => 50000.00,
+            'trigger_type' => 'fixed',
+            'due_date' => now()->toDateString(),
+            'status' => 'Pending',
+            'received' => 0.00,
+            'tds' => 0.00,
+        ]);
+
+        $recurringTerm = PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 2,
+            'label' => 'Monthly Retainer - Oct',
+            'amount' => 10000.00,
+            'trigger_type' => 'recurring',
+            'due_date' => now()->addDays(30)->toDateString(),
+            'status' => 'Pending',
+            'received' => 0.00,
+            'tds' => 0.00,
+        ]);
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectScheduleModal::class)
+            ->call('load', $this->project->id)
+            ->call('split5050');
+
+        $terms = $component->get('terms');
+
+        $this->assertCount(3, $terms);
+        $this->assertEquals('Advance', $terms[0]['label']);
+        $this->assertEquals(50000.00, $terms[0]['amount']);
+        $this->assertEquals('fixed', $terms[0]['trigger']);
+
+        $this->assertEquals('On delivery', $terms[1]['label']);
+        $this->assertEquals(50000.00, $terms[1]['amount']);
+
+        $this->assertEquals($recurringTerm->id, $terms[2]['id']);
+        $this->assertEquals('Monthly Retainer - Oct', $terms[2]['label']);
+        $this->assertEquals(10000.00, $terms[2]['amount']);
+        $this->assertEquals('recurring', $terms[2]['trigger']);
+
+        $component->call('save')->assertHasNoErrors();
+
+        $this->assertDatabaseHas('payment_terms', [
+            'project_id' => $this->project->id,
+            'label' => 'Advance',
+            'amount' => 50000.00,
+        ]);
+        $this->assertDatabaseHas('payment_terms', [
+            'project_id' => $this->project->id,
+            'label' => 'On delivery',
+            'amount' => 50000.00,
+        ]);
+        $this->assertDatabaseHas('payment_terms', [
+            'project_id' => $this->project->id,
+            'id' => $recurringTerm->id,
+            'label' => 'Monthly Retainer - Oct',
+            'amount' => 10000.00,
+            'trigger_type' => 'recurring',
+        ]);
+    }
+
+    public function test_autosplit_preserves_recurring_payments_intact_with_locked_payment(): void
+    {
+        $lockedTerm = PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 1,
+            'label' => 'Deposit Paid',
+            'amount' => 20000.00,
+            'trigger_type' => 'fixed',
+            'due_date' => now()->toDateString(),
+            'status' => 'Paid',
+            'received' => 20000.00,
+            'tds' => 0.00,
+        ]);
+
+        PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 2,
+            'label' => 'Milestone Placeholder',
+            'amount' => 80000.00,
+            'trigger_type' => 'fixed',
+            'due_date' => now()->addDays(20)->toDateString(),
+            'status' => 'Pending',
+        ]);
+
+        $recurringTerm = PaymentTerm::create([
+            'project_id' => $this->project->id,
+            'seq' => 3,
+            'label' => 'Monthly Maintenance',
+            'amount' => 15000.00,
+            'trigger_type' => 'recurring',
+            'due_date' => now()->addDays(30)->toDateString(),
+            'status' => 'Pending',
+        ]);
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectScheduleModal::class)
+            ->call('load', $this->project->id)
+            ->call('autoSplit');
+
+        $terms = $component->get('terms');
+
+        $this->assertCount(5, $terms);
+        $this->assertEquals($lockedTerm->id, $terms[0]['id']);
+        $this->assertEquals(20000.00, $terms[0]['amount']);
+
+        $this->assertEquals(24000.00, $terms[1]['amount']);
+        $this->assertEquals(32000.00, $terms[2]['amount']);
+        $this->assertEquals(24000.00, $terms[3]['amount']);
+
+        $this->assertEquals($recurringTerm->id, $terms[4]['id']);
+        $this->assertEquals(15000.00, $terms[4]['amount']);
+        $this->assertEquals('recurring', $terms[4]['trigger']);
+    }
+
+    public function test_schedule_modal_renders_collapsible_sections_and_add_recurring_row(): void
+    {
+        $component = Livewire::actingAs($this->admin)
+            ->test(ProjectScheduleModal::class)
+            ->call('load', $this->project->id)
+            ->assertSee('Non-Recurring Installments')
+            ->assertSee('Recurring Payments')
+            ->call('addRecurringRow');
+
+        $terms = $component->get('terms');
+        $lastTerm = end($terms);
+
+        $this->assertEquals('recurring', $lastTerm['trigger']);
+        $this->assertStringContainsString('Recurring Retainer', $lastTerm['label']);
+    }
+
+    public function test_schedule_modal_save_is_atomic_and_rolls_back_on_failure(): void
+    {
+        $mockAudit = $this->mock(AuditNotificationService::class);
+        $mockAudit->shouldReceive('log')->andReturnNull();
+        $mockAudit->shouldReceive('notifyProjectStakeholders')->andThrow(new \RuntimeException('Transaction atomic failure simulation'));
+
+        $initialTermCount = PaymentTerm::where('project_id', $this->project->id)->count();
+
+        try {
+            Livewire::actingAs($this->admin)
+                ->test(ProjectScheduleModal::class)
+                ->call('load', $this->project->id)
+                ->set('terms', [
+                    [
+                        'id' => null,
+                        'label' => 'New Term 1',
+                        'amount' => 50000.00,
+                        'percent' => 50,
+                        'trigger' => 'fixed',
+                        'milestoneId' => null,
+                        'dueDate' => now()->addDays(10)->toDateString(),
+                        'graceDays' => 0,
+                        'locked' => false,
+                        'received' => 0,
+                        'tds' => 0,
+                        'due' => 50000.00,
+                        'status' => 'Pending',
+                    ],
+                    [
+                        'id' => null,
+                        'label' => 'New Term 2',
+                        'amount' => 50000.00,
+                        'percent' => 50,
+                        'trigger' => 'fixed',
+                        'milestoneId' => null,
+                        'dueDate' => now()->addDays(20)->toDateString(),
+                        'graceDays' => 0,
+                        'locked' => false,
+                        'received' => 0,
+                        'tds' => 0,
+                        'due' => 50000.00,
+                        'status' => 'Pending',
+                    ],
+                ])
+                ->call('save');
+        } catch (\RuntimeException $e) {
+            $this->assertEquals('Transaction atomic failure simulation', $e->getMessage());
+        }
+
+        $this->assertEquals($initialTermCount, PaymentTerm::where('project_id', $this->project->id)->count());
+    }
+
+    public function test_recurring_modal_generate_is_atomic_and_rolls_back_on_failure(): void
+    {
+        $mockAudit = $this->mock(AuditNotificationService::class);
+        $mockAudit->shouldReceive('log')->andThrow(new \RuntimeException('Recurring audit failure simulation'));
+
+        $initialTermCount = PaymentTerm::where('project_id', $this->project->id)->count();
+
+        try {
+            Livewire::actingAs($this->admin)
+                ->test(ProjectRecurringModal::class)
+                ->call('load', $this->project->id)
+                ->set('amount', 5000.00)
+                ->set('months', 6)
+                ->set('label', 'Retainer Month')
+                ->call('generate');
+        } catch (\RuntimeException $e) {
+            $this->assertEquals('Recurring audit failure simulation', $e->getMessage());
+        }
+
+        $this->assertEquals($initialTermCount, PaymentTerm::where('project_id', $this->project->id)->count());
     }
 }

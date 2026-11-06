@@ -75,42 +75,380 @@
         </div>
     </div>
 
-    @if($accessibleUsers->isNotEmpty())
-        <div
-            class="card p-3 mb-6 bg-slate-50/70 border border-slate-200/80 flex items-center justify-between flex-wrap gap-3">
-            <div class="flex items-center gap-2.5 flex-wrap">
-                <span class="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
-                    <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path
-                            d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+    <!-- Dashboard Unified Control & Date Filter Bar -->
+    <div class="card p-3 mb-6 bg-slate-50/70 border border-slate-200/80 flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-3 flex-wrap">
+            {{-- Date Range Filter Dropdown & Dual Calendar Picker --}}
+            <div x-data="{
+                openDropdown: false,
+                viewMode: '{{ $datePreset === 'custom' ? 'custom' : 'presets' }}',
+                customFrom: '{{ $dateFrom ?? now()->toDateString() }}',
+                customTo: '{{ $dateTo ?? now()->toDateString() }}',
+                hoverDate: null,
+                calMonth1: null,
+                calMonth2: null,
+                init() {
+                    let base = this.customFrom ? new Date(this.customFrom + 'T00:00:00') : new Date();
+                    this.calMonth1 = new Date(base.getFullYear(), base.getMonth(), 1);
+                    this.calMonth2 = new Date(base.getFullYear(), base.getMonth() + 1, 1);
+                },
+                prevMonth() {
+                    this.calMonth1 = new Date(this.calMonth1.getFullYear(), this.calMonth1.getMonth() - 1, 1);
+                    this.calMonth2 = new Date(this.calMonth2.getFullYear(), this.calMonth2.getMonth() - 1, 1);
+                },
+                nextMonth() {
+                    this.calMonth1 = new Date(this.calMonth1.getFullYear(), this.calMonth1.getMonth() + 1, 1);
+                    this.calMonth2 = new Date(this.calMonth2.getFullYear(), this.calMonth2.getMonth() + 1, 1);
+                },
+                getMonthName(dateObj) {
+                    if (!dateObj) return '';
+                    return dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                },
+                getDays(dateObj) {
+                    if (!dateObj) return [];
+                    let year = dateObj.getFullYear();
+                    let month = dateObj.getMonth();
+                    let firstDayIndex = new Date(year, month, 1).getDay();
+                    let daysInMonth = new Date(year, month + 1, 0).getDate();
+                    let list = [];
+                    for (let i = 0; i < firstDayIndex; i++) {
+                        list.push({ day: null, dateStr: '' });
+                    }
+                    for (let d = 1; d <= daysInMonth; d++) {
+                        let mStr = String(month + 1).padStart(2, '0');
+                        let dStr = String(d).padStart(2, '0');
+                        list.push({ day: d, dateStr: `${year}-${mStr}-${dStr}` });
+                    }
+                    return list;
+                },
+                selectDay(dateStr) {
+                    if (!dateStr) return;
+                    if (!this.customFrom || (this.customFrom && this.customTo)) {
+                        this.customFrom = dateStr;
+                        this.customTo = '';
+                    } else if (this.customFrom && !this.customTo) {
+                        if (dateStr < this.customFrom) {
+                            this.customTo = this.customFrom;
+                            this.customFrom = dateStr;
+                        } else {
+                            this.customTo = dateStr;
+                        }
+                    }
+                },
+                isInRange(dateStr) {
+                    if (!dateStr || !this.customFrom) return false;
+                    let end = this.customTo || this.hoverDate;
+                    if (!end) return dateStr === this.customFrom;
+                    let s = this.customFrom <= end ? this.customFrom : end;
+                    let e = this.customFrom <= end ? end : this.customFrom;
+                    return dateStr >= s && dateStr <= e;
+                },
+                isStart(dateStr) {
+                    return dateStr && dateStr === this.customFrom;
+                },
+                isEnd(dateStr) {
+                    return dateStr && dateStr === this.customTo;
+                },
+                applyCustom() {
+                    if (!this.customFrom) return;
+                    let from = this.customFrom;
+                    let to = this.customTo || this.customFrom;
+                    if (from > to) { [from, to] = [to, from]; }
+                    $wire.applyCustomRange(from, to);
+                    this.openDropdown = false;
+                }
+            }" class="relative inline-block text-left" @click.outside="openDropdown = false">
+                <button type="button"
+                        @click="openDropdown = !openDropdown"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-blue-400 shadow-2xs transition-all focus:outline-hidden focus:ring-2 focus:ring-blue-100">
+                    <svg class="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
                     </svg>
-                    <span>Filter by Team Member:</span>
-                </span>
-                <select wire:model.live="selectedUserId"
-                        class="i text-xs py-1.5 px-3 rounded-lg border-slate-300 bg-white"
-                        style="width: auto; min-width: 220px;">
-                    <option value="">Entire Organization / Team Portfolio</option>
-                    @foreach($accessibleUsers as $au)
-                        <option value="{{ $au->id }}">{{ $au->name }} ({{ $au->role }})</option>
-                    @endforeach
-                </select>
-                @if($selectedUserId)
-                    <button type="button" wire:click="$set('selectedUserId', null)"
-                            class="btn btn-outline-danger btn-sm text-xs py-1 px-2.5">
-                        Reset Filter
-                    </button>
-                @endif
+                    <span class="text-slate-500 font-normal">Period:</span>
+                    <span class="font-bold text-slate-800">{{ $periodLabel }}</span>
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                        @if($datePreset === 'all_time')
+                            All Time
+                        @elseif($startDate && $endDate)
+                            @if($startDate === $endDate)
+                                {{ \Carbon\Carbon::parse($startDate)->format('d M Y') }}
+                            @else
+                                {{ \Carbon\Carbon::parse($startDate)->format('d M') }} – {{ \Carbon\Carbon::parse($endDate)->format('d M Y') }}
+                            @endif
+                        @endif
+                    </span>
+                    <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" :class="{ 'rotate-180': openDropdown }" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+
+                <!-- Popover dropdown -->
+                <div x-show="openDropdown"
+                     x-transition:enter="transition ease-out duration-150"
+                     x-transition:enter-start="opacity-0 translate-y-1 scale-98"
+                     x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                     x-transition:leave="transition ease-in duration-100"
+                     x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                     x-transition:leave-end="opacity-0 translate-y-1 scale-98"
+                     class="absolute left-0 mt-2 z-50 bg-white rounded-xl shadow-2xl border border-slate-200 text-xs overflow-hidden"
+                     style="display: none; min-width: 320px;">
+                    
+                    <div class="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-200">
+                        <!-- Presets Column -->
+                        <div class="p-3 w-full md:w-64 shrink-0 bg-slate-50/60 flex flex-col justify-between">
+                            <div class="space-y-3">
+                                <!-- Quick Picks -->
+                                <div>
+                                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
+                                        Quick Picks
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <button type="button" wire:click="selectPreset('today')" @click="openDropdown = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded-md flex items-center justify-between {{ $datePreset === 'today' ? 'bg-blue-600 text-white font-semibold shadow-2xs' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            <span>Today</span>
+                                            @if($datePreset === 'today')
+                                                <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                            @endif
+                                        </button>
+                                        <button type="button" wire:click="selectPreset('yesterday')" @click="openDropdown = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded-md flex items-center justify-between {{ $datePreset === 'yesterday' ? 'bg-blue-600 text-white font-semibold shadow-2xs' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            <span>Yesterday</span>
+                                            @if($datePreset === 'yesterday')
+                                                <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                            @endif
+                                        </button>
+                                        <button type="button" wire:click="selectPreset('last_7_days')" @click="openDropdown = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded-md flex items-center justify-between {{ $datePreset === 'last_7_days' ? 'bg-blue-600 text-white font-semibold shadow-2xs' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            <span>Last 7 Days</span>
+                                            @if($datePreset === 'last_7_days')
+                                                <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                            @endif
+                                        </button>
+                                        <button type="button" wire:click="selectPreset('last_30_days')" @click="openDropdown = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded-md flex items-center justify-between {{ $datePreset === 'last_30_days' ? 'bg-blue-600 text-white font-semibold shadow-2xs' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            <span>Last 30 Days</span>
+                                            @if($datePreset === 'last_30_days')
+                                                <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                            @endif
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Calendar Periods -->
+                                <div class="pt-2 border-t border-slate-200">
+                                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
+                                        Calendar Periods
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-1">
+                                        <button type="button" wire:click="selectPreset('this_week')" @click="openDropdown = false"
+                                                class="text-left px-2 py-1.5 rounded-md {{ $datePreset === 'this_week' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            This Week
+                                        </button>
+                                        <button type="button" wire:click="selectPreset('last_week')" @click="openDropdown = false"
+                                                class="text-left px-2 py-1.5 rounded-md {{ $datePreset === 'last_week' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            Last Week
+                                        </button>
+                                        <button type="button" wire:click="selectPreset('this_month')" @click="openDropdown = false"
+                                                class="text-left px-2 py-1.5 rounded-md {{ $datePreset === 'this_month' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            This Month
+                                        </button>
+                                        <button type="button" wire:click="selectPreset('last_month')" @click="openDropdown = false"
+                                                class="text-left px-2 py-1.5 rounded-md {{ $datePreset === 'last_month' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            Last Month
+                                        </button>
+                                        <button type="button" wire:click="selectPreset('this_quarter')" @click="openDropdown = false"
+                                                class="text-left px-2 py-1.5 rounded-md {{ $datePreset === 'this_quarter' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            This Quarter
+                                        </button>
+                                        <button type="button" wire:click="selectPreset('last_quarter')" @click="openDropdown = false"
+                                                class="text-left px-2 py-1.5 rounded-md {{ $datePreset === 'last_quarter' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            Last Quarter
+                                        </button>
+                                        <button type="button" wire:click="selectPreset('ytd')" @click="openDropdown = false"
+                                                class="text-left px-2 py-1.5 rounded-md {{ $datePreset === 'ytd' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            Year to Date (YTD)
+                                        </button>
+                                        <button type="button" wire:click="selectPreset('last_year')" @click="openDropdown = false"
+                                                class="text-left px-2 py-1.5 rounded-md {{ $datePreset === 'last_year' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            Last Year
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Everything -->
+                                <div class="pt-2 border-t border-slate-200">
+                                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-1">
+                                        Everything
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <button type="button" wire:click="selectPreset('all_time')" @click="openDropdown = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded-md flex items-center justify-between {{ $datePreset === 'all_time' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            <span>All Time</span>
+                                            @if($datePreset === 'all_time')
+                                                <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                            @endif
+                                        </button>
+                                        <button type="button" @click="viewMode = 'custom'"
+                                                class="w-full text-left px-2.5 py-1.5 rounded-md flex items-center justify-between {{ $datePreset === 'custom' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-700 hover:bg-slate-200/70' }}">
+                                            <span>Custom Range...</span>
+                                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dual Calendar View Column -->
+                        <div class="p-3 bg-white flex flex-col justify-between w-full md:w-auto" style="min-width: 480px;">
+                            <div>
+                                <!-- Calendar Navigation Header -->
+                                <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                                    <button type="button" @click="prevMonth()" class="btn btn-ghost btn-xs p-1" title="Previous Month">
+                                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+                                    </button>
+                                    <div class="flex items-center gap-12 font-semibold text-xs text-slate-800">
+                                        <span x-text="getMonthName(calMonth1)"></span>
+                                        <span x-text="getMonthName(calMonth2)"></span>
+                                    </div>
+                                    <button type="button" @click="nextMonth()" class="btn btn-ghost btn-xs p-1" title="Next Month">
+                                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                                    </button>
+                                </div>
+
+                                <!-- Dual Calendars Grid -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <!-- Left Month Calendar -->
+                                    <div>
+                                        <div class="grid grid-cols-7 text-center text-[10px] font-semibold text-slate-400 mb-1">
+                                            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                                        </div>
+                                        <div class="grid grid-cols-7 gap-y-0.5 text-center text-xs">
+                                            <template x-for="(d, idx) in getDays(calMonth1)" :key="'m1-' + idx">
+                                                <div class="h-6 flex items-center justify-center">
+                                                    <template x-if="d.day">
+                                                        <button type="button"
+                                                                @click="selectDay(d.dateStr)"
+                                                                @mouseenter="if(customFrom && !customTo) hoverDate = d.dateStr"
+                                                                :class="{
+                                                                    'bg-blue-600 text-white font-bold rounded-full': isStart(d.dateStr) || isEnd(d.dateStr),
+                                                                    'bg-blue-100 text-blue-900 rounded-none': isInRange(d.dateStr) && !isStart(d.dateStr) && !isEnd(d.dateStr),
+                                                                    'text-slate-700 hover:bg-slate-100 rounded-full': !isInRange(d.dateStr)
+                                                                }"
+                                                                class="w-6 h-6 flex items-center justify-center text-[11px] transition-colors"
+                                                                x-text="d.day"></button>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+
+                                    <!-- Right Month Calendar -->
+                                    <div>
+                                        <div class="grid grid-cols-7 text-center text-[10px] font-semibold text-slate-400 mb-1">
+                                            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                                        </div>
+                                        <div class="grid grid-cols-7 gap-y-0.5 text-center text-xs">
+                                            <template x-for="(d, idx) in getDays(calMonth2)" :key="'m2-' + idx">
+                                                <div class="h-6 flex items-center justify-center">
+                                                    <template x-if="d.day">
+                                                        <button type="button"
+                                                                @click="selectDay(d.dateStr)"
+                                                                @mouseenter="if(customFrom && !customTo) hoverDate = d.dateStr"
+                                                                :class="{
+                                                                    'bg-blue-600 text-white font-bold rounded-full': isStart(d.dateStr) || isEnd(d.dateStr),
+                                                                    'bg-blue-100 text-blue-900 rounded-none': isInRange(d.dateStr) && !isStart(d.dateStr) && !isEnd(d.dateStr),
+                                                                    'text-slate-700 hover:bg-slate-100 rounded-full': !isInRange(d.dateStr)
+                                                                }"
+                                                                class="w-6 h-6 flex items-center justify-center text-[11px] transition-colors"
+                                                                x-text="d.day"></button>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Controls: Date Inputs & Apply Button -->
+                            <div class="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                                <div class="flex items-center gap-2">
+                                    <div>
+                                        <label class="text-[9px] font-bold text-slate-400 uppercase block">Start Date</label>
+                                        <input type="date" x-model="customFrom" class="i text-xs py-1 px-2 rounded border-slate-300 w-32">
+                                    </div>
+                                    <span class="text-slate-400 mt-3">&rarr;</span>
+                                    <div>
+                                        <label class="text-[9px] font-bold text-slate-400 uppercase block">End Date</label>
+                                        <input type="date" x-model="customTo" class="i text-xs py-1 px-2 rounded border-slate-300 w-32">
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 mt-3 sm:mt-0">
+                                    <button type="button" @click="openDropdown = false" class="btn btn-outline-secondary btn-xs py-1 px-2.5">
+                                        Cancel
+                                    </button>
+                                    <button type="button" @click="applyCustom()" class="btn btn-primary btn-xs py-1 px-3 shadow-xs">
+                                        Apply Range
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            {{-- Team Member Filter (if accessible users exist) --}}
+            @if($accessibleUsers->isNotEmpty())
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                        </svg>
+                        <span class="hidden sm:inline">Team Member:</span>
+                    </span>
+                    <select wire:model.live="selectedUserId"
+                            class="i text-xs py-1.5 px-3 rounded-lg border-slate-300 bg-white"
+                            style="width: auto; min-width: 200px;">
+                        <option value="">Entire Organization / Team Portfolio</option>
+                        @foreach($accessibleUsers as $au)
+                            <option value="{{ $au->id }}">{{ $au->name }} ({{ $au->role }})</option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+        </div>
+
+        {{-- Active Filter Tags & Quick Resets --}}
+        <div class="flex items-center gap-2 flex-wrap">
+            @if($datePreset !== 'today')
+                <button type="button" wire:click="selectPreset('today')"
+                        class="btn btn-outline-secondary btn-sm text-xs py-1 px-2.5 flex items-center gap-1"
+                        title="Reset date filter to Today">
+                    <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                    </svg>
+                    <span>Reset to Today</span>
+                </button>
+            @endif
+
+            @if($selectedUserId)
+                <button type="button" wire:click="$set('selectedUserId', null)"
+                        class="btn btn-outline-danger btn-sm text-xs py-1 px-2.5">
+                    Reset Team Filter
+                </button>
+            @endif
+
             @if($selectedUserId && $activeViewingUser && $activeViewingUser->id !== $user->id)
-                <div
-                    class="text-xs text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 font-medium flex items-center gap-1.5">
+                <div class="text-xs text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 font-medium flex items-center gap-1.5">
                     <span class="inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
                     <span>Filtered View: <strong>{{ $activeViewingUser->name }}</strong> ({{ $activeViewingUser->role }})</span>
                 </div>
             @endif
         </div>
-    @endif
+    </div>
 
     <!-- 1. Role-Tailored KPI Row -->
     @switch($role)
@@ -203,9 +541,9 @@
                             @php
                                 $colors = ['On Track' => '#5aa236', 'At Risk' => '#e0a13a', 'Delayed' => '#d94b4b', 'Completed' => '#2e75b6'];
                             @endphp
-                            @foreach($healthCounts as $label => $cnt)
+                            @foreach($healthCounts as $label => $count)
                                 @php
-                                    $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
+                                    $percentage = $totalProjectsCount > 0 ? round(($count / $totalProjectsCount) * 100) : 0;
                                     $colorCode = $colors[$label];
                                 @endphp
                                 <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
@@ -219,7 +557,7 @@
                                     </div>
                                     <div style="display:flex;align-items:baseline;justify-content:space-between">
                                         <span
-                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
+                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $count }}</span>
                                         <span
                                             style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
                                     </div>
@@ -314,7 +652,7 @@
                                             class="bar {{ $salesRow['rate'] >= 80 ? 'green' : ($salesRow['rate'] >= 40 ? 'amber' : '') }}">
                                             <i style="width:{{ $salesRow['rate'] }}%"></i>
                                         </div>
-                                        <span class="muted" style="font-size:10.8px">{{ $salesRow['rate'] }}%</span>
+                                        <span class="muted" style="font-size:11px">{{ $salesRow['rate'] }}%</span>
                                     </td>
                                 </tr>
                             @endforeach
@@ -352,7 +690,7 @@
                             @endphp
                             <div>
                                 <div
-                                    style="display:flex;justify-content:space-between;font-size:12.3px;margin-bottom:5px">
+                                    style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px">
                                     <span style="font-weight:600">{{ $bracket }} days late</span>
                                     <span class="muted" style="font-weight:650"><x-money :value="$amt"/></span>
                                 </div>
@@ -455,9 +793,9 @@
                             @php
                                 $colors = ['On Track' => '#5aa236', 'At Risk' => '#e0a13a', 'Delayed' => '#d94b4b', 'Completed' => '#2e75b6'];
                             @endphp
-                            @foreach($healthCounts as $label => $cnt)
+                            @foreach($healthCounts as $label => $count)
                                 @php
-                                    $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
+                                    $percentage = $totalProjectsCount > 0 ? round(($count / $totalProjectsCount) * 100) : 0;
                                     $colorCode = $colors[$label];
                                 @endphp
                                 <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
@@ -470,7 +808,7 @@
                                     </div>
                                     <div style="display:flex;align-items:baseline;justify-content:space-between">
                                         <span
-                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
+                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $count }}</span>
                                         <span
                                             style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
                                     </div>
@@ -546,21 +884,21 @@
                         </tr>
                         </thead>
                         <tbody>
-                        @forelse($teamCoordinators as $coord)
+                        @forelse($teamCoordinators as $coordinator)
                             <tr>
                                 <td>
-                                    <div class="font-semibold text-[#0d1b34]">{{ $coord->name }}</div>
-                                    <div class="text-xs text-[#8894ac]">{{ $coord->email }}</div>
+                                    <div class="font-semibold text-[#0d1b34]">{{ $coordinator->name }}</div>
+                                    <div class="text-xs text-[#8894ac]">{{ $coordinator->email }}</div>
                                 </td>
-                                <td class="font-bold text-slate-800">{{ $coord->active_projects_count }}</td>
-                                <td class="font-semibold text-emerald-600">{{ $coord->on_track_projects_count }}</td>
-                                <td class="font-semibold {{ $coord->delayed_projects_count > 0 ? 'text-red-600' : 'text-slate-400' }}">
-                                    {{ $coord->delayed_projects_count }}
+                                <td class="font-bold text-slate-800">{{ $coordinator->active_projects_count }}</td>
+                                <td class="font-semibold text-emerald-600">{{ $coordinator->on_track_projects_count }}</td>
+                                <td class="font-semibold {{ $coordinator->delayed_projects_count > 0 ? 'text-red-600' : 'text-slate-400' }}">
+                                    {{ $coordinator->delayed_projects_count }}
                                 </td>
                                 <td>
-                                    @if($coord->delayed_projects_count > 0)
+                                    @if($coordinator->delayed_projects_count > 0)
                                         <span class="badge b-red">Attention Needed</span>
-                                    @elseif($coord->active_projects_count > 0)
+                                    @elseif($coordinator->active_projects_count > 0)
                                         <span class="badge b-green">Healthy</span>
                                     @else
                                         <span class="badge b-gray">Available</span>
@@ -619,7 +957,7 @@
                                             class="bar {{ $salesRow['rate'] >= 80 ? 'green' : ($salesRow['rate'] >= 40 ? 'amber' : '') }}">
                                             <i style="width:{{ $salesRow['rate'] }}%"></i>
                                         </div>
-                                        <span class="muted" style="font-size:10.8px">{{ $salesRow['rate'] }}%</span>
+                                        <span class="muted" style="font-size:11px">{{ $salesRow['rate'] }}%</span>
                                     </td>
                                 </tr>
                             @endforeach
@@ -763,9 +1101,9 @@
                             @php
                                 $colors = ['On Track' => '#5aa236', 'At Risk' => '#e0a13a', 'Delayed' => '#d94b4b', 'Completed' => '#2e75b6'];
                             @endphp
-                            @foreach($healthCounts as $label => $cnt)
+                            @foreach($healthCounts as $label => $count)
                                 @php
-                                    $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
+                                    $percentage = $totalProjectsCount > 0 ? round(($count / $totalProjectsCount) * 100) : 0;
                                     $colorCode = $colors[$label];
                                 @endphp
                                 <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
@@ -778,7 +1116,7 @@
                                     </div>
                                     <div style="display:flex;align-items:baseline;justify-content:space-between">
                                         <span
-                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
+                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $count }}</span>
                                         <span
                                             style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
                                     </div>
@@ -807,23 +1145,23 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        @forelse($coordinatorData['upcomingDeliveries'] as $proj)
+                        @forelse($coordinatorData['upcomingDeliveries'] as $project)
                             @php
-                                $delDate = $proj->delivery_date ? \Carbon\Carbon::parse($proj->delivery_date) : null;
+                                $delDate = $project->delivery_date ? \Carbon\Carbon::parse($project->delivery_date) : null;
                                 $daysLeft = $delDate ? (int) round(\Carbon\Carbon::today()->startOfDay()->diffInDays($delDate->startOfDay(), false)) : 0;
                             @endphp
                             <div
                                 class="mini-item clickable flex items-center justify-between p-2.5 rounded-xl border border-gray-100 hover:bg-gray-50/70 transition mb-2"
-                                @click="Livewire.navigate('{{ route('projects.show', $proj->id) }}')">
+                                @click="Livewire.navigate('{{ route('projects.show', $project->id) }}')">
                                 <div class="flex-1 min-w-0 pr-3">
-                                    <div class="font-semibold text-sm text-[#0d1b34]">{{ $proj->name }}</div>
+                                    <div class="font-semibold text-sm text-[#0d1b34]">{{ $project->name }}</div>
                                     <div class="text-xs text-[#8894ac] flex items-center gap-1.5 mt-0.5">
-                                        <span>{{ $proj->customer?->display_name ?? '—' }}</span>
+                                        <span>{{ $project->customer?->display_name ?? '—' }}</span>
                                         <span>&middot;</span>
                                         <span>Due {{ $delDate ? $delDate->format('d M') : '—' }}</span>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2 flex-shrink-0">
+                                <div class="flex items-center gap-2 shrink-0">
                                 <span class="badge {{ $daysLeft <= 7 ? 'b-red' : 'b-amber' }}">
                                     {{ $daysLeft == 0 ? 'Today' : ($daysLeft < 0 ? abs($daysLeft) . 'd late' : $daysLeft . 'd left') }}
                                 </span>
@@ -948,9 +1286,9 @@
                             @php
                                 $colors = ['On Track' => '#5aa236', 'At Risk' => '#e0a13a', 'Delayed' => '#d94b4b', 'Completed' => '#2e75b6'];
                             @endphp
-                            @foreach($healthCounts as $label => $cnt)
+                            @foreach($healthCounts as $label => $count)
                                 @php
-                                    $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
+                                    $percentage = $totalProjectsCount > 0 ? round(($count / $totalProjectsCount) * 100) : 0;
                                     $colorCode = $colors[$label];
                                 @endphp
                                 <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
@@ -963,7 +1301,7 @@
                                     </div>
                                     <div style="display:flex;align-items:baseline;justify-content:space-between">
                                         <span
-                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
+                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $count }}</span>
                                         <span
                                             style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
                                     </div>
@@ -992,23 +1330,23 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        @forelse($coordinatorData['upcomingDeliveries'] as $proj)
+                        @forelse($coordinatorData['upcomingDeliveries'] as $project)
                             @php
-                                $delDate = $proj->delivery_date ? \Carbon\Carbon::parse($proj->delivery_date) : null;
+                                $delDate = $project->delivery_date ? \Carbon\Carbon::parse($project->delivery_date) : null;
                                 $daysLeft = $delDate ? (int) round(\Carbon\Carbon::today()->startOfDay()->diffInDays($delDate->startOfDay(), false)) : 0;
                             @endphp
                             <div
                                 class="mini-item clickable flex items-center justify-between p-2.5 rounded-xl border border-gray-100 hover:bg-gray-50/70 transition mb-2"
-                                @click="Livewire.navigate('{{ route('projects.show', $proj->id) }}')">
+                                @click="Livewire.navigate('{{ route('projects.show', $project->id) }}')">
                                 <div class="flex-1 min-w-0 pr-3">
-                                    <div class="font-semibold text-sm text-[#0d1b34]">{{ $proj->name }}</div>
+                                    <div class="font-semibold text-sm text-[#0d1b34]">{{ $project->name }}</div>
                                     <div class="text-xs text-[#8894ac] flex items-center gap-1.5 mt-0.5">
-                                        <span>{{ $proj->customer?->display_name ?? '—' }}</span>
+                                        <span>{{ $project->customer?->display_name ?? '—' }}</span>
                                         <span>&middot;</span>
                                         <span>Due {{ $delDate ? $delDate->format('d M') : '—' }}</span>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2 flex-shrink-0">
+                                <div class="flex items-center gap-2 shrink-0">
                                     <span class="badge {{ $daysLeft <= 7 ? 'b-red' : 'b-amber' }}">
                                         {{ $daysLeft == 0 ? 'Today' : ($daysLeft < 0 ? abs($daysLeft) . 'd late' : $daysLeft . 'd left') }}
                                     </span>
@@ -1189,9 +1527,9 @@
                             @php
                                 $colors = ['On Track' => '#5aa236', 'At Risk' => '#e0a13a', 'Delayed' => '#d94b4b', 'Completed' => '#2e75b6'];
                             @endphp
-                            @foreach($healthCounts as $label => $cnt)
+                            @foreach($healthCounts as $label => $count)
                                 @php
-                                    $percentage = $totalProjectsCount > 0 ? round(($cnt / $totalProjectsCount) * 100) : 0;
+                                    $percentage = $totalProjectsCount > 0 ? round(($count / $totalProjectsCount) * 100) : 0;
                                     $colorCode = $colors[$label];
                                 @endphp
                                 <a href="{{ route('projects.index', ['health' => $label]) }}" wire:navigate
@@ -1204,7 +1542,7 @@
                                     </div>
                                     <div style="display:flex;align-items:baseline;justify-content:space-between">
                                         <span
-                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $cnt }}</span>
+                                            style="font-size:22px;font-weight:750;letter-spacing:-.6px">{{ $count }}</span>
                                         <span
                                             style="font-size:11px;font-weight:600;color:var(--muted)">{{ $percentage }}%</span>
                                     </div>
@@ -1247,7 +1585,7 @@
                                                 :value="$deal->value"/></span>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2 flex-shrink-0">
+                                <div class="flex items-center gap-2 shrink-0">
                                     <x-health-badge :health="$deal->health"/>
                                 </div>
                             </div>

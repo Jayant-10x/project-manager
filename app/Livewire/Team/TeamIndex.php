@@ -92,9 +92,9 @@ class TeamIndex extends Component
             try {
                 Mail::to($user->email)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Manager'));
                 $adminEmails = User::where('role', 'Admin')->where('status', 'Active')->pluck('email');
-                foreach ($adminEmails as $admEmail) {
-                    if ($admEmail !== $user->email) {
-                        Mail::to($admEmail)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Admin'));
+                foreach ($adminEmails as $adminEmail) {
+                    if ($adminEmail !== $user->email) {
+                        Mail::to($adminEmail)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Admin'));
                     }
                 }
             } catch (\Throwable) {
@@ -171,8 +171,8 @@ class TeamIndex extends Component
 
         if ($this->search !== '') {
             $term = '%'.trim($this->search).'%';
-            $query->where(function ($q) use ($term) {
-                $q->where('name', 'like', $term)
+            $query->where(function ($searchQuery) use ($term) {
+                $searchQuery->where('name', 'like', $term)
                     ->orWhere('email', 'like', $term)
                     ->orWhere('phone', 'like', $term)
                     ->orWhere('designation', 'like', $term)

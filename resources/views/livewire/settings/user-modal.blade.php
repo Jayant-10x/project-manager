@@ -98,8 +98,8 @@
                 <select wire:model.live="reporting_to"
                         class="i @error('reporting_to') border-red-500! bg-red-50/20! @enderror">
                     <option value="">*** No Supervisor (Top Level) ***</option>
-                    @foreach($supervisors as $s)
-                        <option value="{{ $s->id }}">{{ $s->name }} ({{ $s->role }})</option>
+                    @foreach($supervisors as $supervisorOption)
+                        <option value="{{ $supervisorOption->id }}">{{ $supervisorOption->name }} ({{ $supervisorOption->role }})</option>
                     @endforeach
                 </select>
                 @error('reporting_to')
@@ -331,7 +331,7 @@
             <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
                 <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
                 <button type="submit"
-                        class="btn btn-primary min-w-[150px] justify-center"
+                        class="btn btn-primary min-w-40 justify-center"
                         wire:loading.attr="disabled"
                         wire:target="save">
                     <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">{{ $userId ? 'Save changes' : ($role === 'Sales' ? 'Add salesperson' : 'Add user') }}</span>

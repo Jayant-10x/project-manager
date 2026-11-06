@@ -21,7 +21,7 @@ class CurrencyRateService
 
                     return $rate;
                 }
-            } catch (\Throwable $e) {
+            } catch (\Throwable $exception) {
                 // Silently fallback if network fails
             }
 

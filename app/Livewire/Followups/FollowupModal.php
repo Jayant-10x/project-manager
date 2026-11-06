@@ -88,7 +88,7 @@ class FollowupModal extends Component
 
         $happenedOn = ! empty($validated['happened_on']) ? Carbon::parse($validated['happened_on'])->startOfDay() : now();
 
-        $fu = Followup::create([
+        $followup = Followup::create([
             'customer_id' => $validated['customer_id'],
             'project_id' => $validated['project_id'],
             'type' => $validated['type'],
@@ -100,35 +100,35 @@ class FollowupModal extends Component
             'created_by' => auth()->id(),
         ]);
 
-        $cust = Customer::find($validated['customer_id']);
+        $customer = Customer::find($validated['customer_id']);
         $auditService = app(AuditNotificationService::class);
         $auditService->log(
             auth()->id(),
             'Logged Follow-up',
             'Followup',
-            $fu->id,
-            $cust?->customer_code ?? '',
-            "Logged {$validated['type']} for {$cust?->company}: {$validated['summary']}"
+            $followup->id,
+            $customer?->customer_code ?? '',
+            "Logged {$validated['type']} for {$customer?->company}: {$validated['summary']}"
         );
 
-        $customerName = $cust?->display_name ?? 'Customer';
-        if ($fu->project) {
+        $customerName = $customer?->display_name ?? 'Customer';
+        if ($followup->project) {
             $auditService->notifyProjectStakeholders(
-                $fu->project,
+                $followup->project,
                 'Follow-up Logged',
                 "Follow-up: {$validated['summary']}",
-                auth()->user()->name." logged a {$validated['type']} on project {$fu->project->name}: {$validated['summary']}",
+                auth()->user()->name." logged a {$validated['type']} on project {$followup->project->name}: {$validated['summary']}",
                 'project',
-                $fu->project->id
+                $followup->project->id
             );
-        } elseif ($cust) {
+        } elseif ($customer) {
             $auditService->notifyCustomerStakeholders(
-                $cust,
+                $customer,
                 'Follow-up Logged',
                 "Follow-up: {$validated['summary']}",
                 auth()->user()->name." logged a {$validated['type']} for {$customerName}: {$validated['summary']}",
                 'customer',
-                $cust->id
+                $customer->id
             );
         } else {
             $auditService->notifyUplines(

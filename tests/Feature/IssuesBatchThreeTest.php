@@ -163,6 +163,9 @@ class IssuesBatchThreeTest extends TestCase
             'value' => 50000,
         ]);
 
+        Storage::fake('documents');
+        Storage::fake('public');
+
         $fakePdf = UploadedFile::fake()->create('bank_receipt.pdf', 150, 'application/pdf');
 
         Livewire::actingAs($this->admin)

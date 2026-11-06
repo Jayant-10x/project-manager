@@ -17,7 +17,7 @@
                             <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
                                 <tr>
                                     <td>
-                                        <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px;">
+                                        <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: -1px;">
                                             Project Manager 10X Agency
                                         </h1>
                                         <p style="margin: 4px 0 0; font-size: 12px; color: #93c5fd; font-weight: 500;">
@@ -44,7 +44,7 @@
 
                             <!-- Credentials Box -->
                             <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-                                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 8px;">
+                                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 8px;">
                                     Temporary Password
                                 </div>
                                 <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 18px; font-weight: 700; color: #0b3d91; word-break: break-all; background-color: #ffffff; padding: 14px 18px; border-radius: 8px; border: 1px solid #cbd5e1; text-align: center; letter-spacing: 1px; user-select: all; -webkit-user-select: all; -moz-user-select: all;">

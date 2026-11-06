@@ -90,7 +90,17 @@ class SettingIndex extends Component
 
     public function removeReminderDay(int $day): void
     {
-        $this->reminderDays = array_values(array_filter($this->reminderDays, fn ($d) => $d !== $day));
+        if (count($this->reminderDays) <= 1) {
+            $this->addError('reminderDays', 'At least one payment reminder threshold must be retained.');
+            $this->dispatch('toast', [
+                'msg' => 'At least one payment reminder threshold must be retained.',
+                'type' => 'warning',
+            ]);
+
+            return;
+        }
+
+        $this->reminderDays = array_values(array_filter($this->reminderDays, fn ($reminderDay) => $reminderDay !== $day));
 
         if (empty($this->reminderDays)) {
             $this->addError('reminderDays', 'At least one payment reminder threshold is required.');
@@ -131,6 +141,14 @@ class SettingIndex extends Component
         ];
     }
 
+    protected function messages(): array
+    {
+        return [
+            'reminderDays.required' => 'At least one payment reminder threshold must be configured.',
+            'reminderDays.min' => 'At least one payment reminder threshold must be configured.',
+        ];
+    }
+
     public function saveSettings(): void
     {
         if (auth()->user()->role !== 'Admin') {
@@ -141,6 +159,10 @@ class SettingIndex extends Component
 
         if (empty($this->reminderDays)) {
             $this->addError('reminderDays', 'At least one payment reminder threshold must be configured.');
+            $this->dispatch('toast', [
+                'msg' => 'At least one payment reminder threshold must be configured.',
+                'type' => 'warning',
+            ]);
 
             return;
         }
@@ -297,9 +319,9 @@ class SettingIndex extends Component
             try {
                 Mail::to($user->email)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Manager'));
                 $adminEmails = User::where('role', 'Admin')->where('status', 'Active')->pluck('email');
-                foreach ($adminEmails as $admEmail) {
-                    if ($admEmail !== $user->email) {
-                        Mail::to($admEmail)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Admin'));
+                foreach ($adminEmails as $adminEmail) {
+                    if ($adminEmail !== $user->email) {
+                        Mail::to($adminEmail)->send(new TemporaryPasswordMail($user, $temporaryPassword, 'Admin'));
                     }
                 }
             } catch (\Throwable) {
@@ -402,7 +424,7 @@ class SettingIndex extends Component
             request()->session()->invalidate();
             request()->session()->regenerateToken();
         }
-        $this->redirect(route('login'), navigate: true);
+        $this->redirect(route('login'));
     }
 
     public function render()

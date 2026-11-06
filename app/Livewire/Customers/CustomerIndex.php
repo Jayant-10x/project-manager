@@ -3,8 +3,10 @@
 namespace App\Livewire\Customers;
 
 use App\Models\Customer;
+use App\Models\Project;
 use App\Models\User;
 use App\Services\AuditNotificationService;
+use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -160,14 +162,12 @@ class CustomerIndex extends Component
         $this->dispatch('toast', ['msg' => 'Customer rejected.', 'type' => 'warning']);
     }
 
-    public function exportCsv()
+    protected function getFilteredCustomersQuery(?User $user = null): Builder
     {
-        abort_if(! logged_in_user() || is_tech_person() || ! has_permission('customers', 'view'), 403, 'Unauthorized access to customer module.');
+        $user = $user ?? auth()->user();
 
-        $user = logged_in_user();
-        $query = Customer::query()
+        return Customer::query()
             ->forUser($user)
-            ->with(['projects' => fn ($projectQuery) => $projectQuery->forUser($user)->with(['terms', 'payments']), 'salesPerson'])
             ->when($this->search, function ($builder) {
                 $searchTerm = '%'.trim($this->search).'%';
                 $builder->where(function ($subQuery) use ($searchTerm) {
@@ -184,29 +184,38 @@ class CustomerIndex extends Component
             ->when($this->sales, fn ($builder) => $builder->where('sales_person_id', $this->sales))
             ->when($this->state, fn ($builder) => $builder->where('state', $this->state))
             ->when($this->status, fn ($builder) => $builder->where('status', $this->status))
-            ->orderBy('company');
-
-        $customers = $query->get();
-
-        if ($this->pay) {
-            $customers = $customers->filter(function ($customer) {
-                $due = $customer->projects->sum(fn ($project) => $project->money['due']);
-                $overdue = $customer->projects->sum(fn ($project) => $project->money['overdue']);
-                $sched = $customer->projects->sum(fn ($project) => $project->money['scheduled']);
-
+            ->when($this->pay, function ($builder) use ($user) {
                 if ($this->pay === 'due') {
-                    return $due > 0;
+                    $builder->whereHas('projects', function ($projectQuery) use ($user) {
+                        $projectQuery->forUser($user)->whereRaw('((SELECT COALESCE(SUM(amount), 0) FROM payment_terms WHERE payment_terms.project_id = projects.id AND payment_terms.status != ?) - (SELECT COALESCE(SUM(amount + tds), 0) FROM payments WHERE payments.project_id = projects.id)) > 0', ['Cancelled']);
+                    });
+                } elseif ($this->pay === 'over') {
+                    $builder->whereHas('projects', function ($projectQuery) use ($user) {
+                        $projectQuery->forUser($user)->whereHas('terms', function ($termQuery) {
+                            $termQuery->where('status', 'Overdue')
+                                ->whereRaw('(amount - received - tds) > 0');
+                        });
+                    });
+                } elseif ($this->pay === 'clear') {
+                    $builder->whereHas('projects', function ($projectQuery) use ($user) {
+                        $projectQuery->forUser($user)->whereHas('terms', fn ($termQuery) => $termQuery->where('status', '!=', 'Cancelled'));
+                    })->whereDoesntHave('projects', function ($projectQuery) use ($user) {
+                        $projectQuery->forUser($user)->whereRaw('((SELECT COALESCE(SUM(amount), 0) FROM payment_terms WHERE payment_terms.project_id = projects.id AND payment_terms.status != ?) - (SELECT COALESCE(SUM(amount + tds), 0) FROM payments WHERE payments.project_id = projects.id)) > 0', ['Cancelled']);
+                    });
                 }
-                if ($this->pay === 'over') {
-                    return $overdue > 0;
-                }
-                if ($this->pay === 'clear') {
-                    return $due <= 0 && $sched > 0;
-                }
+            })
+            ->orderBy('company');
+    }
 
-                return true;
-            });
-        }
+    public function exportCsv()
+    {
+        abort_if(! logged_in_user() || is_tech_person() || ! has_permission('customers', 'view'), 403, 'Unauthorized access to customer module.');
+
+        $user = logged_in_user();
+        $query = $this->getFilteredCustomersQuery($user)
+            ->with(['projects' => fn ($projectQuery) => $projectQuery->forUser($user)->with(['terms', 'payments']), 'salesPerson']);
+
+        $exportedCount = (clone $query)->count();
 
         audit_service()->log(
             logged_in_user_id(),
@@ -214,17 +223,17 @@ class CustomerIndex extends Component
             'Customer',
             null,
             '',
-            "Exported {$customers->count()} customers to CSV"
+            "Exported {$exportedCount} customers to CSV"
         );
 
         $filename = 'customers-'.now()->toDateString().'.csv';
 
-        return response()->streamDownload(function () use ($customers) {
+        return response()->streamDownload(function () use ($query) {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
             fputcsv($handle, ['Code', 'Company', 'Contact', 'Phone', 'Email', 'City', 'State', 'GSTIN', 'Source', 'Onboarded By', 'Status', 'Projects', 'Total Value', 'Received', 'Due']);
 
-            foreach ($customers as $customer) {
+            foreach ($query->lazy(100) as $customer) {
                 $scheduledAmount = (float) $customer->projects->sum(fn ($project) => $project->money['scheduled']);
                 $receivedAmount = (float) $customer->projects->sum(fn ($project) => $project->money['received']);
                 $dueAmount = (float) $customer->projects->sum(fn ($project) => $project->money['due']);
@@ -255,56 +264,15 @@ class CustomerIndex extends Component
     {
         $user = auth()->user();
 
-        $query = Customer::query()
-            ->forUser($user)
-            ->with([
-                'projects' => fn ($projectQuery) => $projectQuery->forUser($user)->with(['terms', 'payments']),
-                'salesPerson',
-            ])
-            ->when($this->search, function ($builder) {
-                $searchTerm = '%'.trim($this->search).'%';
-                $builder->where(function ($subQuery) use ($searchTerm) {
-                    $subQuery->where('company', 'like', $searchTerm)
-                        ->orWhere('customer_code', 'like', $searchTerm)
-                        ->orWhere('contact_name', 'like', $searchTerm)
-                        ->orWhere('phone', 'like', $searchTerm)
-                        ->orWhere('email', 'like', $searchTerm)
-                        ->orWhere('city', 'like', $searchTerm)
-                        ->orWhere('state', 'like', $searchTerm)
-                        ->orWhere('gst_number', 'like', $searchTerm);
-                });
-            })
-            ->when($this->sales, fn ($builder) => $builder->where('sales_person_id', $this->sales))
-            ->when($this->state, fn ($builder) => $builder->where('state', $this->state))
-            ->when($this->status, fn ($builder) => $builder->where('status', $this->status))
-            ->orderBy('company');
+        $baseQuery = $this->getFilteredCustomersQuery($user);
 
-        $allMatching = (clone $query)->get();
-
-        // Filter by payment status if specified
-        if ($this->pay) {
-            $filteredIds = $allMatching->filter(function ($customer) {
-                $due = $customer->projects->sum(fn ($project) => $project->money['due']);
-                $overdue = $customer->projects->sum(fn ($project) => $project->money['overdue']);
-                $sched = $customer->projects->sum(fn ($project) => $project->money['scheduled']);
-
-                if ($this->pay === 'due') {
-                    return $due > 0;
-                }
-                if ($this->pay === 'over') {
-                    return $overdue > 0;
-                }
-                if ($this->pay === 'clear') {
-                    return $due <= 0 && $sched > 0;
-                }
-
-                return true;
-            })->pluck('id');
-
-            $query->whereIn('id', $filteredIds);
-            $totalDue = $allMatching->whereIn('id', $filteredIds)->sum(fn ($customer) => $customer->projects->sum(fn ($project) => $project->money['due']));
-        } else {
-            $totalDue = $allMatching->sum(fn ($customer) => $customer->projects->sum(fn ($project) => $project->money['due']));
+        $totalDue = 0.0;
+        if ($user->role !== 'Sales') {
+            $matchingCustomerIds = (clone $baseQuery)->reorder()->select('customers.id');
+            $totalDue = (float) Project::whereIn('customer_id', $matchingCustomerIds)
+                ->forUser($user)
+                ->selectRaw('COALESCE(SUM(CASE WHEN ((SELECT COALESCE(SUM(amount), 0) FROM payment_terms WHERE payment_terms.project_id = projects.id AND payment_terms.status != ?) - (SELECT COALESCE(SUM(amount + tds), 0) FROM payments WHERE payments.project_id = projects.id)) > 0 THEN ((SELECT COALESCE(SUM(amount), 0) FROM payment_terms WHERE payment_terms.project_id = projects.id AND payment_terms.status != ?) - (SELECT COALESCE(SUM(amount + tds), 0) FROM payments WHERE payments.project_id = projects.id)) ELSE 0 END), 0) as total_due', ['Cancelled', 'Cancelled'])
+                ->value('total_due');
         }
 
         $presentStateCodes = Customer::query()
@@ -331,8 +299,15 @@ class CustomerIndex extends Component
         }
         $salesPeople = ($user->role === 'Sales') ? collect() : $salesPeopleQuery->orderBy('name')->get();
 
+        $customers = (clone $baseQuery)
+            ->with([
+                'projects' => fn ($projectQuery) => $projectQuery->forUser($user)->with(['terms', 'payments']),
+                'salesPerson',
+            ])
+            ->paginate(15);
+
         return view('livewire.customers.customer-index', [
-            'customers' => $query->paginate(15),
+            'customers' => $customers,
             'salesPeople' => $salesPeople,
             'states' => $states,
             'totalDue' => $totalDue,

@@ -132,14 +132,14 @@ a {
 
 .login-title {
     text-align: center;
-    font-size: 17.5px;
+    font-size: 18px;
     font-weight: 700;
     letter-spacing: -.25px;
 }
 
 .login-sub {
     text-align: center;
-    font-size: 11.3px;
+    font-size: 11px;
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: .9px;
@@ -153,7 +153,7 @@ a {
     color: #b93636;
     padding: 11px 13px;
     border-radius: 11px;
-    font-size: 12.8px;
+    font-size: 13px;
     margin: 20px 0 4px;
     border: 1px solid #f6d5d5;
     align-items: flex-start;
@@ -174,7 +174,7 @@ a {
 
 .login-hint {
     margin-top: 20px;
-    font-size: 11.7px;
+    font-size: 12px;
     color: var(--muted);
     text-align: center;
     line-height: 1.65;
@@ -440,9 +440,9 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 }
 
 .nav-label {
-    font-size: 9.8px;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 1.1px;
+    letter-spacing: 1px;
     color: #6b7fa8;
     padding: 14px 10px 6px;
     font-weight: 700;
@@ -473,10 +473,10 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     gap: 11px;
     width: 100%;
     text-align: left;
-    padding: 8.5px 11px;
+    padding: 9px 11px;
     border-radius: 9px;
     color: #c0cbe0;
-    font-size: 13.1px;
+    font-size: 13px;
     margin-bottom: 1px;
     position: relative;
     transition: background 0.14s ease, color 0.14s ease, padding 0.24s var(--ease-smooth), gap 0.24s var(--ease-smooth);
@@ -609,9 +609,9 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 }
 
 .nav-label {
-    font-size: 9.8px;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 1.1px;
+    letter-spacing: 1px;
     color: #6b7fa8;
     padding: 14px 10px 6px;
     font-weight: 700;
@@ -623,10 +623,10 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     gap: 11px;
     width: 100%;
     text-align: left;
-    padding: 8.5px 11px;
+    padding: 9px 11px;
     border-radius: 9px;
     color: #c0cbe0;
-    font-size: 13.1px;
+    font-size: 13px;
     margin-bottom: 1px;
     transition: .14s;
     position: relative;
@@ -672,7 +672,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     margin-left: auto;
     background: #16448a;
     color: #dfe8fa;
-    font-size: 10.3px;
+    font-size: 10px;
     padding: 1px 7px;
     border-radius: 20px;
     font-weight: 700;
@@ -709,7 +709,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 .me-txt strong {
     display: block;
     color: #fff;
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 650;
     white-space: nowrap;
     overflow: hidden;
@@ -717,7 +717,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 }
 
 .me-txt span {
-    font-size: 10.5px;
+    font-size: 11px;
     color: #8ea3cc;
 }
 
@@ -785,13 +785,13 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 }
 
 .page-title {
-    font-size: 17.5px;
+    font-size: 18px;
     font-weight: 680;
     letter-spacing: -.25px;
 }
 
 .page-sub {
-    font-size: 12.1px;
+    font-size: 12px;
     color: var(--muted);
     margin-top: 1px;
 }
@@ -834,14 +834,14 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     margin: 0;
     width: 100%;
     height: 100%;
-    font-size: 12.8px;
+    font-size: 13px;
     color: var(--text);
     line-height: 34px;
 }
 
 .gsearch input::placeholder {
     color: var(--muted);
-    font-size: 12.8px;
+    font-size: 13px;
 }
 
 .gsearch svg {
@@ -866,11 +866,11 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     align-items: center;
     justify-content: center;
     gap: 7px;
-    padding: 8.5px 14px;
+    padding: 9px 14px;
     border-radius: 10px;
-    font-size: 13.1px;
+    font-size: 13px;
     font-weight: 600;
-    border: 1.5px solid transparent;
+    border: 2px solid transparent;
     transition: all .16s ease-in-out;
     white-space: nowrap;
     cursor: pointer;
@@ -955,7 +955,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 .btn-amber-soft {
     background: var(--amberSoft);
     color: #96660f;
-    border: 1.5px solid #fae4be;
+    border: 2px solid #fae4be;
 }
 
 .btn-amber-soft:hover {
@@ -966,7 +966,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 
 .btn-ghost {
     background: #fff;
-    border: 1.5px solid var(--border);
+    border: 2px solid var(--border);
     color: var(--text2);
     box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
 }
@@ -994,7 +994,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 .btn-danger-soft {
     background: var(--redSoft);
     color: var(--red);
-    border: 1.5px solid #f6d5d5;
+    border: 2px solid #f6d5d5;
 }
 
 .btn-danger-soft:hover {
@@ -1045,7 +1045,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
     --btn-color: #475569;
     --btn-border: #cbd5e1;
     background: #fff;
-    border: 1.5px solid var(--btn-border, var(--btn-color));
+    border: 2px solid var(--btn-border, var(--btn-color));
     color: var(--btn-color);
     box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
     transition: all .16s var(--ease-smooth);
@@ -1119,26 +1119,26 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 /* --- Sizes --- */
 .btn-lg {
     padding: 10px 18px;
-    font-size: 14.5px;
+    font-size: 15px;
     border-radius: 12px;
     gap: 8px;
 }
 
 .btn-sm {
     padding: 6px 12px;
-    font-size: 12.2px;
+    font-size: 12px;
     border-radius: 8px;
     gap: 6px;
 }
 
 .btn-sm svg {
-    width: 13.5px;
-    height: 13.5px;
+    width: 14px;
+    height: 14px;
 }
 
 .btn-xs {
     padding: 4px 9px;
-    font-size: 11.5px;
+    font-size: 12px;
     border-radius: 7px;
     gap: 5px;
     line-height: 1.25;
@@ -1184,13 +1184,13 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 }
 
 .card-head h3 {
-    font-size: 14.2px;
+    font-size: 14px;
     font-weight: 660;
     letter-spacing: -.1px;
 }
 
 .card-head .sub {
-    font-size: 11.6px;
+    font-size: 12px;
     color: var(--muted);
     margin-top: 1px;
 }
@@ -1287,7 +1287,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 }
 
 .kpi-label {
-    font-size: 10.7px;
+    font-size: 11px;
     color: var(--text2);
     font-weight: 680;
     text-transform: uppercase;
@@ -1306,7 +1306,7 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 }
 
 .kpi-foot {
-    font-size: 11.2px;
+    font-size: 11px;
     color: var(--muted);
     margin-top: 4px;
 }
@@ -1336,13 +1336,13 @@ html.sidebar-collapsed-init .sidebar .sb-btn {
 table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12.9px;
+    font-size: 13px;
 }
 
 thead th {
     text-align: left;
     padding: 10px 15px;
-    font-size: 10.8px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: .65px;
     color: var(--muted);
@@ -1400,34 +1400,6 @@ tr.clickable {
     flex-wrap: nowrap;
 }
 
-.mini-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    display: grid;
-    place-items: center;
-    border: 1.5px solid var(--border);
-    color: var(--text2);
-    background: #fff;
-    cursor: pointer;
-    transition: all .16s ease-in-out;
-}
-
-.mini-btn svg {
-    width: 14px;
-    height: 14px;
-    stroke: currentColor;
-    fill: none;
-    transition: stroke .16s ease-in-out, fill .16s ease-in-out, color .16s ease-in-out;
-}
-
-.mini-btn:hover {
-    background: var(--navy);
-    border-color: var(--navy);
-    color: #fff;
-    box-shadow: 0 3px 8px -2px rgba(11, 61, 145, .4);
-}
-
 .mini-btn.danger {
     border-color: #f6d5d5;
     color: var(--red);
@@ -1459,9 +1431,9 @@ tr.clickable {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 2.5px 9px;
+    padding: 3px 9px;
     border-radius: 20px;
-    font-size: 11.2px;
+    font-size: 11px;
     font-weight: 650;
     white-space: nowrap;
     border: 1px solid transparent;
@@ -1469,8 +1441,8 @@ tr.clickable {
 
 .badge.dot::before {
     content: "";
-    width: 5.5px;
-    height: 5.5px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: currentColor;
     opacity: .9;
@@ -1496,16 +1468,6 @@ tr.clickable {
     color: #b93636;
 }
 
-.b-violet {
-    background: var(--violetSoft);
-    color: #5b3ed6;
-}
-
-.b-cyan {
-    background: var(--cyanSoft);
-    color: #1f5b8f;
-}
-
 .b-grey {
     background: var(--greySoft);
     color: #65718c;
@@ -1517,7 +1479,7 @@ tr.clickable {
     border-radius: 7px;
     background: var(--surface2);
     border: 1px solid var(--border);
-    font-size: 11.2px;
+    font-size: 11px;
     color: var(--text2);
     font-weight: 580;
     white-space: nowrap;
@@ -1527,7 +1489,7 @@ tr.clickable {
     display: inline-block;
     padding: 2px 8px;
     border-radius: 12px;
-    font-size: 11.2px;
+    font-size: 11px;
     font-weight: 650;
     white-space: nowrap;
 }
@@ -1546,7 +1508,7 @@ tr.clickable {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 11.6px;
+    font-size: 12px;
     font-weight: 650;
 }
 
@@ -1596,7 +1558,7 @@ tr.clickable {
     border-radius: 50%;
     display: grid;
     place-items: center;
-    font-size: 11.4px;
+    font-size: 11px;
     font-weight: 700;
     color: #fff;
     flex: 0 0 30px;
@@ -1614,7 +1576,7 @@ tr.clickable {
 .avatar.sm {
     width: 24px;
     height: 24px;
-    font-size: 9.6px;
+    font-size: 10px;
     flex: 0 0 24px;
 }
 
@@ -1670,7 +1632,7 @@ tr.clickable {
 .progress-row {
     display: flex;
     justify-content: space-between;
-    font-size: 11.6px;
+    font-size: 12px;
     color: var(--text2);
     margin-bottom: 5px;
 }
@@ -1695,7 +1657,7 @@ tr.clickable {
 }
 
 .money-cell .k {
-    font-size: 10.4px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: .6px;
     color: var(--muted);
@@ -1734,7 +1696,7 @@ tr.clickable {
 
 .tab {
     padding: 10px 14px;
-    font-size: 12.9px;
+    font-size: 13px;
     color: var(--text2);
     font-weight: 600;
     border-bottom: 2px solid transparent;
@@ -1752,36 +1714,9 @@ tr.clickable {
 }
 
 .tab .n {
-    font-size: 10.5px;
+    font-size: 11px;
     opacity: .75;
     margin-left: 5px;
-}
-
-.chips {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.chipbtn {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12.2px;
-    font-weight: 600;
-    color: var(--text2);
-    border: 1px solid var(--border);
-    background: #fff;
-}
-
-.chipbtn:hover {
-    border-color: #c2d2f2;
-    color: var(--navy);
-}
-
-.chipbtn.active {
-    background: var(--navy);
-    color: #fff;
-    border-color: var(--navy);
 }
 
 /* ---------- MILESTONE TIMELINE ---------- */
@@ -1804,7 +1739,7 @@ tr.clickable {
     flex: 0 0 22px;
     display: grid;
     place-items: center;
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 800;
     border: 2px solid var(--border);
     color: var(--muted);
@@ -1836,28 +1771,20 @@ tr.clickable {
 }
 
 .ms-name {
-    font-size: 13.2px;
+    font-size: 13px;
     font-weight: 620;
 }
 
 .ms-meta {
-    font-size: 11.4px;
+    font-size: 11px;
     color: var(--muted);
     margin-top: 2px;
-}
-
-.ms-line {
-    width: 2px;
-    background: var(--border2);
-    flex: 0 0 2px;
-    align-self: stretch;
-    margin-left: 10px;
 }
 
 /* ---------- SCHEDULE ---------- */
 .term {
     display: flex;
-    gap: 12px;
+    /*gap: 12px;*/
     align-items: flex-start;
     padding: 12px;
     border: 1px solid var(--border2);
@@ -1889,9 +1816,24 @@ tr.clickable {
     color: var(--navy);
     display: grid;
     place-items: center;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 800;
     flex: 0 0 26px;
+}
+
+.term-no.ms {
+    background: var(--cyanSoft);
+    color: var(--cyan);
+}
+
+.term-no.rc {
+    background: var(--violetSoft);
+    color: var(--violet);
+}
+
+.term-no.fx {
+    background: var(--greySoft);
+    color: var(--text2);
 }
 
 .term-body {
@@ -1900,12 +1842,12 @@ tr.clickable {
 }
 
 .term-title {
-    font-size: 13.2px;
+    font-size: 13px;
     font-weight: 650;
 }
 
 .term-meta {
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--muted);
     margin-top: 2px;
     display: flex;
@@ -1919,13 +1861,13 @@ tr.clickable {
 }
 
 .term-amt .a {
-    font-size: 14.5px;
+    font-size: 15px;
     font-weight: 750;
     font-variant-numeric: tabular-nums;
 }
 
 .term-amt .b {
-    font-size: 11.2px;
+    font-size: 11px;
     color: var(--muted);
     margin-top: 2px;
 }
@@ -1967,7 +1909,7 @@ tr.clickable {
 }
 
 .doc-m {
-    font-size: 11.2px;
+    font-size: 11px;
     color: var(--muted);
 }
 
@@ -1977,7 +1919,7 @@ tr.clickable {
     padding: 20px;
     text-align: center;
     color: var(--muted);
-    font-size: 12.5px;
+    font-size: 13px;
     cursor: pointer;
     transition: .14s;
 }
@@ -2038,12 +1980,12 @@ tr.clickable {
 }
 
 .fu-s {
-    font-size: 12.9px;
+    font-size: 13px;
     font-weight: 600;
 }
 
 .fu-t {
-    font-size: 11.4px;
+    font-size: 11px;
     color: var(--muted);
     margin-top: 2px;
 }
@@ -2085,7 +2027,7 @@ tr.clickable {
 }
 
 .tl .t {
-    font-size: 12.5px;
+    font-size: 13px;
     line-height: 1.45;
 }
 
@@ -2094,7 +2036,7 @@ tr.clickable {
 }
 
 .tl .w {
-    font-size: 10.8px;
+    font-size: 11px;
     color: var(--muted);
     margin-top: 1px;
 }
@@ -2115,11 +2057,11 @@ tr.clickable {
 }
 
 .empty p {
-    font-size: 13.2px;
+    font-size: 13px;
 }
 
 .empty .sm {
-    font-size: 11.8px;
+    font-size: 12px;
     margin-top: 5px;
     opacity: .85;
 }
@@ -2168,12 +2110,6 @@ tr.clickable {
 .sk-line {
     height: 11px;
     margin-bottom: 8px;
-}
-
-.sk-card {
-    height: 88px;
-    border-radius: 12px;
-    margin-bottom: 12px;
 }
 
 /* ---------- MODAL ---------- */
@@ -2228,13 +2164,13 @@ body.overflow-hidden {
 }
 
 .modal-head h3 {
-    font-size: 15.8px;
+    font-size: 16px;
     font-weight: 680;
     letter-spacing: -.2px;
 }
 
 .modal-head .sub {
-    font-size: 11.5px;
+    font-size: 12px;
     color: var(--muted);
     margin-top: 1px;
 }
@@ -2292,7 +2228,7 @@ label.f {
 
 label.f > span {
     display: block;
-    font-size: 11.1px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--text2);
     margin-bottom: 5px;
@@ -2308,7 +2244,7 @@ input.i, select.i, textarea.i {
     background: #fff;
     outline: none;
     transition: .14s;
-    font-size: 13.2px;
+    font-size: 13px;
 }
 
 input.i:focus, select.i:focus, textarea.i:focus {
@@ -2323,7 +2259,7 @@ textarea.i {
 }
 
 .hint {
-    font-size: 11.2px;
+    font-size: 11px;
     color: var(--muted);
     margin-top: 5px;
 }
@@ -2339,7 +2275,7 @@ textarea.i {
     border-radius: 9px;
     border: 1px solid var(--border);
     background: #fff;
-    font-size: 12.3px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--text2);
 }
@@ -2355,7 +2291,7 @@ textarea.i {
     align-items: center;
     gap: 9px;
     padding: 5px 0;
-    font-size: 12.9px;
+    font-size: 13px;
 }
 
 .checkline input {
@@ -2378,7 +2314,7 @@ textarea.i {
     color: #2a3f6b;
     border-radius: 12px;
     padding: 13px 16px;
-    font-size: 12.7px;
+    font-size: 13px;
     display: flex;
     gap: 10px;
     align-items: flex-start;
@@ -2431,7 +2367,7 @@ textarea.i {
 }
 
 .page-head .info {
-    font-size: 12.3px;
+    font-size: 12px;
     color: var(--muted);
 }
 
@@ -2463,12 +2399,12 @@ textarea.i {
 }
 
 .mini-item .t {
-    font-size: 12.8px;
+    font-size: 13px;
     font-weight: 600;
 }
 
 .mini-item .s {
-    font-size: 11.2px;
+    font-size: 11px;
     color: var(--muted);
     margin-top: 1px;
 }
@@ -2542,7 +2478,7 @@ textarea.i {
 }
 
 .spark-label {
-    font-size: 10.6px;
+    font-size: 11px;
     color: var(--muted);
     font-weight: 650;
     text-align: center;
@@ -2586,14 +2522,14 @@ textarea.i {
     margin: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    font-size: 12.8px !important;
+    font-size: 13px !important;
     color: var(--text) !important;
     line-height: 34px !important;
 }
 
 .filterbar .gsearch input::placeholder {
     color: var(--muted) !important;
-    font-size: 12.8px !important;
+    font-size: 13px !important;
 }
 
 .filterbar .gsearch svg {
@@ -2613,7 +2549,7 @@ textarea.i {
     border: 1px solid var(--border);
     border-radius: 8px;
     background-color: #fff;
-    font-size: 12.8px;
+    font-size: 13px;
     color: var(--text);
     outline: none;
     line-height: normal;
@@ -2645,7 +2581,7 @@ textarea.i {
     border: 1px solid var(--border);
     border-radius: 8px;
     background-color: #fff;
-    font-size: 12.5px;
+    font-size: 13px;
     color: var(--text);
     outline: none;
     line-height: normal;
@@ -2681,7 +2617,7 @@ textarea.i {
     max-height: 36px;
     box-sizing: border-box;
     padding: 0 12px;
-    font-size: 12.5px;
+    font-size: 13px;
     border-radius: 8px;
     display: inline-flex;
     align-items: center;
@@ -2692,8 +2628,8 @@ textarea.i {
 
 .filterbar .btn svg,
 .filterbar .btn-sm svg {
-    width: 13.5px;
-    height: 13.5px;
+    width: 14px;
+    height: 14px;
 }
 
 .sres {
@@ -2711,7 +2647,7 @@ textarea.i {
 }
 
 .sres-head {
-    font-size: 10.3px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: .8px;
     color: var(--muted);
@@ -2732,12 +2668,12 @@ textarea.i {
 }
 
 .sres-item .tt {
-    font-size: 12.8px;
+    font-size: 13px;
     font-weight: 600;
 }
 
 .sres-item .ss {
-    font-size: 11.1px;
+    font-size: 11px;
     color: var(--muted);
 }
 
@@ -2773,6 +2709,11 @@ textarea.i {
 .toast.err {
     background: #4a1a1a;
     border-left: 3px solid var(--red);
+}
+
+.toast.warning {
+    background: #3d2a0f;
+    border-left: 3px solid var(--amber);
 }
 
 .toast svg {
@@ -2862,7 +2803,7 @@ textarea.i {
 
     .sidebar.collapsed .nav-item {
         justify-content: flex-start !important;
-        padding: 8.5px 11px !important;
+        padding: 9px 11px !important;
         gap: 11px !important;
     }
 
@@ -3078,7 +3019,7 @@ textarea.i {
     }
 
     .topbar .gsearch input {
-        font-size: 11.5px;
+        font-size: 12px;
     }
 
     .sres {
@@ -3115,14 +3056,6 @@ textarea.i {
         flex-wrap: wrap;
         gap: 8px;
     }
-
-    .card-head-actions {
-        margin-left: auto;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
-
     .card-foot {
         padding: 12px 14px;
         flex-wrap: wrap;
@@ -3222,7 +3155,7 @@ textarea.i {
         white-space: nowrap;
         flex-shrink: 0;
         padding: 10px 12px;
-        font-size: 12.5px;
+        font-size: 13px;
     }
 }
 

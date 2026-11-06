@@ -185,7 +185,15 @@ class ProjectDetail extends Component
 
     public function deleteDocument(int $docId): void
     {
+        $user = auth()->user();
         $doc = $this->project->documents()->findOrFail($docId);
+
+        if ($user->role !== 'Admin' && $doc->uploaded_by !== $user->id) {
+            $this->dispatch('toast', ['msg' => 'You can only remove files you uploaded.', 'type' => 'err']);
+
+            return;
+        }
+
         $docName = $doc->file_name;
         if (Storage::disk('documents')->exists($doc->stored_as)) {
             Storage::disk('documents')->delete($doc->stored_as);
@@ -205,6 +213,7 @@ class ProjectDetail extends Component
         );
 
         $this->project->load('documents');
+        $this->dispatch('toast', ['msg' => 'Document removed', 'type' => 'ok']);
     }
 
     public function deleteProject(): void
@@ -358,9 +367,9 @@ class ProjectDetail extends Component
         }
 
         return view('livewire.projects.project-detail', [
-            'terms' => $this->project->terms()->orderBy('seq')->get(),
-            'milestones' => $this->project->milestones()->orderBy('sort_order')->get(),
-            'payments' => $this->project->payments()->orderByDesc('paid_on')->get(),
+            'terms' => $this->project->terms()->with('milestone')->orderBy('seq')->get(),
+            'milestones' => $this->project->milestones()->with('paymentTerms')->orderBy('sort_order')->get(),
+            'payments' => $this->project->payments()->with(['term.milestone', 'enteredBy', 'document'])->orderByDesc('paid_on')->get(),
             'documents' => $this->project->documents()->orderByDesc('id')->get(),
             'r' => $collectionRate,
             'daysLate' => $daysLate,

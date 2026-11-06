@@ -52,8 +52,8 @@
 
                 <select wire:model.live="sales" class="i" style="width:auto">
                     <option value="">All salespeople</option>
-                    @foreach($salesPeople as $sp)
-                        <option value="{{ $sp->id }}">{{ $sp->name }}</option>
+                    @foreach($salesPeople as $salesPerson)
+                        <option value="{{ $salesPerson->id }}">{{ $salesPerson->name }}</option>
                     @endforeach
                 </select>
 
@@ -127,7 +127,7 @@
                         <td>
                             <div
                                 class="strong">{{ $customer->display_name }}</div>
-                            <div class="muted" style="font-size:10.9px">
+                            <div class="muted" style="font-size:11px">
                                 {{ $customer->code }}
                                 @if($customer->company && $customer->contact_name)
                                     · {{ $customer->contact_name }}
