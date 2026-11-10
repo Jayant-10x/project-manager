@@ -13,49 +13,61 @@
     </div>
 
     @php
-        $kindConfig = match ($notification->type) {
-            'payment_due' => ['color' => '#e0a13a', 'icon' => 'clock', 'badge' => 'Payment Due'],
-            'overdue'     => ['color' => '#d94b4b', 'icon' => 'alert', 'badge' => 'Overdue Alert'],
-            'amc'         => ['color' => '#5aa236', 'icon' => 'refresh', 'badge' => 'AMC Renewal'],
-            'followup'    => ['color' => '#0b3d91', 'icon' => 'chat', 'badge' => 'Follow-up Call'],
-            'handover'    => ['color' => '#7a5af8', 'icon' => 'flag', 'badge' => 'Handover Pending'],
-            'payment'     => ['color' => '#5aa236', 'icon' => 'cash', 'badge' => 'Payment Receipt'],
-            'customer'    => ['color' => '#0b3d91', 'icon' => 'cust', 'badge' => 'Customer Event'],
-            'project'     => ['color' => '#2e75b6', 'icon' => 'proj', 'badge' => 'Project Update'],
-            default       => ['color' => '#8894ac', 'icon' => 'bell', 'badge' => 'System Notification'],
-        };
-        $c = $kindConfig['color'];
-        $ico = $kindConfig['icon'];
+        $kindConfig = $notification->kind_config;
+        $color = $kindConfig['color'];
+        $icon = $kindConfig['icon'];
     @endphp
 
     <div class="card <!--max-w-3xl-->">
         <div class="card-head flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <span class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style="background: {{ $c }}1a; color: {{ $c }}">
-                    @if($ico === 'clock')
+                <span class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style="background: {{ $color }}1a; color: {{ $color }}">
+                    @if($icon === 'lock')
+                        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0110 0v4"/>
+                        </svg>
+                    @elseif($icon === 'clock')
                         <svg viewBox="0 0 24 24" class="w-5 h-5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                    @elseif($ico === 'alert')
+                    @elseif($icon === 'alert')
                         <svg viewBox="0 0 24 24" class="w-5 h-5"><circle cx="12" cy="12" r="9"/><path
                                 d="M12 8v5M12 16.5v.5"/></svg>
-                    @elseif($ico === 'refresh')
+                    @elseif($icon === 'milestone')
+                        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                            <path d="M4 22v-7"/>
+                        </svg>
+                    @elseif($icon === 'refresh')
                         <svg viewBox="0 0 24 24" class="w-5 h-5"><path d="M21 12a9 9 0 11-3-6.7M21 3v6h-6"/></svg>
-                    @elseif($ico === 'chat')
+                    @elseif($icon === 'chat')
                         <svg viewBox="0 0 24 24" class="w-5 h-5"><path
                                 d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                    @elseif($ico === 'flag')
+                    @elseif($icon === 'flag')
                         <svg viewBox="0 0 24 24" class="w-5 h-5"><path
                                 d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path
                                 d="M4 22v-7"/></svg>
-                    @elseif($ico === 'cash')
+                    @elseif($icon === 'cash')
                         <svg viewBox="0 0 24 24" class="w-5 h-5"><rect x="2" y="6" width="20" height="12" rx="2"/><circle
                                 cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>
-                    @elseif($ico === 'cust')
+                    @elseif($icon === 'cust')
                         <svg viewBox="0 0 24 24" class="w-5 h-5"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle
                                 cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/></svg>
-                    @elseif($ico === 'proj')
+                    @elseif($icon === 'proj')
                         <svg viewBox="0 0 24 24" class="w-5 h-5"><path
                                 d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+                    @elseif($icon === 'task')
+                        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 11 12 14 22 4"/>
+                            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                        </svg>
+                    @elseif($icon === 'users')
+                        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 010 7.75"/>
+                        </svg>
                     @else
                         <svg viewBox="0 0 24 24" class="w-5 h-5"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path
                                 d="M13.7 21a2 2 0 01-3.4 0"/></svg>
@@ -98,18 +110,27 @@
                             Target {{ ucfirst($notification->link_type) }} #{{ $notification->link_id }}
                         </div>
                     </div>
-                    <button type="button" wire:click="navigateToTarget" class="btn btn-primary btn-sm">
-                        View {{ ucfirst($notification->link_type) }}
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M9 18l6-6-6-6"/>
-                        </svg>
-                    </button>
+                    @if($notification->canAccessTarget(auth()->user()))
+                        <button type="button" wire:click="navigateToTarget" class="btn btn-primary btn-sm">
+                            View {{ ucfirst($notification->link_type) }}
+                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </button>
+                    @else
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200" title="This record is restricted for your role or outside your assignment scope.">
+                            <svg class="w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                            </svg>
+                            Restricted Record
+                        </span>
+                    @endif
                 </div>
             @endif
 
             <!-- Action Controls -->
             <div class="flex items-center justify-between pt-4 border-t border-[#eef2f9]">
-                <button type="button" wire:click="toggleRead" class="btn btn-ghost btn-sm">
+                <button type="button" wire:click="toggleRead" class="btn btn-outline-secondary btn-sm">
                     <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                         <path d="M20 6L9 17l-5-5"/>
                     </svg>
@@ -117,7 +138,7 @@
                 </button>
 
                 <button type="button"
-                        class="btn btn-danger btn-sm"
+                        class="btn btn-outline-danger btn-sm"
                         @click="$dispatch('confirm-dialog', {
                             title: 'Delete Notification?',
                             message: 'Are you sure you want to permanently delete this notification?',

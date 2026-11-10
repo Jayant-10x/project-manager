@@ -50,6 +50,12 @@ class NotificationDetail extends Component
 
     public function navigateToTarget()
     {
+        if (! $this->notification->canAccessTarget(auth()->user())) {
+            $this->dispatch('toast', ['msg' => 'You do not have permission to view the linked record.', 'type' => 'err']);
+
+            return;
+        }
+
         if ($this->notification->link_type === 'project' && $this->notification->link_id) {
             return $this->redirect(route('projects.show', $this->notification->link_id), navigate: true);
         }
@@ -62,6 +68,22 @@ class NotificationDetail extends Component
             $params = $this->notification->link_id ? ['highlight_user' => $this->notification->link_id] : [];
 
             return $this->redirect(route('settings.index', $params), navigate: true);
+        }
+
+        if ($this->notification->link_type === 'team') {
+            return $this->redirect(route('team.index'), navigate: true);
+        }
+
+        if ($this->notification->link_type === 'tasks') {
+            return $this->redirect(route('tasks.index'), navigate: true);
+        }
+
+        if ($this->notification->link_type === 'payments') {
+            return $this->redirect(route('payments.index'), navigate: true);
+        }
+
+        if ($this->notification->link_type === 'followups') {
+            return $this->redirect(route('followups.index'), navigate: true);
         }
 
         return $this->redirect(route('notifications.index'), navigate: true);

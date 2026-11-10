@@ -60,18 +60,38 @@ class NotificationIndex extends Component
             $notif->update(['is_read' => true]);
         }
 
-        if ($notif->link_type === 'project' && $notif->link_id) {
-            return $this->redirect(route('projects.show', $notif->link_id), navigate: true);
-        }
+        // If the user has permission to the related target entity, redirect directly.
+        // Otherwise, open the default notification preview to avoid 403 Forbidden redirects.
+        if ($notif->canAccessTarget(auth()->user())) {
+            if ($notif->link_type === 'project' && $notif->link_id) {
+                return $this->redirect(route('projects.show', $notif->link_id), navigate: true);
+            }
 
-        if ($notif->link_type === 'customer' && $notif->link_id) {
-            return $this->redirect(route('customers.show', $notif->link_id), navigate: true);
-        }
+            if ($notif->link_type === 'customer' && $notif->link_id) {
+                return $this->redirect(route('customers.show', $notif->link_id), navigate: true);
+            }
 
-        if ($notif->link_type === 'settings') {
-            $params = $notif->link_id ? ['highlight_user' => $notif->link_id] : [];
+            if ($notif->link_type === 'settings') {
+                $params = $notif->link_id ? ['highlight_user' => $notif->link_id] : [];
 
-            return $this->redirect(route('settings.index', $params), navigate: true);
+                return $this->redirect(route('settings.index', $params), navigate: true);
+            }
+
+            if ($notif->link_type === 'team') {
+                return $this->redirect(route('team.index'), navigate: true);
+            }
+
+            if ($notif->link_type === 'tasks') {
+                return $this->redirect(route('tasks.index'), navigate: true);
+            }
+
+            if ($notif->link_type === 'payments') {
+                return $this->redirect(route('payments.index'), navigate: true);
+            }
+
+            if ($notif->link_type === 'followups') {
+                return $this->redirect(route('followups.index'), navigate: true);
+            }
         }
 
         return $this->redirect(route('notifications.show', $notif->id), navigate: true);
@@ -82,14 +102,15 @@ class NotificationIndex extends Component
         $user = auth()->user();
 
         $notifications = Notification::where('user_id', $user->id)
-            ->when($this->type, fn ($q) => $q->where('type', $this->type))
-            ->when($this->status === 'unread', fn ($q) => $q->where('is_read', false))
-            ->when($this->status === 'read', fn ($q) => $q->where('is_read', true))
-            ->when($this->search, function ($q) {
+            ->ofType($this->type)
+            ->when($this->status === 'unread', fn ($statusQuery) => $statusQuery->where('is_read', false))
+            ->when($this->status === 'read', fn ($statusQuery) => $statusQuery->where('is_read', true))
+            ->when($this->search, function ($searchQuery) {
                 $term = '%'.trim($this->search).'%';
-                $q->where(function ($sub) use ($term) {
-                    $sub->where('title', 'like', $term)
-                        ->orWhere('body', 'like', $term);
+                $searchQuery->where(function ($filterQuery) use ($term) {
+                    $filterQuery->where('title', 'like', $term)
+                        ->orWhere('body', 'like', $term)
+                        ->orWhere('type', 'like', $term);
                 });
             })
             ->orderByDesc('id')
@@ -104,7 +125,7 @@ class NotificationIndex extends Component
             'unreadCount' => $unreadCount,
         ])->layoutData([
             'header' => 'Notifications',
-            'subtitle' => 'Payment due, overdue, AMC and follow-up alerts',
+            'subtitle' => 'Payment due, overdue, milestone, security and project alerts',
         ]);
     }
 }

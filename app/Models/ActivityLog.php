@@ -12,11 +12,12 @@ class ActivityLog extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'user_id', 'action', 'entity', 'entity_id', 'entity_code', 'detail', 'at_time',
+        'user_id', 'action', 'entity', 'entity_id', 'entity_code', 'detail', 'changes', 'at_time',
     ];
 
     protected $casts = [
         'at_time' => 'datetime',
+        'changes' => 'array',
     ];
 
     public function user(): BelongsTo

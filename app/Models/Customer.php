@@ -11,6 +11,10 @@ class Customer extends Model
 {
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'approved_at' => 'datetime',
+    ];
+
     public function getCodeAttribute(): string
     {
         return $this->customer_code ?? '';
@@ -23,7 +27,7 @@ class Customer extends Model
         }
 
         if (filled($this->contact_name)) {
-            return "{$this->contact_name} (Client)";
+            return "{$this->contact_name} (Customer)";
         }
 
         return (string) ($this->customer_code ?: 'Unnamed Customer');
@@ -32,6 +36,26 @@ class Customer extends Model
     public function getNameAttribute(): string
     {
         return $this->display_name;
+    }
+
+    public function setCompanyAttribute($value): void
+    {
+        $this->attributes['company'] = (is_string($value) && trim($value) === '') ? null : $value;
+    }
+
+    public function setEmailAttribute($value): void
+    {
+        $this->attributes['email'] = (is_string($value) && trim($value) === '') ? null : $value;
+    }
+
+    public function setGstNumberAttribute($value): void
+    {
+        $this->attributes['gst_number'] = (is_string($value) && trim($value) === '') ? null : (is_string($value) ? strtoupper(trim($value)) : $value);
+    }
+
+    public function setPanNumberAttribute($value): void
+    {
+        $this->attributes['pan_number'] = (is_string($value) && trim($value) === '') ? null : (is_string($value) ? strtoupper(trim($value)) : $value);
     }
 
     /**
@@ -59,15 +83,24 @@ class Customer extends Model
 
             return $query->where(function ($subQuery) use ($downlineIds) {
                 $subQuery->whereIn('sales_person_id', $downlineIds)
+                    ->orWhereIn('created_by', $downlineIds)
                     ->orWhereHas('projects', function ($projectQuery) use ($downlineIds) {
                         $projectQuery->whereIn('coordinator_id', $downlineIds)
-                            ->orWhereIn('sales_person_id', $downlineIds);
+                            ->orWhereIn('sales_person_id', $downlineIds)
+                            ->orWhereIn('tech_person_id', $downlineIds);
                     });
             });
         }
 
         if ($user->role === 'Sales') {
-            return $query->where('sales_person_id', $user->id);
+            return $query->where(function ($subQuery) use ($user) {
+                $subQuery->where('sales_person_id', $user->id)
+                    ->orWhere('created_by', $user->id);
+            });
+        }
+
+        if ($user->isTechPerson()) {
+            return $query->whereRaw('0 = 1');
         }
 
         // Coordinator: customers with projects assigned to coordinator or created/attributed to them
@@ -91,6 +124,45 @@ class Customer extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function isPendingApproval(): bool
+    {
+        return $this->approval_status === 'Pending';
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->approval_status === 'Approved' || empty($this->approval_status);
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->approval_status === 'Rejected';
+    }
+
+    public function canBeApprovedBy(?User $user): bool
+    {
+        if (! $user || ! $this->isPendingApproval()) {
+            return false;
+        }
+
+        // Submitter cannot approve their own item
+        if ($user->id === (int) $this->sales_person_id || $user->id === (int) $this->created_by) {
+            return false;
+        }
+
+        // Approval can be done by Admin, Manager, Coordinator
+        if (in_array($user->role, ['Admin', 'Manager', 'Coordinator'], true)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function payments(): HasMany

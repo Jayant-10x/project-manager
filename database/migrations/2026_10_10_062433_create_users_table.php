@@ -14,11 +14,13 @@ return new class extends Migration
             $table->string('email', 160)->unique('email');
             $table->timestamp('email_verified_at')->nullable()->default(null);
             $table->string('phone', 30)->nullable()->default(null)->unique('phone');
-            $table->enum('role', ['Admin', 'Manager', 'Coordinator', 'Sales'])->default('Coordinator');
+            $table->enum('role', ['Admin', 'Manager', 'Coordinator', 'Sales', 'TechPerson'])->default('Sales');
             $table->enum('status', ['Active', 'Inactive'])->default('Inactive');
             $table->string('designation', 60)->nullable()->default(null);
             $table->string('city', 60)->nullable()->default(null);
+            $table->string('avatar')->nullable()->default(null);
             $table->decimal('target', 14, 2)->default(0.00);
+            $table->json('permissions')->nullable()->default(null);
 
             // Presence tracking
             $table->boolean('is_online')->default(false);

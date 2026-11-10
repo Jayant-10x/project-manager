@@ -17,19 +17,28 @@
 
     <!-- 4 KPI Blocks -->
     <div class="kpis four mb-6">
-        <x-kpi-card label="Upcoming" :value="$upcomingSum" :sub="$upcomingCount . ' ' . \Illuminate\Support\Str::plural('installment', $upcomingCount)" icon="cal"
+        <x-kpi-card label="Upcoming" :value="$upcomingSum"
+                    :sub="$upcomingCount . ' ' . \Illuminate\Support\Str::plural('installment', $upcomingCount)"
+                    icon="cal"
                     :ismoney="true" color="#0b3d91" bg="#e8eefc"
                     wire:click="setStatus('Upcoming')"
                     :class="$status === 'Upcoming' ? 'ring-2 ring-[#0b3d91] bg-blue-50/50' : ''"/>
-        <x-kpi-card label="Overdue" :value="$overdueSum" :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount)" icon="alert"
+        <x-kpi-card label="Overdue" :value="$overdueSum"
+                    :sub="$overdueCount . ' ' . \Illuminate\Support\Str::plural('installment', $overdueCount)"
+                    icon="alert"
                     :ismoney="true" color="#d94b4b" bg="#fdeaea"
                     wire:click="setStatus('Overdue')"
                     :class="$status === 'Overdue' ? 'ring-2 ring-[#d94b4b] bg-red-50/50' : ''"/>
-        <x-kpi-card label="Collected" :value="$collectedSum" :sub="$paidCount . ' fully paid'" icon="check"
+        <x-kpi-card label="Received" :value="$collectedSum"
+                    :sub="$tdsCollected > 0
+                        ? (view('components.money', ['value' => $cashCollected])->render() . ' Cash + ' . view('components.money', ['value' => $tdsCollected])->render() . ' TDS (' . $paidCount . ' paid)')
+                        : ('Collected · ' . $paidCount . ' fully paid')"
+                    icon="check"
                     :ismoney="true" color="#5aa236" bg="#eef7e8"
                     wire:click="setStatus('Paid')"
                     :class="$status === 'Paid' ? 'ring-2 ring-[#5aa236] bg-green-50/50' : ''"/>
-        <x-kpi-card label="Total scheduled" :value="$totalScheduledSum" sub="All active terms" icon="cash"
+        <x-kpi-card label="Total Receivable" :value="$totalScheduledSum" sub="Total Scheduled · All active terms"
+                    icon="cash"
                     color="#7a5af8"
                     :ismoney="true" bg="#f0ecff"
                     wire:click="setStatus('')"
@@ -50,8 +59,8 @@
 
                 <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
                     <option value="">All customers</option>
-                    @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
+                    @foreach($customers as $customer)
+                        <option value="{{ $customer->id }}">{{ $customer->display_name }}</option>
                     @endforeach
                 </select>
 
@@ -73,7 +82,7 @@
                 </select>
 
                 @if($search !== '' || $status !== '' || $customer_id !== '' || $trigger_type !== '')
-                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                    <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
                         </svg>
@@ -113,7 +122,7 @@
                         $balance = max(0, (float)$term->amount - (float)$term->received - (float)$term->tds);
                         $isLate = $term->status === 'Overdue';
                         $dueDate = $term->due_date ? \Carbon\Carbon::parse($term->due_date) : null;
-                        $daysLate = ($isLate && $dueDate) ? abs(\Carbon\Carbon::parse($today)->diffInDays($dueDate, false)) : 0;
+                        $daysLate = ($isLate && $dueDate) ? (int) round(abs(\Carbon\Carbon::parse($today)->startOfDay()->diffInDays($dueDate->startOfDay(), false))) : 0;
                         $triggerLabel = match ($term->trigger_type) {
                             'milestone' => 'Milestone linked',
                             'recurring' => 'Recurring monthly',
@@ -130,19 +139,34 @@
                         <td class="nowrap" style="{{ $isLate ? 'color:#d94b4b;font-weight:650' : '' }}">
                             {{ $dueDate ? $dueDate->format('d M') : '—' }}
                             @if($isLate && $daysLate > 0)
-                                <div style="font-size:10.5px">{{ $daysLate }} days late</div>
+                                <div style="font-size:11px">{{ $daysLate }} days late</div>
                             @endif
                         </td>
                         <td class="clickable"
-                            @click="Livewire.navigate('{{ $term->project?->customer_id ? route('customers.show', $term->project->customer_id) : '#' }}')">
+                            @click="Livewire.navigate('{{ $term->project?->customer_id ? route('customers.show', $term->project->customer_id)."?tab=payments" : '#' }}')">
                             {{ $term->project?->customer?->display_name ?? '—' }}
                         </td>
                         <td class="muted">
-                            <a href="{{ route('projects.show', $term->project_id) }}" wire:navigate class="link">
-                                {{ $term->project?->code }}
+                            <a href="{{ route('projects.show', $term->project_id).'?tab=schedule' }}" wire:navigate
+                               class="link font-semibold">
+                                {{ $term->project?->name ?: ($term->project?->code ?? '—') }}
                             </a>
                         </td>
-                        <td>{{ $term->label }}</td>
+                        <td>
+                            <div class="font-medium text-slate-800 dark:text-slate-200">{{ $term->label }}</div>
+                            @if($term->milestone)
+                                <div class="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-0.5" title="Milestone: {{ $term->milestone->title }}">
+                                    <svg class="w-2.5 h-2.5 inline shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                                        <line x1="4" y1="22" x2="4" y2="15"/>
+                                    </svg>
+                                    <span>{{ $term->milestone->title }}</span>
+                                    @if($term->milestone->done)
+                                        <span class="text-emerald-600 dark:text-emerald-400 font-semibold text-[10px]">(Done)</span>
+                                    @endif
+                                </div>
+                            @endif
+                        </td>
                         <td><span class="pill">{{ $triggerLabel }}</span></td>
                         <td class="num">
                             <x-money :value="$term->amount"/>
@@ -154,13 +178,21 @@
                         <td>
                             @if($balance > 0)
                                 <button type="button"
-                                        class="mini-btn"
+                                        class="btn btn-outline-green btn-xs whitespace-nowrap"
                                         @click="Livewire.dispatch('open-payment-modal', { projectId: {{ $term->project_id }}, termId: {{ $term->id }} })"
-                                        title="Record payment">
-                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
+                                        title="Record payment for this installment">
+                                    <svg viewBox="0 0 24 24" class="w-3 h-3 mr-1 inline">
                                         <path d="M12 5v14M5 12h14"/>
                                     </svg>
+                                    Record Payment
                                 </button>
+                            @else
+                                <span class="inline-flex items-center gap-1 text-xs text-[#5aa236] font-semibold">
+                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 stroke-current fill-none stroke-2">
+                                        <path d="M20 6L9 17l-5-5"/>
+                                    </svg>
+                                    Settled
+                                </span>
                             @endif
                         </td>
                     </tr>

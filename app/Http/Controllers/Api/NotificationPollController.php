@@ -16,9 +16,8 @@ class NotificationPollController extends Controller
         $maxId = (int) (Notification::where('user_id', $userId)->max('id') ?? 0);
         $unreadCount = Notification::where('user_id', $userId)->where('is_read', false)->count();
 
-        // 1. If database was cleared/truncated or client cursor is ahead of database reality,
-        // reset client cursor to current max ID without triggering alerts.
-        if ($afterId > $maxId) {
+        // 1. Initial client synchronization (prevent historical alert flood on very first device session)
+        if ($request->boolean('init')) {
             return response()->json([
                 'unread_count' => $unreadCount,
                 'latest_id' => $maxId,
@@ -27,9 +26,9 @@ class NotificationPollController extends Controller
             ]);
         }
 
-        // 2. Baseline on first visit: if client has no cursor (after_id = 0),
-        // set baseline to current max ID so historical notifications are not spammed.
-        if ($afterId === 0) {
+        // 2. If database was cleared/truncated or client cursor is ahead of database reality,
+        // reset client cursor to current max ID without triggering alerts.
+        if ($afterId > $maxId) {
             return response()->json([
                 'unread_count' => $unreadCount,
                 'latest_id' => $maxId,

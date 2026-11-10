@@ -1,0 +1,161 @@
+<?php
+
+namespace App\Livewire\Projects;
+
+use App\Models\Followup;
+use App\Models\Milestone;
+use App\Models\PaymentTerm;
+use App\Services\AuditNotificationService;
+use Livewire\Attributes\On;
+use Livewire\Component;
+
+class MilestoneChaseModal extends Component
+{
+    public ?int $milestoneId = null;
+
+    public ?int $termId = null;
+
+    public string $milestoneName = '';
+
+    public string $projectCode = '';
+
+    public string $projectName = '';
+
+    public string $chase_notes = '';
+
+    public ?string $next_chase_date = null;
+
+    #[On('open-chase-modal')]
+    public function openModal(?int $milestoneId = null, ?int $termId = null): void
+    {
+        $this->resetValidation();
+        $this->termId = $termId;
+        $this->milestoneId = null;
+
+        if (! $milestoneId && $termId) {
+            $term = PaymentTerm::with(['milestone', 'project.customer'])->find($termId);
+            if ($term) {
+                if ($term->milestone_id && $term->milestone) {
+                    $milestoneId = $term->milestone_id;
+                } else {
+                    // Do not persist a dummy milestone upon modal opening.
+                    // Populate display information directly from payment term context.
+                    $this->milestoneId = null;
+                    $this->milestoneName = $term->label;
+                    $this->projectCode = $term->project?->code ?? '';
+                    $this->projectName = $term->project?->name ?? '';
+                    $this->chase_notes = $term->notes ?? '';
+                    $this->next_chase_date = null;
+
+                    $this->dispatch('open-modal', 'milestone-chase-modal');
+
+                    return;
+                }
+            }
+        }
+
+        if (! $milestoneId) {
+            return;
+        }
+
+        $this->milestoneId = $milestoneId;
+
+        $milestone = Milestone::with('project.customer')->findOrFail($milestoneId);
+        $this->milestoneName = $milestone->name;
+        $this->projectCode = $milestone->project?->code ?? '';
+        $this->projectName = $milestone->project?->name ?? '';
+        $this->chase_notes = $milestone->chase_notes ?? '';
+        $this->next_chase_date = $milestone->next_chase_date?->toDateString();
+
+        $this->dispatch('open-modal', 'milestone-chase-modal');
+    }
+
+    protected function rules(): array
+    {
+        return [
+            'chase_notes' => 'required|string|max:1000',
+            'next_chase_date' => 'nullable|date',
+        ];
+    }
+
+    protected function validationAttributes(): array
+    {
+        return [
+            'chase_notes' => 'collection chase note',
+            'next_chase_date' => 'next chase date',
+        ];
+    }
+
+    public function save(): void
+    {
+        $this->chase_notes = trim($this->chase_notes);
+        $this->next_chase_date = ! empty($this->next_chase_date) ? $this->next_chase_date : null;
+
+        $validated = $this->validate();
+
+        if (! $this->milestoneId && $this->termId) {
+            $term = PaymentTerm::with('project.customer')->findOrFail($this->termId);
+            $milestone = Milestone::create([
+                'project_id' => $term->project_id,
+                'name' => $term->label,
+                'due_date' => $term->due_date,
+                'status' => $term->status === 'Paid' ? 'Done' : 'Pending',
+                'done' => $term->status === 'Paid',
+                'sort_order' => $term->seq ?: 1,
+            ]);
+            $term->update(['milestone_id' => $milestone->id]);
+            $this->milestoneId = $milestone->id;
+        }
+
+        $milestone = Milestone::with('project.customer')->findOrFail($this->milestoneId);
+        $milestone->update([
+            'chase_notes' => $validated['chase_notes'],
+            'next_chase_date' => $validated['next_chase_date'],
+        ]);
+
+        // Smart Follow-up: record a customer/project follow-up entry
+        if ($milestone->project) {
+            Followup::create([
+                'customer_id' => $milestone->project->customer_id,
+                'project_id' => $milestone->project_id,
+                'type' => 'Note',
+                'summary' => "Collection Chase: {$milestone->name}",
+                'detail' => $validated['chase_notes'],
+                'happened_on' => now(),
+                'next_date' => $validated['next_chase_date'],
+                'next_note' => "Follow-up on {$milestone->name}",
+                'created_by' => auth()->id(),
+            ]);
+
+            app(AuditNotificationService::class)->log(
+                auth()->id(),
+                'Logged Chase Note',
+                'Milestone',
+                $milestone->id,
+                $milestone->project->code,
+                "Logged chase note for milestone '{$milestone->name}': {$validated['chase_notes']}"
+            );
+
+            app(AuditNotificationService::class)->notifyProjectStakeholders(
+                $milestone->project,
+                'Chase Note Logged',
+                "Collection Chase: {$milestone->name}",
+                auth()->user()->name." logged a collection chase note on project {$milestone->project->name}: {$validated['chase_notes']}",
+                'project',
+                $milestone->project->id
+            );
+        }
+
+        $this->reset(['milestoneId', 'termId', 'milestoneName', 'projectCode', 'projectName', 'chase_notes', 'next_chase_date']);
+        $this->dispatch('close-modal', 'milestone-chase-modal');
+        $this->dispatch('project-saved');
+        $this->dispatch('followup-saved');
+        $this->dispatch('counter-refresh');
+        $this->dispatch('toast', ['msg' => 'Collection chase note saved successfully', 'type' => 'ok']);
+    }
+
+    public function render()
+    {
+        return view('livewire.projects.milestone-chase-modal');
+    }
+}

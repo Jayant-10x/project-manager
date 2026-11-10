@@ -1,7 +1,7 @@
 <div class="relative inline-block">
     <button type="button"
             class="icon-sq relative"
-            @click="$dispatch('toggle-notification-drawer')"
+            @click="if ('Notification' in window && Notification.permission === 'default') { Notification.requestPermission(); } $dispatch('toggle-notification-drawer')"
             title="Notifications">
         <svg viewBox="0 0 24 24" class="w-4 h-4">
             <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>

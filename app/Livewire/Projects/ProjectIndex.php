@@ -5,6 +5,7 @@ namespace App\Livewire\Projects;
 use App\Models\Customer;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\AuditNotificationService;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -30,6 +31,9 @@ class ProjectIndex extends Component
 
     #[Url]
     public string $coordinator_id = '';
+
+    #[Url]
+    public string $tech_person_id = '';
 
     #[Url]
     public string $project_type = '';
@@ -62,6 +66,11 @@ class ProjectIndex extends Component
         $this->resetPage();
     }
 
+    public function updatingTechPersonId(): void
+    {
+        $this->resetPage();
+    }
+
     public function updatingProjectType(): void
     {
         $this->resetPage();
@@ -74,7 +83,7 @@ class ProjectIndex extends Component
 
     public function clearFilters(): void
     {
-        $this->reset(['search', 'health', 'status', 'customer_id', 'coordinator_id', 'project_type', 'sales_person_id']);
+        $this->reset(['search', 'health', 'status', 'customer_id', 'coordinator_id', 'tech_person_id', 'project_type', 'sales_person_id']);
         $this->resetPage();
     }
 
@@ -84,13 +93,98 @@ class ProjectIndex extends Component
         $this->resetPage();
     }
 
+    public function approveProject(int $id): void
+    {
+        $project = Project::findOrFail($id);
+        $user = auth()->user();
+        if (! $project->canBeApprovedBy($user)) {
+            abort(403, 'Unauthorized to approve this project.');
+        }
+
+        $project->update([
+            'approval_status' => 'Approved',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'rejection_reason' => null,
+        ]);
+
+        $auditService = app(AuditNotificationService::class);
+
+        $auditService->log(
+            $user->id,
+            'Approved Project',
+            'Project',
+            $project->id,
+            $project->code,
+            "Approved project {$project->name}"
+        );
+
+        $creatorId = $project->created_by ?: $project->sales_person_id;
+        if ($creatorId && (int) $creatorId !== (int) $user->id) {
+            $auditService->notify(
+                $creatorId,
+                'Project Approved',
+                "Project Approved: {$project->name}",
+                "Your submitted project {$project->name} ({$project->code}) was approved by {$user->name}.",
+                'project',
+                $project->id
+            );
+        }
+
+        $this->dispatch('toast', ['msg' => 'Project approved successfully.', 'type' => 'ok']);
+    }
+
+    public function rejectProject(int $id, ?string $reason = null): void
+    {
+        $project = Project::findOrFail($id);
+        $user = auth()->user();
+        if (! $project->canBeApprovedBy($user)) {
+            abort(403, 'Unauthorized to reject this project.');
+        }
+
+        $cleanReason = trim((string) $reason);
+
+        $project->update([
+            'approval_status' => 'Rejected',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'rejection_reason' => $cleanReason !== '' ? $cleanReason : null,
+        ]);
+
+        $auditService = app(AuditNotificationService::class);
+        $reasonText = $cleanReason !== '' ? " (Reason: {$cleanReason})" : '';
+
+        $auditService->log(
+            $user->id,
+            'Rejected Project',
+            'Project',
+            $project->id,
+            $project->code,
+            "Rejected project {$project->name}{$reasonText}"
+        );
+
+        $creatorId = $project->created_by ?: $project->sales_person_id;
+        if ($creatorId && (int) $creatorId !== (int) $user->id) {
+            $auditService->notify(
+                $creatorId,
+                'Project Rejected',
+                "Project Rejected: {$project->name}",
+                "Your submitted project {$project->name} ({$project->code}) was rejected by {$user->name}.".($cleanReason !== '' ? " Reason: {$cleanReason}" : ''),
+                'project',
+                $project->id
+            );
+        }
+
+        $this->dispatch('toast', ['msg' => 'Project rejected.', 'type' => 'warning']);
+    }
+
     public function render()
     {
         $user = auth()->user();
 
         $query = Project::query()
             ->forUser($user)
-            ->with(['customer', 'terms', 'payments', 'milestones', 'coordinator', 'salesPerson'])
+            ->with(['customer', 'terms', 'payments', 'milestones', 'coordinator', 'salesPerson', 'techPerson'])
             ->when($this->search, function ($builder) {
                 $searchTerm = '%'.trim($this->search).'%';
                 $builder->where(function ($subQuery) use ($searchTerm) {
@@ -99,6 +193,7 @@ class ProjectIndex extends Component
                         ->orWhere('project_type', 'like', $searchTerm)
                         ->orWhereHas('customer', fn ($customerQuery) => $customerQuery->where('company', 'like', $searchTerm)->orWhere('contact_name', 'like', $searchTerm))
                         ->orWhereHas('coordinator', fn ($coordinatorQuery) => $coordinatorQuery->where('name', 'like', $searchTerm))
+                        ->orWhereHas('techPerson', fn ($tpQuery) => $tpQuery->where('name', 'like', $searchTerm))
                         ->orWhereHas('salesPerson', fn ($salesQuery) => $salesQuery->where('name', 'like', $searchTerm));
                 });
             })
@@ -106,6 +201,7 @@ class ProjectIndex extends Component
             ->when($this->status, fn ($builder) => $builder->where('status', $this->status))
             ->when($this->customer_id, fn ($builder) => $builder->where('customer_id', $this->customer_id))
             ->when($this->coordinator_id, fn ($builder) => $builder->where('coordinator_id', $this->coordinator_id))
+            ->when($this->tech_person_id, fn ($builder) => $builder->where('tech_person_id', $this->tech_person_id))
             ->when($this->sales_person_id, fn ($builder) => $builder->where('sales_person_id', $this->sales_person_id))
             ->when($this->project_type, fn ($builder) => $builder->where('project_type', $this->project_type))
             ->orderByRaw("CASE health WHEN 'Delayed' THEN 1 WHEN 'At Risk' THEN 2 WHEN 'On Track' THEN 3 WHEN 'Completed' THEN 4 ELSE 5 END")
@@ -120,12 +216,21 @@ class ProjectIndex extends Component
             ->orderBy('company')
             ->get();
 
-        $coordinators = User::query()
-            ->whereIn('id', Project::forUser($user)->whereNotNull('coordinator_id')->distinct()->pluck('coordinator_id'))
-            ->orderBy('name')
-            ->get();
+        $coordinatorsQuery = User::query()
+            ->where('status', 'Active')
+            ->whereIn('id', Project::forUser($user)->whereNotNull('coordinator_id')->distinct()->pluck('coordinator_id'));
+        $coordinators = ($user->role === 'Coordinator') ? collect() : $coordinatorsQuery->orderBy('name')->get();
 
-        $salesPeople = User::where('role', 'Sales')->orderBy('name')->get();
+        $techPersons = ($user->isTechPerson()) ? collect() : User::where(function ($techQuery) use ($user) {
+            $techQuery->where('role', 'TechPerson')
+                ->orWhereIn('id', Project::forUser($user)->whereNotNull('tech_person_id')->distinct()->pluck('tech_person_id'));
+        })->where('status', 'Active')->orderBy('name')->get();
+
+        $salesPeopleQuery = User::where('role', 'Sales')->where('status', 'Active');
+        if ($user->role === 'Manager') {
+            $salesPeopleQuery->whereIn('id', current_user_downline_ids());
+        }
+        $salesPeople = ($user->role === 'Sales') ? collect() : $salesPeopleQuery->orderBy('name')->get();
 
         $projectTypes = Project::forUser($user)
             ->whereNotNull('project_type')
@@ -137,6 +242,7 @@ class ProjectIndex extends Component
             'projects' => $query->paginate(15),
             'customers' => $customers,
             'coordinators' => $coordinators,
+            'techPersons' => $techPersons,
             'salesPeople' => $salesPeople,
             'projectTypes' => $projectTypes,
             'totalDue' => $totalDue,

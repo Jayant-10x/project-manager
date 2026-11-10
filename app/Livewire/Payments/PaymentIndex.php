@@ -6,7 +6,6 @@ use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\PaymentTerm;
 use App\Services\AuditNotificationService;
-use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -36,7 +35,7 @@ class PaymentIndex extends Component
     public function mount(): void
     {
         $user = auth()->user();
-        if (! $user || $user->role === 'Sales') {
+        if (! $user || ! $user->hasPermission('payments', 'view')) {
             abort(403, 'Unauthorized access to payment ledger.');
         }
     }
@@ -81,9 +80,7 @@ class PaymentIndex extends Component
     public function deletePayment(int $id): void
     {
         $user = auth()->user();
-        $payment = Payment::query()
-            ->whereHas('project', fn ($q) => $q->forUser($user))
-            ->findOrFail($id);
+        $payment = Payment::forUser($user)->findOrFail($id);
 
         // Coordinators can only delete their own entries unless Admin
         if ($user->role !== 'Admin' && $payment->created_by !== $user->id) {
@@ -93,30 +90,16 @@ class PaymentIndex extends Component
         }
 
         $termId = $payment->term_id;
+        $project = $payment->project;
         $payment->delete();
 
         if ($termId) {
             $term = PaymentTerm::find($termId);
-            if ($term) {
-                $remPaid = (float) Payment::where('term_id', $termId)->sum('amount');
-                $remTds = (float) Payment::where('term_id', $termId)->sum('tds');
-                $term->received = $remPaid;
-                $term->tds = $remTds;
-
-                if (($remPaid + $remTds) >= ($term->amount - 0.01)) {
-                    $term->status = 'Paid';
-                } elseif ($remPaid > 0) {
-                    $term->status = 'Partial';
-                } else {
-                    $dueDate = $term->due_date ? Carbon::parse($term->due_date) : null;
-                    $limit = $dueDate ? $dueDate->copy()->addDays($term->grace_days)->toDateString() : null;
-                    $term->status = ($limit && $limit < now()->toDateString()) ? 'Overdue' : 'Pending';
-                }
-                $term->save();
-            }
+            $term?->recalculateStatus();
         }
 
-        app(AuditNotificationService::class)->log(
+        $auditService = app(AuditNotificationService::class);
+        $auditService->log(
             auth()->id(),
             'Deleted Payment',
             'Payment',
@@ -125,18 +108,28 @@ class PaymentIndex extends Component
             "Deleted payment receipt {$payment->code} of ₹".number_format($payment->amount, 2)
         );
 
+        if ($project) {
+            $auditService->notifyProjectStakeholders(
+                $project,
+                'Payment Deleted',
+                "Payment Deleted: {$payment->code}",
+                "Payment receipt {$payment->code} of ₹".number_format($payment->amount, 2)." for project {$project->name} was deleted by ".auth()->user()->name.'.',
+                'project',
+                $project->id
+            );
+        }
+
         $this->dispatch('payment-deleted');
     }
 
     public function exportCsv()
     {
         $user = auth()->user();
-        $payments = Payment::query()
-            ->whereHas('project', fn ($q) => $q->forUser($user))
-            ->with(['project.customer', 'customer', 'term', 'enteredBy'])
-            ->when($user->role === 'Coordinator', function ($q) {
-                $q->whereHas('project.terms', function ($t) {
-                    $t->whereIn('status', ['Pending', 'Partial', 'Overdue']);
+        $payments = Payment::forUser($user)
+            ->with(['project.customer', 'customer', 'term.milestone', 'enteredBy'])
+            ->when($user->role === 'Coordinator', function ($coordinatorQuery) {
+                $coordinatorQuery->whereHas('project.terms', function ($termQuery) {
+                    $termQuery->whereIn('status', ['Pending', 'Partial', 'Overdue']);
                 });
             })
             ->when($this->mode, fn ($builder) => $builder->where('mode', $this->mode))
@@ -196,9 +189,8 @@ class PaymentIndex extends Component
     {
         $user = auth()->user();
 
-        $query = Payment::query()
-            ->whereHas('project', fn ($projectQuery) => $projectQuery->forUser($user))
-            ->with(['project.customer', 'customer', 'term', 'enteredBy'])
+        $query = Payment::forUser($user)
+            ->with(['project.customer', 'customer', 'term.milestone', 'enteredBy'])
             ->when($user->role === 'Coordinator', function ($coordinatorQuery) {
                 // Coordinators only see payments with active due balances
                 $coordinatorQuery->whereHas('project.terms', function ($termQuery) {

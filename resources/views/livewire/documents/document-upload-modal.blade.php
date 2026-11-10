@@ -7,9 +7,9 @@
                 <span>Customer<span class="text-red-500"> *</span></span>
                 <select wire:model.live="customer_id"
                         class="i @error('customer_id') border-red-500! bg-red-50/20! @enderror">
-                    <option value="">— Select Customer —</option>
-                    @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
+                    <option value="">*** Select Customer ***</option>
+                    @foreach($customers as $customer)
+                        <option value="{{ $customer->id }}">{{ $customer->display_name }}</option>
                     @endforeach
                 </select>
                 @error('customer_id')
@@ -21,9 +21,9 @@
                 <span>Project (optional)</span>
                 <select wire:model.live="project_id"
                         class="i @error('project_id') border-red-500! bg-red-50/20! @enderror">
-                    <option value="">— no project —</option>
-                    @foreach($projects as $p)
-                        <option value="{{ $p->id }}">{{ $p->code }} — {{ $p->name }}</option>
+                    <option value="">*** No Project ***</option>
+                    @foreach($projects as $project)
+                        <option value="{{ $project->id }}">{{ $project->code }} — {{ $project->name }}</option>
                     @endforeach
                 </select>
                 @error('project_id')
@@ -35,6 +35,7 @@
                 <span>Category<span class="text-red-500"> *</span></span>
                 <select wire:model.blur="category"
                         class="i @error('category') border-red-500! bg-red-50/20! @enderror">
+                    <option value="">*** Select Category ***</option>
                     @foreach($categories as $cat)
                         <option value="{{ $cat }}">{{ $cat }}</option>
                     @endforeach
@@ -57,7 +58,7 @@
 
         <div x-data="documentUploadHandler()" class="mt-4">
             <label class="text-[11px] font-bold text-gray-500 uppercase block mb-1">
-                File Attachment *
+                File Attachment <span class="text-red-500"> *</span>
             </label>
 
             <!-- Hidden native file input with accept filter -->
@@ -123,14 +124,14 @@
                             <div class="flex items-center gap-2 shrink-0">
                                 <button type="button"
                                         @click.stop="$refs.fileInput.click()"
-                                        class="text-xs font-semibold text-[#0b3d91] hover:underline px-2 py-1">
+                                        class="btn btn-outline-secondary btn-xs">
                                     Change
                                 </button>
                                 <button type="button"
                                         @click.stop="clearFile()"
-                                        class="w-7 h-7 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition"
+                                        class="btn btn-outline-danger btn-xs"
                                         title="Remove file">
-                                    <svg viewBox="0 0 24 24" class="w-4 h-4 fill-none stroke-current stroke-2">
+                                    <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 fill-none stroke-current stroke-2">
                                         <path d="M18 6L6 18M6 6l12 12"/>
                                     </svg>
                                 </button>
@@ -153,7 +154,7 @@
                                 <span class="text-[#0b3d91] underline decoration-[#0b3d91]/30 ml-1">browse</span>
                             </div>
 
-                            <div class="text-[11.5px] text-[#8894ac] mt-1.5 space-y-0.5">
+                            <div class="text-[12px] text-[#8894ac] mt-1.5 space-y-0.5">
                                 <div>Supported: <span class="font-semibold text-gray-600">PDF, DOC, DOCX, XLS, XLSX, CSV, TXT, PPT, Images, ZIP</span>
                                 </div>
                                 <div>Maximum file size: <span class="font-semibold text-gray-600">10 MB</span></div>
@@ -257,8 +258,17 @@
         </script>
 
         <div class="mt-6 flex justify-end gap-3 border-t border-[#eef2f9] pt-4">
-            <button type="button" @click="confirmClose()" class="btn btn-ghost">Cancel</button>
-            <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">Upload</button>
+            <button type="button" @click="confirmClose()" class="btn btn-outline-secondary">Cancel</button>
+            <button type="submit" class="btn btn-primary min-w-32 justify-center" wire:loading.attr="disabled" wire:target="save">
+                <span wire:loading.remove wire:target="save" class="inline-flex items-center justify-center gap-1.5">Upload</span>
+                <span wire:loading.inline-flex wire:target="save" class="items-center justify-center gap-1.5">
+                    <svg class="animate-spin h-4 w-4 text-current" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Uploading...</span>
+                </span>
+            </button>
         </div>
     </form>
 </x-modal>

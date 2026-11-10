@@ -16,7 +16,7 @@ class DynamicCounterTest extends TestCase
 
     public function test_counter_renders_customers_and_reacts_to_events(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'Admin']);
 
         Livewire::actingAs($user)
             ->test(DynamicCounter::class, ['type' => 'customers'])

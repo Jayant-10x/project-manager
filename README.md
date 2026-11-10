@@ -11,14 +11,17 @@
 <p>
   <img src="https://img.shields.io/badge/Laravel-13.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13">
   <img src="https://img.shields.io/badge/Livewire-4.x-FB70A9?style=for-the-badge&logo=livewire&logoColor=white" alt="Livewire 4">
-  <img src="https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.2+">
+  <img src="https://img.shields.io/badge/PHP-8.4-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.4">
   <img src="https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL 8.0+">
   <img src="https://img.shields.io/badge/Frontend-Alpine.js%20%26%20Tailwind-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/Tests-345%20Passed-2ea44f?style=for-the-badge&logo=githubactions&logoColor=white" alt="345 Tests Passed">
   <img src="https://img.shields.io/badge/License-Proprietary-0B3D91?style=for-the-badge" alt="Proprietary License">
 </p>
 
-> [!TIP]
-> **Comprehensive Master Technical Reference Available**: For complete technical specifications, architectural evolution history, full database schema & ERD, deep component matrix, and consolidated historical defect registry (ISS-001 through ISS-056), see [**`project.md`**](project.md).
+> [!NOTE]
+> **Complete User Guide & Operational Manual**: For easy-to-understand, step-by-step instructions on how to use every module and action in the application, see [**`project-guide.md`**](project-guide.md).
+>
+> **Master Technical Reference Available**: For database schema & ERD, component matrix, and consolidated defect history, see [**`project.md`**](project.md).
 
 ---
 
@@ -49,15 +52,20 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 
 ## Key Features
 
-### 📊 1. Executive Dashboard & Real-Time Overview
+### 📊 1. Executive Dashboard & Role-Tailored Overview
 
-* **Top Financial Metric Cards:** Real-time agency financial health indicators:
-  * **Total Receivable** `(sum(Installment Amount) where Status != 'Cancelled')`: All active scheduled billing milestones across projects.
-  * **Received** `(sum(Payment Receipts))`: Total cash collected to date across all verified payments.
-  * **Due** `(max(0, Total Receivable - Received - TDS Deducted))`: Outstanding balance still to be collected.
-  * **Overdue** `(sum(Balance) where Status == 'Overdue')`: Delinquent installments requiring immediate follow-up.
-  * **This Month** `(sum(Payment Receipts) where Month == Current Month)`: Collections logged within the current calendar month.
-* **Project Health Summary:** Real-time breakdown categorizing active projects into **On Track**, **At Risk**, **Delayed**, and **Completed**, with 1-click filtering to the Projects directory.
+* **Thematic Section Metric Grouping:** Dashboard cards are cleanly merged into dedicated operational sections with 1-click drilldown navigation to their respective modules:
+  * **Financial Receivables Section (Admins, Managers & Coordinators):**
+    * **Total Receivable** `(sum(Installment Amount) where Status != 'Cancelled')`: All active scheduled billing milestones.
+    * **Received** `(sum(Payment Receipts))`: Total verified collections to date.
+    * **Due** `(max(0, Total Receivable - Received - TDS Deducted))`: Outstanding balance to collect.
+    * **Overdue** `(sum(Balance) where Status == 'Overdue')`: Delinquent installments requiring chase.
+    * **This Month** `(sum(Payment Receipts) where Month == Current Month)`: Collections logged within the current calendar month.
+  * **Project Operations & Execution Section (All Roles / Role-Tailored):**
+    * **Active Projects**, **On Track**, **At Risk**, **Delayed**, and **Completed** breakdown with direct filtering.
+    * **Delivery Velocity & Deadlines**: Upcoming milestones and delivery due dates tailored to Coordinators and Tech Persons.
+* **Downline Team Member Filter:** In-header filter dropdown allowing Administrators and Managers to isolate all dashboard financial metrics, project health charts, and triage items to a specific staff member's portfolio.
+* **Payment Calendar Switcher:** One-click quick link to switch directly from the Dashboard to the datewise Payment Calendar.
 * **Collection Trend Chart:** 6-month visual revenue sparkline tracking monthly collection totals over the last half year.
 * **Today's Work Quick List:** Fast daily triage widget displaying:
   * **Overdue Payments** `(late customer installments with 1-click navigation to project details)`
@@ -72,18 +80,35 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 
 * **Slide-Over Notification Drawer:** Accessible via the topbar bell icon, featuring real-time unread badges, filter tabs (**All** vs. **Unread**), 1-click single mark-as-read, and bulk **Mark all as read**.
 * **Native Desktop Browser Alerts:** Automatically checks for new reminders and delivers native operating system desktop notification banners every 30 seconds with direct deep-linking on click.
+* **Intelligent Notification Suppression:** Sensitive financial receipts, payment milestones, and customer onboarding alerts are strictly suppressed for technical execution staff (`Tech Person`).
 * **Notification Detail View:** Inspect full alert details, jump to linked customer or project dossiers, and toggle read status.
 * **Topbar Bell Counter:** Live unread notification counter updated automatically as activities occur.
 
-### 🔒 3. User Roles, Security & Password Management
+### 🔒 3. Team Governance, Canonical Roles & Security
 
-* **Role-Based Access Control (RBAC):**
-  * **Administrator (`Admin`)**: Unrestricted global governance over system settings, staff accounts, alert thresholds, customer deletions, and executive reports.
-  * **Manager (`Manager`)**: Supervisory oversight over assigned teams and downline coordinators with full schedule, project, customer, and report visibility.
-  * **Project Coordinator (`Coordinator`)**: Scoped to assigned customer accounts, projects, schedules, receipts, tasks, and follow-ups; executive financial reports are restricted.
-  * **Sales Representative (`Sales`)**: Client onboarding attribution and target monitoring; scoped strictly to self-attributed customer profiles and basic project overviews (financial ledgers, payment schedules, and money columns remain hidden).
+* **Multi-Level Permissions & Unified 5-Role Matrix:**
+  * **Administrator (`Admin`)**: Unrestricted global governance over system settings, staff accounts, alert thresholds, customer deletions, approval workflows, and executive reports.
+  * **Manager (`Manager`)**: Supervisory oversight over assigned teams, reporting coordinators, and tech persons via downline tree scoping, with full schedule, project, customer, and report visibility.
+  * **Project Coordinator (`Coordinator`)**: Scoped to assigned customer accounts, projects, schedules, receipts, tasks, and follow-ups; now equipped with dedicated financial receivable and delivery health KPI cards.
+  * **Tech Person (`Tech Person`)**: Technical project execution lead (the engineer/developer who completes technical milestones and deliverables). Scoped strictly to assigned projects (`tech_person_id`). Customer directories, financial ledgers, payment schedules, and money columns are completely concealed. Has no direct team, so Team Management is disabled.
+  * **Sales Representative (`Sales`)**: Client onboarding attribution and target monitoring; scoped strictly to self-attributed customer profiles and basic project overviews (financial ledgers, payment schedules, and money columns remain hidden). Has no direct team, so Team Management is disabled.
+  * **Custom Permission Overrides**: Administrators can customize granular module permissions (`view`, `add`, `edit`, `delete`, `export`) for individual staff members, with 1-click reset to role defaults.
+* **Team Governance & Directory:**
+  * **Users Directory (`/users`)**: Searchable staff management table for administrators with role and status filtering, quick user previews, and temporary password resets.
+  * **Team Members (`/team`)**: Supervisory team directory view allowing managers to inspect reporting coordinators and reset team credentials.
+* **Slide-Over Profile Drawer:**
+  * Accessible from the sidebar footer avatar, allowing users to update contact details, upload and crop profile pictures, view reporting supervisors, and update passwords without leaving their workspace.
+* **In-App Password Reset Queue & Email Delivery:**
+  * Forgot-password submissions are queued into an in-app review table (`PasswordResetRequest`), notifying administrators and direct managers via high-priority alerts.
+  * Admin-mediated resets generate a 16-character high-entropy temporary password (`PasswordGeneratorService`), delivered instantly via branded email (`TemporaryPasswordMail`) and displayed in a secure copyable dialog.
 * **Mandatory First-Time Password Change:** Automatically intercepts logins and redirects newly created staff or administratively reset accounts to the **/change-password** screen before granting access.
 * **Password Complexity Rules:** Enforces a minimum of 8 characters containing at least 1 uppercase letter, 1 lowercase letter, and 1 numeric digit.
+* **Livewire-Powered Authentication & Security Defenses:**
+  * **Reactive Login Component (`App\Livewire\Auth\Login`)**: Fully reactive Livewire component with real-time blur validation, loading states, and defense-in-depth security.
+  * **Account Lockout & Rate-Limiting**: Automatically tracks failed attempts, providing real-time feedback with remaining attempts (`X attempts left`). 5 failed attempts trigger an automatic 30-minute lockout with supervisor alerts and rate-limiting.
+  * **Universal Elimination of HTML5 `required`**: All login, registration, password recovery, and profile forms strictly enforce `novalidate` without native browser bubbles, utilizing server-side and real-time Livewire validation with prominent `@error` red-border styling and field-level labels.
+* **Global Toast Notification System (`<x-toast-container />`):**
+  * Built-in Alpine.js notification container integrated into `layouts/app.blade.php` listening to `toast` events, displaying slide-in banners for success (`ok`), warnings (`warning`), and errors (`err`) with automatic 4.5s dismissal and click-to-dismiss support.
 
 ### 🎯 4. Today's Work Command Center
 
@@ -101,34 +126,58 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 ### 📁 5. Customer Directory & Client Profiles
 
 * **Customer Directory Table:** Filterable list displaying **Customer**, primary **Contact**, assigned **Salesperson**, **City / State**, active **Projects**, total contract **Value**, outstanding **Due**, and **Status**.
+* **Client Approval Workflow:** Supports formal management oversight:
+  * Newly submitted client dossiers default to **Pending Approval** if submitted by non-supervisory staff.
+  * Designated supervisors and administrators review client records and execute **Approve Client** or **Reject Client** (with documented rejection feedback).
+  * Rejected client cards feature an alert banner with a 1-click **Edit & Resubmit** workflow.
 * **Flexible Sole Proprietor & Corporate Profiles:** Supports corporate clients with GST/PAN tax details alongside individual clients without a company name.
 * **Deterministic Display Fallback:** Automatically displays company name when available, or cleanly falls back to **"{Contact Name} (Client)"** (or customer code) across all tables, search dropdowns, and activity feeds.
 * **Sales Targets & Quotas:** Tracks onboarding attribution and monitors collection progress against monthly quotas configured in user settings `(% Achieved = (Received / Target) * 100)`.
 * **Bulk Import & CSV Export:** Upload customer lists via spreadsheet CSV file or direct copy-paste with automated duplicate checking, or stream filtered client records to Excel-compatible CSV.
+* **Customer Deletion Safeguard & Atomic Cascades:**
+  * **Linked-Project Protection (Option B)**: Prevents accidental destruction of project and financial history. When a customer has active linked projects, clicking Delete opens an informative warning modal explaining that projects must be reassigned or deleted first, backed by server-side rejection and error toasts.
+  * **Atomic Cascade Deletions (ISS-106)**: When 0 projects remain, deletion executes inside an atomic `DB::transaction(...)` block, ensuring customer records, audit logs, and stakeholder notifications commit before physical file unlinking is triggered via `DB::afterCommit(...)`.
 
 ### 🚀 6. Project Coordination, Milestones & Maintenance
 
-* **Project Directory Table:** Complete work order list showing **Project**, **Customer**, delivery **Health** (On Track, At Risk, Delayed, Completed), work **Status** (Onboarding, In Progress, Review / UAT, Delivered, On Hold, Cancelled), assigned **Coordinator**, contracted **Value**, **Received**, **Due**, and target **Delivery Date**.
+* **Project Directory Table:** Complete work order list showing **Project**, **Customer**, delivery **Health** (On Track, At Risk, Delayed, Completed), work **Status** (Onboarding, In Progress, Review / UAT, Delivered, On Hold, Cancelled), assigned **Coordinator**, assigned **Tech Person**, contracted **Value**, **Received**, **Due**, and target **Delivery Date**.
+* **Project Approval Workflow:** Multi-tiered contract validation:
+  * Projects submitted by staff enter **Pending Approval** status with prominent visual banners.
+  * Authorized managers and admins can approve or reject projects with mandatory explanation notes.
 * **Delivery Health Monitoring:** Visible health tags with mandatory delay reasons to highlight delivery roadblocks early.
-* **Auto-Split (30/40/30) Schedule Wizard:** 1-Click payment term calculation dividing total project value into standard agency installments:
+* **Auto-Split (30/40/30 & 50/50) Schedule Wizards:** 1-Click payment term calculation dividing total project value into standard agency installments:
   * **Advance (30%)**: Upfront retainer upon signing
   * **Mid-Project (40%)**: Billed upon interim delivery milestone
   * **Final Delivery (30%)**: Remaining completion balance (with exact penny matching)
+  * **Locked Payment Term Preservation**: Existing locked installments (terms with recorded payments or TDS deductions) are strictly preserved intact; auto-split distributes only the remaining uncollected balance (`Project Value - Locked Total`) across the new terms.
   * Automatically maps due dates to milestones or staggers them (+0, +15, +30 days) from project start.
-* **Milestone Checklist:** Interactive milestone tracker with due dates, payment trigger linking, and 1-click completion checkmarks.
+* **Milestone Checklist & Chase Tracker:** Interactive milestone tracker with due dates, payment trigger linking, 1-click completion checkmarks, and a dedicated **Milestone Chase Modal** to record follow-up notes and schedule next chase dates (with resilient empty-date normalization).
+* **Locked Milestones Linked to Payment Schedules:**
+  * **Schedule Connection Safeguard**: Milestones linked to any payment schedule term (`payment_terms.milestone_id`) are automatically locked just like installments with recorded payments.
+  * **Destruction Protection**: Locked milestones cannot be removed manually via `removeRow()` (triggering a friendly warning) and are strictly protected against deletion during database synchronization.
+  * **Template Preservation**: Loading standard 5-stage milestone templates strictly preserves all locked milestones, adding only non-duplicate template stages.
+  * **Visual Indicators**: Displays an amber "Locked" badge with padlock icon, tooltip detailing the connected schedule installments, disabled name field with `(Locked to Schedule)` indicator, and a `Schedule Linked` badge on the project overview tab.
 * **Annual Maintenance Contracts (AMC):** Dedicated contract duration tracking with automated renewal warnings before expiration.
 * **Handover Governance:** Post-delivery checklist and formal client handover notes.
 
 ### 💳 7. Money, Payments & Installment Schedules
 
 * **Payments Ledger:** Comprehensive receipts table tracking **Receipt #**, **Project / Customer**, installment **Term**, payment **Amount**, **TDS Deducted**, **Total Credited**, **Paid on** date, and **Mode & Reference** (Cash, UPI, NEFT, RTGS, Cheque, Card).
+* **Datewise Payment Calendar (`/calendar`):** Full 7-column monthly view charting scheduled installment dues and payment receipts on their exact calendar dates:
+  * **Month Navigation & Quick Jump:** Seamless previous/next month transitions with overflow-safe date arithmetic (`Carbon::parse($month.'-01')`), current month "Today" reset, and direct month-year input selector.
+  * **Monthly Cash Flow KPIs:** Top indicators calculating Total Scheduled Due, Total Received, Total Due (Pending), and Overdue amounts.
+  * **Dual Filter System:** Toggle between All Records, Scheduled Dues Only, or Received Payments Only, with downline team member scoping for Administrators and Managers.
+  * **Itemized Day Details Modal:** Click any date cell to review comprehensive tables of due installments and payment receipts with deep-linking to project dossiers.
+* **Smart Payment Receipts:** Attach client remittance slips and bank advices directly within the payment modal; files are stored securely and automatically catalogued into the Document Vault as linked invoices.
+* **Triple Notification Dispatch:** Recording a payment automatically dispatches high-priority in-app alerts to the Project Coordinator, the Onboarding Salesperson, and System Administrators.
 * **Payment Schedule Master View:** Centralized chronological timeline tracking **Upcoming**, **Overdue**, **Collected**, and **Total Scheduled** installments across all agency projects.
-* **Automatic Installment Status Transitions:**
-  * **Paid**: Fully cleared when `Received + TDS Deducted >= Installment Amount`
+* **Automatic Installment Status Transitions & Deletion Recalculation (ISS-105):**
+  * **Paid**: Fully cleared when `Received + TDS Deducted >= Installment Amount - 0.01`
   * **Partial**: Partially settled when payments are logged but a balance remains
   * **Overdue**: Automatically marked late when `Today > Due Date + Grace Days` and balance is unpaid
-  * **Pending**: Scheduled upcoming term with zero payments logged
+  * **Pending**: Scheduled upcoming term with zero payments logged and due date + grace days in the future
   * **Cancelled**: Voided installment excluded from active receivables.
+  * **Synchronized Payment Deletion (`PaymentTerm::recalculateStatus()`):** Deleting a payment receipt automatically invokes model-level status recalculation across `CustomerDetail`, `ProjectDetail`, and `PaymentIndex`, accurately determining whether a cleared term resets to `Partial`, `Pending`, or `Overdue` based on due date and grace period.
 * **Zero-Default TDS Handling:** Normalized tax inputs credit withheld TDS directly against invoice balances alongside received cash.
 * **Dual Currency Display:** Instant navbar toggle between Indian Rupees (`₹`) and US Dollars (`$`) with real-time conversion across all monetary views.
 
@@ -136,7 +185,7 @@ The platform is engineered on **Laravel 13** and **Livewire 4**, providing singl
 
 * **My Tasks Checklist:** Personal task manager with priority tags (**Low**, **Medium**, **High**, **Urgent**), due dates, and late indicators.
 * **Client Follow-ups Logger:** Multi-channel interaction tracker (**Call**, **Email**, **Meeting**, **WhatsApp**, **Note**) with scheduled next action dates and reminders.
-* **Document Vault:** Secure file manager supporting contracts, KYC documents, invoices, and delivery proofs up to 10 MB with instant in-browser lightbox previews for PDFs and images.
+* **Document Vault:** Secure file manager supporting contracts, KYC documents, invoices, and delivery proofs up to 10 MB with instant in-browser lightbox previews for PDFs and images, plus downline RBAC authorization on file downloads (`DocumentDownloadController`).
 * **Activity Log:** Reverse-chronological timeline recording all team creates, edits, receipts, uploads, and deletions.
 * **Settings & User Administration:** Configure company information, adjust alert lead times (payment, AMC, follow-up windows), manage staff profiles, and generate 1-click temporary credentials for password resets.
 
@@ -190,7 +239,7 @@ graph TD
     subgraph StorageLayer ["Data and Storage Layer"]
         Eloquent["Eloquent ORM Models (with Casts & Relationships)"]
         MySQL[("MySQL 8.0+ Database")]
-        DiskStorage[("Public Disk Storage (storage/app/public)")]
+        DiskStorage[("Private Documents (storage/app/private/documents) & Public Avatars (storage/app/public)")]
 
         MoneyService & CodeService --> Eloquent
         Eloquent --> MySQL
@@ -228,6 +277,23 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
     System HTTP errors (404, 403, 500, 419, 503) extend the application shell (`layouts.app`) for authenticated users, preserving the top navigation header, search bar, and sidebar. A route fallback handler catches missing pages within the `web` session pipeline to provide intelligent, contextual recovery suggestions (e.g. "Customer Not Found" with "View All Customers", "Project Not Found" with "View All Projects"). Guests receive a clean branded card inside `layouts.guest`.
 12. **Development & Production Asset Parity**:
     Vite configuration specifies `hmr: { host: 'localhost' }`, `cors: true`, and automatic lifecycle signal cleanup for `public/hot`, ensuring zero styling distortion or network address errors whether running `npm run dev` or `npm run build`.
+13. **Centralized Modal Orchestration (`window.ModalManager`)**:
+    A global manager in `layouts.app` tracks active modal identifiers (`openModals`), manages body scroll locking, and cleans up the modal stack on `livewire:navigated` events to prevent stuck backdrops.
+14. **Form Error Auto-Scroll & Tab Activation (`window.scrollToFirstError`)**:
+    When form validation fails, the UI automatically unhides inactive tabs if the invalid field is concealed inside a tab pane, smooth-scrolls to the input, sets focus, and triggers an animated red focus ring (`.error-focused`).
+15. **Event-Driven Dynamic Counters (`DynamicCounter`)**:
+    Sidebar badges automatically update on domain events (`customer-saved`, `project-saved`, `payment-saved`, `counter-refresh`) without full-page re-renders.
+16. **Global Reusable Helper Architecture (`app/Helpers/helpers.php`)**:
+    Autoloaded via `composer.json`, reusable global helpers replace redundant method chains and raw framework calls:
+    * `logged_in_user()` & `logged_in_user_id()`: Clean typed access to the current authenticated `User`.
+    * `has_permission($module, $action)`: Dot-notation or two-argument RBAC authorization check.
+    * `is_admin()`, `is_manager()`, `is_coordinator()`, `is_sales()`, `is_tech_person()`: Self-documenting role guards.
+    * `audit_service()`: Instant access to the centralized `AuditNotificationService`.
+    * `format_inr($amount)`: Standardized Indian Rupee monetary formatting with symbol and comma separation.
+17. **Standardized Button System & Accessible Icon Actions**:
+    All arbitrary inline color utilities on buttons are replaced by the canonical design system (`.btn`, `.btn-primary`, `.btn-outline-secondary`, `.btn-success`, `.btn-danger`, `.btn-outline-primary`, `.btn-outline-success`, `.btn-outline-danger`, `.btn-xs`, `.btn-sm`). High-density table row actions utilize compact, accessible icon buttons with explicit `title` attributes.
+18. **Early Sidebar State Stabilization (`html.sidebar-collapsed-init`)**:
+    An early-execution state synchronizer checks localStorage for `pjt_sidebar_collapsed` prior to initial paint, preventing sidebar expansion glitches on page reloads.
 
 ---
 
@@ -238,20 +304,27 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
 │   ├── mcp_config.json                     # Laravel Boost MCP server configuration
 │   └── skills/                             # Domain skills (codewise, laravel-best-practices, livewire, etc.)
 ├── app/
+│   ├── Constants/
+│   │   └── Permissions.php                 # Canonical 5-role & module action permission matrix
+│   ├── Helpers/
+│   │   └── helpers.php                     # Centralized global helper functions (autoloaded)
 │   ├── Http/
 │   │   ├── Controllers/
 │   │   │   ├── Api/
 │   │   │   │   └── NotificationPollController.php  # Lightweight 30s endpoint for desktop notification polling
-│   │   │   ├── Auth/                               # Laravel Breeze authentication controllers
+│   │   │   ├── Auth/                               # Laravel Breeze authentication & password reset request controllers
+│   │   │   ├── DocumentDownloadController.php      # Controller for secure document attachment streaming
 │   │   │   └── ProfileController.php               # User profile editing and password updates
 │   │   └── Middleware/
 │   │       └── EnsurePasswordIsChanged.php         # Intercepts logins with must_change flag
 │   ├── Livewire/
 │   │   ├── Audit/
-│   │   │   └── AuditIndex.php                      # System activity log timeline viewer
+│   │   │   └── AuditIndex.php                      # System activity log timeline viewer with field diffs
 │   │   ├── Auth/
-│   │   │   └── ForcePasswordChange.php             # Dedicated password update screen for flagged users
+│   │   │   ├── ForcePasswordChange.php             # Dedicated password update screen for flagged users
+│   │   │   └── Login.php                           # Reactive Livewire login component with blur validation
 │   │   ├── Components/
+│   │   │   ├── DynamicCounter.php                  # Real-time event-driven badge counter component
 │   │   │   ├── GlobalSearch.php                    # Universal debounced search dropdown
 │   │   │   ├── NotificationBell.php                # Topbar unread count polling badge
 │   │   │   └── NotificationDrawer.php              # Slide-over flyout panel for notifications
@@ -273,12 +346,15 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
 │   │   │   └── NotificationIndex.php               # Notification inbox with deep linking and mark-as-read actions
 │   │   ├── Payments/
 │   │   │   ├── PaymentIndex.php                    # Receipt ledger, mode filtering, balance tracking, and CSV export
-│   │   │   └── PaymentModal.php                    # Receipt recorder with auto-balance calculation and term binding
+│   │   │   └── PaymentModal.php                    # Receipt recorder with Smart Receipt upload and multi-role alerts
+│   │   ├── Profile/
+│   │   │   └── ProfileDrawer.php                   # Slide-over user profile, avatar upload, and self password updates
 │   │   ├── Projects/
+│   │   │   ├── MilestoneChaseModal.php             # Milestone chase notes logger and next chase scheduler
 │   │   │   ├── ProjectDetail.php                   # Project delivery matrix, timeline, schedule, and document tabs
 │   │   │   ├── ProjectIndex.php                    # Work orders directory, health filtering, and overdue rollups
 │   │   │   ├── ProjectMilestoneModal.php           # Dynamic milestone ordering and checklist manager
-│   │   │   ├── ProjectModal.php                    # Project contract creator/editor with AMC and handover fields
+│   │   │   ├── ProjectModal.php                    # Project contract creator/editor with sales rep auto-assignment
 │   │   │   ├── ProjectRecurringModal.php           # Monthly retainer recurring installment generator
 │   │   │   └── ProjectScheduleModal.php            # Installment scheduler (fixed, milestone-linked, recurring)
 │   │   ├── Reports/
@@ -289,41 +365,54 @@ To prevent DOM race conditions, detachment of form event listeners, or unexpecte
 │   │   │   └── ScheduleIndex.php                   # Master chronological installment timeline and CSV export
 │   │   ├── Settings/
 │   │   │   ├── SettingIndex.php                    # Operational threshold configuration, password manager, and user list
-│   │   │   └── UserModal.php                       # Staff and sales account creator/editor with quota and credential provisioning
+│   │   │   └── UserModal.php                       # Staff account creator with granular permissions matrix & avatar upload
 │   │   ├── Tasks/
 │   │   │   └── TaskIndex.php                       # Coordinator checklist manager with priority flags and late indicators
-│   │   └── Today/
-│   │       └── TodayWorkIndex.php                  # Daily operational triage for overdue payments, calls, and risks
-│   ├── Models/                                     # 14 Eloquent Models with relationships & casts
-│   │   ├── ActivityLog.php                         # System activity log model (mapped to activity_logs)
+│   │   ├── Team/
+│   │   │   └── TeamIndex.php                       # Downline supervisory oversight, member details, and credential resets
+│   │   ├── Today/
+│   │   │   └── TodayWorkIndex.php                  # Daily operational triage for overdue payments, calls, and risks
+│   │   └── Users/
+│   │       └── UserIndex.php                       # Global staff directory, role/status filters, and admin credential resets
+│   ├── Mail/
+│   │   └── TemporaryPasswordMail.php               # Mailable for delivering temporary credentials via email
+│   ├── Models/                                     # 15 Eloquent Models with relationships, diffs & casts
+│   │   ├── ActivityLog.php                         # System activity log model with field diffs
+│   │   ├── PasswordResetRequest.php                # Queued employee password reset requests
 │   │   └── ...
 │   └── Services/
+│       ├── AuditNotificationService.php            # System event logger, field diff computer & multi-recipient notifier
 │       ├── CodeGeneratorService.php                # Concurrency-safe atomic counter sequence generator
 │       ├── CurrencyRateService.php                 # Exchange rate configuration and conversion service
-│       └── MoneyCalculationService.php             # Central financial calculation engine
+│       ├── MoneyCalculationService.php             # Central financial calculation engine
+│       └── PasswordGeneratorService.php            # Secure 16-character temporary credential generator
+├── config/
+│   └── crm.php                                     # Centralized CRM configuration (TTLs, thresholds, upload rules)
 ├── database/
-│   ├── migrations/                                 # 17 structured table migrations
+│   ├── migrations/                                 # 18 structured table migrations
 │   └── seeders/
 │       ├── DatabaseSeeder.php
 │       └── UsersSeeder.php                         # Seeds default Administrator, Coordinator, and Manager accounts
 ├── public/
 │   ├── assets/logo.png                             # Static brand identity asset
-│   └── css/crm-style.css                           # Complete CSS layout & design palette
+│   └── css/crm-style.css                           # Complete CSS layout with standardized 36px filter bar
 ├── resources/
 │   ├── css/app.css                                 # Tailwind CSS setup
 │   ├── js/app.js                                   # Clean JS entry without manual Alpine imports
 │   └── views/
-│       ├── components/                             # Blade UI components (money, kpi-card, health-badge, modal, confirm-modal)
+│       ├── components/                             # Blade UI components (money, kpi-card, health-badge, modal, confirm-modal, toast-container)
+│       ├── emails/
+│       │   └── temporary-password.blade.php        # Branded HTML email template for temporary credentials
 │       ├── errors/                                 # Context-aware error views (403, 404, 419, 500, 503) extending workspace shell
 │       ├── layouts/
-│       │   ├── app.blade.php                       # Master responsive application layout with slide-over drawer & notifier
+│       │   ├── app.blade.php                       # Master application layout with ModalManager & ErrorScroller
 │       │   ├── guest.blade.php                     # Clean layout for login and password change
-│       │   └── partials/sidebar.blade.php          # 14-module navigation sidebar with live counters
+│       │   └── partials/sidebar.blade.php          # 5-section navigation sidebar with dynamic counters & profile trigger
 │       └── livewire/                               # Paired Blade templates for all Livewire components
-├── boost.json                              # Laravel Boost agent and skill registry
+├── boost.json                                      # Laravel Boost agent and skill registry
 └── routes/
-    ├── auth.php                            # Breeze authentication routes
-    └── web.php                             # Authenticated routes mapping all Livewire modules & polling API
+    ├── auth.php                                    # Breeze authentication routes
+    └── web.php                                     # Authenticated routes mapping Livewire modules & polling API
 ```
 
 ---
@@ -410,9 +499,11 @@ Following database seeding, log in using any of the following accounts:
 
 | Role | Email | Default Password | Permissions Scope |
 |:---|:---|:---|:---|
-| **Admin** | `admin@the10xagency.in` | `Sample@1123` | Unrestricted access: User Administration, System Settings, Customer Deletion |
-| **Coordinator** | `coordinator@the10xagency.in` | `Sample@1123` | Account-scoped access: Customers, Assigned Projects, Payments, Uploads, Tasks |
-| **Manager** | `manager@the10xagency.in` | `Sample@1123` | Supervisory access: Downline coordinator project oversight and activity tracking |
+| **Admin** | `admin@the10xagency.in` | `Sample@1123` | Unrestricted access: User Administration, System Settings, Approvals, Customer Deletion |
+| **Coordinator** | `coordinator1@the10xagency.in` | `Sample@1123` | Account-scoped access: Customers, Assigned Projects, Payments, Uploads, Tasks |
+| **Manager** | `manager1@the10xagency.in` | `Sample@1123` | Supervisory access: Downline team project oversight, approvals, and activity tracking |
+| **Tech Person** | `tech1@the10xagency.in` | `Sample@1123` | Project execution lead: strictly assigned projects, milestones, handovers (finance masked) |
+| **Sales** | `sales1@the10xagency.in` | `Sample@1123` | Commercial onboarding: self-attributed customer accounts and basic project views |
 
 > **Security Notice:** Update default passwords immediately via **Settings (`/settings`)** upon initial deployment.
 
@@ -420,25 +511,29 @@ Following database seeding, log in using any of the following accounts:
 
 ## Livewire 4 Component Matrix
 
-All operational modules are built as dedicated Livewire 4 full-page components and modals:
+All operational modules are built as dedicated Livewire 4 full-page components, slide-over drawers, and modals:
 
 | Module Group | Module Name | Route Name | Livewire Class | Key Sub-Components & Modals |
 |:---|:---|:---|:---|:---|
 | **Overview** | **1. Dashboard** | `dashboard` | `Dashboard\DashboardIndex` | `x-kpi-card`, `x-health-badge`, `spark` bar chart, reactive mutation listeners |
 | | **2. Today's Work** | `today.index` | `Today\TodayWorkIndex` | Actionable queue, overdue alert badges, inline `+ Payment` modal trigger |
-| **Customers** | **3. Customers** | `customers.index` | `Customers\CustomerIndex` | `CustomerDetail`, `CustomerModal`, `CustomerImportModal` |
-| | **4. Projects** | `projects.index` | `Projects\ProjectIndex` | `ProjectDetail`, `ProjectModal`, `ProjectScheduleModal`, `ProjectRecurringModal`, `ProjectMilestoneModal` |
-| | **5. My Tasks** | `tasks.index` | `Tasks\TaskIndex` | Priority checklist, due date late flags, sanitized selects |
-| **Money** | **6. Payments** | `payments.index` | `Payments\PaymentIndex` | `PaymentModal` with auto-balance calculation, non-null TDS defaults |
-| | **7. Payment Schedule** | `schedule.index` | `Schedule\ScheduleIndex` | Master timeline, trigger badges, CSV export, live recalculations |
-| | **8. Reports** | `reports.index` | `Reports\ReportIndex` | Executive analytics: collection rate % `((received / scheduled) * 100)`, trailing 6-month sparkline `(monthly sum(payments))`, mode bars `(sum(payments) grouped by mode)`, aging bars `(overdue terms bucketed: 0–30, 31–60, 61–90, 90+ days)`, and delivery variance table `(milestone_% - collection_%)` |
-| **Records** | **9. Documents** | `documents.index` | `Documents\DocumentIndex` | `DocumentUploadModal` (public disk root), `DocumentPreviewModal` (lightbox) |
-| | **10. Follow-ups** | `followups.index` | `Followups\FollowupIndex` | Touchpoint feed, overdue alert banner, scoped project relations |
-| | **11. Sales Team** | `sales.index` | `Sales\SalesIndex` | Shared `UserModal` for quota tracking and credential management |
-| **System** | **12. Notifications** | `notifications.index`<br>`notifications.show` | `Notifications\NotificationIndex`<br>`Notifications\NotificationDetail` | `Components\NotificationBell`, `Components\NotificationDrawer`, deep linking |
-| | **13. Activity Log** | `audit.index` | `Audit\AuditIndex` | Color-coded action timeline, user attribution (`ActivityLog`) |
-| | **14. Settings** | `settings.index` | `Settings\SettingIndex` | `UserModal`, password complexity manager, threshold configurations |
-| **Auth** | **Password Change** | `password.change` | `Auth\ForcePasswordChange` | Mandatory first-time password change screen triggered by `EnsurePasswordIsChanged` |
+| **Clients & Projects** | **3. Customers** | `customers.index`<br>`customers.show` | `Customers\CustomerIndex`<br>`Customers\CustomerDetail` | `CustomerModal`, `CustomerImportModal`, `DynamicCounter` |
+| | **4. Projects** | `projects.index`<br>`projects.show` | `Projects\ProjectIndex`<br>`Projects\ProjectDetail` | `ProjectModal`, `ProjectScheduleModal`, `ProjectRecurringModal`, `ProjectMilestoneModal`, `MilestoneChaseModal`, `DynamicCounter` |
+| **Team & Access** | **5. Users** | `users.index` | `Users\UserIndex` | Staff directory, role & status filtering, reset password action, user quick-view |
+| | **6. Team Members** | `team.index` | `Team\TeamIndex` | Supervisory downline hierarchy view, team member detail view, downline password resets |
+| | **7. User Profile** | *Slide-Over Drawer* | `Profile\ProfileDrawer` | Avatar file upload and removal, profile details update, supervisor display, password update |
+| **Money** | **8. Payments** | `payments.index` | `Payments\PaymentIndex` | `PaymentModal` with Smart Receipt file upload, auto-balance calculation, non-null TDS defaults |
+| | **9. Payment Schedule** | `schedule.index` | `Schedule\ScheduleIndex` | Master timeline, trigger badges, CSV export, live recalculations |
+| | **10. Payment Calendar** | `calendar.index` | `Calendar\PaymentCalendarIndex` | 7-column monthly cash flow grid, datewise due installments & payment receipts, downline filter, day details modal |
+| | **11. Reports** | `reports.index` | `Reports\ReportIndex` | Executive analytics: collection rate % `((received / scheduled) * 100)`, trailing 6-month sparkline `(monthly sum(payments))`, mode bars `(sum(payments) grouped by mode)`, aging bars `(overdue terms bucketed: 0–30, 31–60, 61–90, 90+ days)`, and delivery variance table `(milestone_% - collection_%)` |
+| **Records** | **12. Documents** | `documents.index` | `Documents\DocumentIndex` | `DocumentUploadModal` (private documents disk), `DocumentPreviewModal` (streaming lightbox) |
+| | **13. Follow-ups** | `followups.index` | `Followups\FollowupIndex` | Touchpoint feed, overdue alert banner, scoped project relations |
+| | **14. Sales Team** | `sales.index` | `Sales\SalesIndex` | Shared `UserModal` for quota tracking and credential management |
+| **System** | **15. Notifications** | `notifications.index`<br>`notifications.show` | `Notifications\NotificationIndex`<br>`Notifications\NotificationDetail` | `Components\NotificationBell`, `Components\NotificationDrawer`, `DynamicCounter`, deep linking |
+| | **16. Activity Log** | `audit.index` | `Audit\AuditIndex` | Color-coded action timeline, field-level structured diffs (`ActivityLog`) |
+| | **17. Settings** | `settings.index` | `Settings\SettingIndex` | `UserModal` with granular permissions editor, threshold configurations |
+| **Auth** | **Login** | `login` | `Auth\Login` | Reactive login screen, real-time validation, rate limiting & lockout defenses |
+| | **Password Change** | `password.change` | `Auth\ForcePasswordChange` | Mandatory first-time password change screen triggered by `EnsurePasswordIsChanged` |
 
 ---
 
@@ -487,12 +582,14 @@ Installments automatically update their visual status badge in the **Payment Sch
 4. **`Pending`** (Gray): `Today <= Due Date + Grace Days` AND `Received + TDS Deducted == 0` (future installment).
 5. **`Cancelled`** (Muted): Voided term excluded from active receivables.
 
-### 3. Auto-Split (30/40/30) Schedule Wizard
+### 3. Auto-Split (30/40/30 & 50/50) Schedule Wizards
 
-Available inside the **Schedule** modal on any project, this wizard divides the contracted **Project Value** into standard agency milestone terms with exact penny settlement:
+Available inside the **Schedule** modal on any project, this wizard divides the contracted **Project Value** (or remaining uncollected balance) into standard agency milestone terms with exact penny settlement:
 * **Advance (30%)**: `round(Project Value * 0.30, 2)` (upfront retainer upon signing)
 * **Mid-Project (40%)**: `round(Project Value * 0.40, 2)` (interim milestone billing)
 * **Final Delivery (30%)**: `Project Value - Advance - Mid-Project` (remaining balance upon project completion)
+* **50/50 Split**: Divides into equal Advance (50%) and Delivery (50%) installments.
+* **Locked Installment Preservation**: If any terms already have recorded payments or TDS deductions (`locked === true`), the wizard preserves those locked terms untouched, computes the remaining balance (`Project Value - Locked Terms Sum`), and generates new terms distributing solely the remaining balance. If locked payments equal or exceed the total project value, auto-splitting is blocked with an informational warning toast.
 * **Due Date Synchronization**: If delivery milestones exist, terms inherit their due dates; if milestones are not yet defined, terms automatically stagger (+0 days, +15 days, +30 days) from the project start date.
 
 ### 4. Concurrency-Safe Sequence Engine & Counter Auto-Healing (`CodeGeneratorService`)
@@ -511,10 +608,18 @@ Available inside the **Schedule** modal on any project, this wizard divides the 
   * When both are empty: `Customer Code` (e.g. *"CUS-0008"*)
 * **Working**: Centralized in the `display_name` Eloquent accessor (`$customer->display_name`), ensuring clean, non-empty labels across all tables, modal dropdown selects, global search results, and activity audit logs.
 
-### 6. Admin-Mediated Password Reset Workflow (`SettingIndex`)
+### 6. Admin-Mediated Password Reset Workflow (`Users`, `Team`, `Settings`)
 
-* **Formula**: `Temporary Password = "Temp" . Current Year . "@" . 4-Digit Secure Random PIN` (e.g. `"Temp2026@4892"`)
-* **Working**: Generates a compliant temporary password on-demand from the Settings user list, resets failed login counters (`fail_count = 0`), clears lockout timestamps (`locked_until = null`), flags `must_change = true`, records an audit log entry, and dispatches an in-app alert to the user.
+* **Formula**: `Temporary Password = Cryptographically Random 16-character string (mixed case, numbers, symbols)`
+* **Working**: Generates a high-entropy compliant temporary password on-demand (`PasswordGeneratorService::generate(16)`), resets failed login counters (`fail_count = 0`), clears lockout timestamps (`locked_until = null`), flags `must_change = true`, resolves pending in-app `PasswordResetRequest` records, delivers credentials via branded email (`TemporaryPasswordMail`), records an audit log entry, and presents credentials in a secure copyable dialog.
+
+### 7. Clone Form Retain-Instance Safeguards (`Milestones`, `Payment Terms`, `Reminder Days`)
+
+* **Formula**: `Active Instances >= 1`
+* **Working**: Every repeatable clone/repeater form throughout the application is protected against accidental empty state deletion:
+  1. **UI Delete Button Suppression**: When a form has only a single instance (`count <= 1`), the removal/delete button is cleanly removed from the DOM to prevent accidental clicks.
+  2. **Server-Side Removal Guard**: Invoking row deletion on a single item is blocked with specific field-level validation errors (`items`, `terms`, or `reminderDays`) and dispatches a warning toast notification (`type: 'warning'`).
+  3. **Empty Form Submission Guard**: Submitting a form without any rows is blocked at the start of `save()`, preventing blank form submissions or orphaned financial/milestone states.
 
 ---
 

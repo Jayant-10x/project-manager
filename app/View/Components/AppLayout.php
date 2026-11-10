@@ -10,6 +10,7 @@ class AppLayout extends Component
     public function __construct(
         public ?string $header = null,
         public ?string $subtitle = null,
+        public ?string $title = null,
     ) {}
 
     /**

@@ -2,11 +2,13 @@
 
 namespace App\Livewire\Today;
 
+use App\Models\Customer;
 use App\Models\Followup;
 use App\Models\PaymentTerm;
 use App\Models\Project;
 use App\Models\Setting;
 use App\Models\Task;
+use App\Services\MoneyCalculationService;
 use Carbon\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -15,19 +17,30 @@ use Livewire\Component;
 #[Layout('layouts.app')]
 class TodayWorkIndex extends Component
 {
+    public function mount(): void
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->hasPermission('today', 'view')) {
+            abort(403, 'Unauthorized access to operational work queue.');
+        }
+    }
+
     #[On('payment-saved')]
     #[On('payment-deleted')]
     #[On('project-saved')]
     #[On('task-saved')]
     #[On('followup-saved')]
+    #[On('counter-refresh')]
     public function refreshWorkQueue(): void
     {
         // Re-renders the operational triage queue
     }
 
-    public function render()
+    public function render(MoneyCalculationService $moneyService)
     {
         $user = auth()->user();
+        $moneyService->refreshOverdueStatus();
+
         $today = Carbon::today()->toDateString();
         $alertDays = (int) Setting::getValue('payment_alert_days', 7);
         $soonDate = Carbon::today()->addDays($alertDays)->toDateString();
@@ -36,12 +49,13 @@ class TodayWorkIndex extends Component
         // Scope to current coordinator unless Admin
         $projectsQuery = Project::query()->forUser($user);
         $projectIds = (clone $projectsQuery)->pluck('id');
+        $customerIds = Customer::query()->forUser($user)->pluck('id');
 
         // 1. Overdue payments
         $overdue = PaymentTerm::query()
             ->whereIn('project_id', $projectIds)
             ->where('status', 'Overdue')
-            ->with(['project.customer'])
+            ->with(['project.customer', 'milestone'])
             ->orderBy('due_date')
             ->get();
 
@@ -51,18 +65,22 @@ class TodayWorkIndex extends Component
             ->whereIn('status', ['Pending', 'Partial'])
             ->whereNotNull('due_date')
             ->whereBetween('due_date', [$today, $soonDate])
-            ->with(['project.customer'])
+            ->with(['project.customer', 'milestone'])
             ->orderBy('due_date')
             ->get();
 
-        // 3. Follow-up calls due within 7 days
+        // 3. Follow-up calls due within 7 days (scoped to assigned projects & customers)
         $followups = Followup::query()
             ->whereNotNull('next_date')
             ->where('next_date', '<=', $followupSoon)
-            ->where(function ($q) use ($projectIds) {
-                $q->whereIn('project_id', $projectIds)->orWhereNull('project_id');
+            ->where(function ($followupQuery) use ($projectIds, $customerIds) {
+                $followupQuery->whereIn('project_id', $projectIds)
+                    ->orWhere(function ($subQuery) use ($customerIds) {
+                        $subQuery->whereNull('project_id')
+                            ->whereIn('customer_id', $customerIds);
+                    });
             })
-            ->with('customer')
+            ->with(['customer', 'project'])
             ->orderBy('next_date')
             ->get();
 
@@ -75,8 +93,8 @@ class TodayWorkIndex extends Component
             ->get();
 
         // Financial totals
-        $totalOverdue = (float) $overdue->sum(fn ($t) => max(0, (float) $t->amount - (float) $t->received - (float) $t->tds));
-        $totalSoon = (float) $soon->sum(fn ($t) => max(0, (float) $t->amount - (float) $t->received - (float) $t->tds));
+        $totalOverdue = (float) $overdue->sum(fn ($term) => max(0, (float) $term->amount - (float) $term->received - (float) $term->tds));
+        $totalSoon = (float) $soon->sum(fn ($term) => max(0, (float) $term->amount - (float) $term->received - (float) $term->tds));
         $openTasksCount = Task::where('assigned_to', $user->id)->where('done', false)->count();
 
         return view('livewire.today.today-work-index', [

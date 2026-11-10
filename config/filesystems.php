@@ -47,11 +47,10 @@ return [
             'report' => false,
         ],
 
-        'uploads' => [
+        'documents' => [
             'driver' => 'local',
-            'root' => public_path('uploads'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/uploads',
-            'visibility' => 'public',
+            'root' => storage_path('app/private/documents'),
+            'visibility' => 'private',
             'throw' => false,
             'report' => false,
         ],

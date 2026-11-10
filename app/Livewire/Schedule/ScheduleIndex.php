@@ -30,7 +30,7 @@ class ScheduleIndex extends Component
     public function mount(): void
     {
         $user = auth()->user();
-        if (! $user || $user->role === 'Sales') {
+        if (! $user || ! $user->hasPermission('schedules', 'view')) {
             abort(403, 'Unauthorized access to payment schedule.');
         }
     }
@@ -55,14 +55,37 @@ class ScheduleIndex extends Component
     public function exportCsv()
     {
         $user = auth()->user();
-        $projectIds = Project::forUser($user)->pluck('id');
 
-        $terms = PaymentTerm::query()
-            ->whereIn('project_id', $projectIds)
-            ->with(['project.customer'])
+        $allTerms = PaymentTerm::forUser($user)
+            ->with(['project.customer', 'milestone'])
             ->orderByRaw("CASE status WHEN 'Overdue' THEN 1 WHEN 'Pending' THEN 2 WHEN 'Partial' THEN 3 WHEN 'Paid' THEN 4 WHEN 'Cancelled' THEN 5 ELSE 6 END")
-            ->orderBy('due_date')
+            ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC')
             ->get();
+
+        $terms = $allTerms
+            ->when($this->status, function ($collection) {
+                if ($this->status === 'Upcoming') {
+                    return $collection->whereIn('status', ['Pending', 'Partial']);
+                }
+
+                return $collection->where('status', $this->status);
+            })
+            ->when($this->trigger_type, function ($collection) {
+                return $collection->where('trigger_type', $this->trigger_type);
+            })
+            ->when($this->customer_id, function ($collection) {
+                return $collection->where('project.customer_id', (int) $this->customer_id);
+            })
+            ->when($this->search, function ($collection) {
+                $searchQuery = strtolower(trim($this->search));
+
+                return $collection->filter(function ($term) use ($searchQuery) {
+                    return str_contains(strtolower($term->label ?? ''), $searchQuery) ||
+                           str_contains(strtolower($term->project?->name ?? ''), $searchQuery) ||
+                           str_contains(strtolower($term->project?->code ?? ''), $searchQuery) ||
+                           str_contains(strtolower($term->project?->customer?->display_name ?? ''), $searchQuery);
+                });
+            });
 
         app(AuditNotificationService::class)->log(
             auth()->id(),
@@ -78,7 +101,7 @@ class ScheduleIndex extends Component
         return response()->streamDownload(function () use ($terms) {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF"); // BOM for Excel UTF-8
-            fputcsv($handle, ['Customer', 'Project Code', 'Project', '#', 'Installment', 'Trigger', 'Amount', 'Received', 'TDS', 'Balance', 'Due Date', 'Status']);
+            fputcsv($handle, ['Customer', 'Project Code', 'Project', '#', 'Installment', 'Trigger', 'Milestone', 'Amount', 'Received', 'TDS', 'Balance', 'Due Date', 'Status']);
 
             foreach ($terms as $term) {
                 $balance = max(0, (float) $term->amount - (float) $term->received - (float) $term->tds);
@@ -97,6 +120,7 @@ class ScheduleIndex extends Component
                     $term->seq,
                     $term->label,
                     $triggerLabel,
+                    $term->milestone?->title ?? '',
                     $term->amount,
                     $term->received,
                     $term->tds,
@@ -113,13 +137,10 @@ class ScheduleIndex extends Component
     {
         $user = auth()->user();
         $today = Carbon::today()->toDateString();
-        $projectsQuery = Project::forUser($user);
-        $projectIds = (clone $projectsQuery)->pluck('id');
-        $totalProjectsCount = (clone $projectsQuery)->count();
+        $totalProjectsCount = Project::forUser($user)->count();
 
-        $allTerms = PaymentTerm::query()
-            ->whereIn('project_id', $projectIds)
-            ->with(['project.customer'])
+        $allTerms = PaymentTerm::forUser($user)
+            ->with(['project.customer', 'milestone'])
             ->orderByRaw("CASE status WHEN 'Overdue' THEN 1 WHEN 'Pending' THEN 2 WHEN 'Partial' THEN 3 WHEN 'Paid' THEN 4 WHEN 'Cancelled' THEN 5 ELSE 6 END")
             ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC')
             ->get();
@@ -132,7 +153,9 @@ class ScheduleIndex extends Component
         $overdueSum = (float) $overdueTerms->sum(fn ($term) => max(0, (float) $term->amount - (float) $term->received - (float) $term->tds));
 
         $paidTerms = $allTerms->where('status', 'Paid');
-        $collectedSum = (float) $allTerms->sum('received');
+        $cashCollected = (float) $allTerms->sum('received');
+        $tdsCollected = (float) $allTerms->sum('tds');
+        $collectedSum = round($cashCollected + $tdsCollected, 2); // Option B: Gross Settled Revenue
 
         $totalScheduledSum = (float) $allTerms->where('status', '!=', 'Cancelled')->sum('amount');
 
@@ -176,6 +199,8 @@ class ScheduleIndex extends Component
             'overdueSum' => $overdueSum,
             'overdueCount' => $overdueTerms->count(),
             'collectedSum' => $collectedSum,
+            'cashCollected' => $cashCollected,
+            'tdsCollected' => $tdsCollected,
             'paidCount' => $paidTerms->count(),
             'totalScheduledSum' => $totalScheduledSum,
             'today' => $today,

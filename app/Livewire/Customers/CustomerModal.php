@@ -4,7 +4,6 @@ namespace App\Livewire\Customers;
 
 use App\Models\Customer;
 use App\Models\User;
-use App\Services\AuditNotificationService;
 use App\Services\CodeGeneratorService;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
@@ -14,8 +13,10 @@ class CustomerModal extends Component
 {
     public ?int $customerId = null;
 
+    public bool $isRejected = false;
+
     #[Validate]
-    public string $company = '';
+    public ?string $company = null;
 
     #[Validate]
     public string $contact_name = '';
@@ -62,14 +63,25 @@ class CustomerModal extends Component
     #[Validate]
     public string $status = 'Active';
 
-    // Added #[Validate] attribute
     #[Validate]
     public string $internal_notes = '';
 
-    // Optional but recommended for dynamic rules: guarantees validateOnly on change
     public function updated($propertyName): void
     {
+        if ($propertyName === 'company' && is_string($this->company) && trim($this->company) === '') {
+            $this->company = null;
+        }
+
         $this->validateOnly($propertyName);
+    }
+
+    public function openModal(int|array|null $id = null): void
+    {
+        if (is_array($id)) {
+            $id = isset($id['id']) ? (int) $id['id'] : null;
+        }
+
+        $this->loadCustomer($id);
     }
 
     #[On('open-customer-modal')]
@@ -81,6 +93,7 @@ class CustomerModal extends Component
 
         if ($id) {
             $customer = Customer::findOrFail($id);
+            $this->isRejected = $customer->isRejected();
             $this->company = $customer->company ?? '';
             $this->contact_name = $customer->contact_name ?? '';
             $this->email = $customer->email ?? '';
@@ -96,8 +109,13 @@ class CustomerModal extends Component
             $this->source = $customer->source ?? '';
             $this->industry = $customer->industry ?? '';
             $this->sales_person_id = $customer->sales_person_id ?? null;
-            $this->status = $customer->status ?? 'Active';
+            $this->status = $customer->status;
             $this->internal_notes = $customer->internal_notes ?? '';
+        } else {
+            $this->status = 'Active';
+            if (auth()->check() && auth()->user()->role === 'Sales') {
+                $this->sales_person_id = auth()->id();
+            }
         }
 
         $this->dispatch('open-modal', 'customer-modal');
@@ -128,7 +146,7 @@ class CustomerModal extends Component
             'billing_address' => 'nullable|string|min:2|max:1000',
             'source' => 'nullable|string|min:2|max:60',
             'industry' => 'nullable|string|min:2|max:60',
-            'sales_person_id' => 'required|integer|exists:users,id',
+            'sales_person_id' => (auth()->check() && auth()->user()->role === 'Sales') ? 'nullable|integer' : 'required|integer|exists:users,id',
             'status' => 'required|in:Active,On Hold,Completed,Churned',
             'internal_notes' => 'nullable|string|min:2|max:4000',
         ];
@@ -141,17 +159,30 @@ class CustomerModal extends Component
             'contact_name' => 'Contact Person',
             'email' => 'Email',
             'alt_phone' => 'Alternate Phone',
+            'sales_person_id' => 'Salesperson',
         ];
     }
 
     public function save(): void
     {
+        if (auth()->check() && auth()->user()->role === 'Sales') {
+            $this->sales_person_id = auth()->id();
+        }
+
         // Normalize empty select values
         if (empty($this->sales_person_id)) {
             $this->sales_person_id = null;
         }
 
+        if (is_string($this->company) && trim($this->company) === '') {
+            $this->company = null;
+        }
+
         $validated = $this->validate();
+
+        if (auth()->check() && auth()->user()->role === 'Sales') {
+            $validated['sales_person_id'] = auth()->id();
+        }
 
         foreach (['company', 'email', 'alt_phone', 'gst_number', 'pan_number', 'billing_name', 'billing_address', 'source', 'industry', 'internal_notes', 'address', 'city'] as $field) {
             if (array_key_exists($field, $validated) && ($validated[$field] === '' || $validated[$field] === null)) {
@@ -162,25 +193,115 @@ class CustomerModal extends Component
         $codeService = app(CodeGeneratorService::class);
         $isEdit = (bool) $this->customerId;
 
-        $auditService = app(AuditNotificationService::class);
+        $auditService = audit_service();
 
         if ($this->customerId) {
             $customer = Customer::findOrFail($this->customerId);
-            $customer->update($validated);
+            $wasRejected = $customer->isRejected();
+
+            $customer->fill($validated);
+
+            if ($wasRejected) {
+                $customer->approval_status = 'Pending';
+                $customer->rejection_reason = null;
+                $customer->approved_by = null;
+                $customer->approved_at = null;
+            }
+
+            $structuredChanges = $auditService->computeChanges($customer);
+            $customer->save();
+
             $label = $customer->company ?: ($customer->contact_name ?: $customer->customer_code);
-            $auditService->log(auth()->id(), 'Updated Customer', 'Customer', $customer->id, $customer->customer_code, "Updated customer {$label}");
+            $diffSummaries = [];
+            foreach ($structuredChanges as $field => $diff) {
+                $diffSummaries[] = "{$field}: {$diff['old']} -> {$diff['new']}";
+            }
+            $diffText = ! empty($diffSummaries) ? ' ('.implode(', ', $diffSummaries).')' : '';
+
+            if ($wasRejected) {
+                $auditService->log(
+                    auth()->id(),
+                    'Resubmitted Customer',
+                    'Customer',
+                    $customer->id,
+                    $customer->customer_code,
+                    'Salesperson '.auth()->user()->name." updated and resubmitted customer {$label} for approval{$diffText}",
+                    $structuredChanges
+                );
+
+                $auditService->notifyUplines(
+                    $customer->sales_person_id ? User::find($customer->sales_person_id) : auth()->user(),
+                    'Customer Approval Required',
+                    "Customer Resubmitted for Approval: {$label}",
+                    'Salesperson '.auth()->user()->name." updated details and resubmitted customer {$label} ({$customer->customer_code}) for review.",
+                    'customer',
+                    $customer->id
+                );
+            } else {
+                $auditService->log(
+                    auth()->id(),
+                    'Updated Customer',
+                    'Customer',
+                    $customer->id,
+                    $customer->customer_code,
+                    "Updated customer {$label}{$diffText}",
+                    $structuredChanges
+                );
+
+                $auditService->notifyCustomerStakeholders(
+                    $customer,
+                    'Customer Updated',
+                    "Customer Updated: {$label}",
+                    "Customer {$label} ({$customer->customer_code}) details were updated by ".auth()->user()->name.'.',
+                    'customer',
+                    $customer->id
+                );
+            }
         } else {
             $validated['customer_code'] = $codeService->generate('customer', 'CUS-');
             $validated['created_by'] = auth()->id();
+            $isSales = auth()->check() && auth()->user()->role === 'Sales';
+            $validated['approval_status'] = $isSales ? 'Pending' : 'Approved';
             $customer = Customer::create($validated);
             $label = $customer->company ?: ($customer->contact_name ?: $customer->customer_code);
-            $auditService->log(auth()->id(), 'Created Customer', 'Customer', $customer->id, $customer->customer_code, "Created customer {$label}");
+
+            if ($isSales) {
+                $auditService->log(
+                    auth()->id(),
+                    'Submitted Customer',
+                    'Customer',
+                    $customer->id,
+                    $customer->customer_code,
+                    'Salesperson '.auth()->user()->name." submitted customer {$label} for approval"
+                );
+
+                $auditService->notifyUplines(
+                    auth()->user(),
+                    'Customer Approval Required',
+                    "New Customer Approval: {$label}",
+                    'Salesperson '.auth()->user()->name." submitted customer {$label} ({$customer->customer_code}). Approval required.",
+                    'customer',
+                    $customer->id
+                );
+            } else {
+                $auditService->log(auth()->id(), 'Created Customer', 'Customer', $customer->id, $customer->customer_code, "Created customer {$label}");
+
+                $auditService->notifyCustomerStakeholders(
+                    $customer,
+                    'Customer Created',
+                    "New Customer: {$label}",
+                    "Customer {$label} ({$customer->customer_code}) was onboarded by ".auth()->user()->name.'.',
+                    'customer',
+                    $customer->id
+                );
+            }
         }
 
+        $wasRejectedAction = $isEdit && isset($wasRejected) && $wasRejected;
         $this->reset();
         $this->dispatch('customer-saved');
         $this->dispatch('close-modal', 'customer-modal');
-        $this->dispatch('toast', ['msg' => 'Customer saved successfully', 'type' => 'ok']);
+        $this->dispatch('toast', ['msg' => $wasRejectedAction ? 'Customer updated and resubmitted for review' : 'Customer saved successfully', 'type' => 'ok']);
 
         if (! $isEdit) {
             $this->redirect(route('customers.show', $customer->id), navigate: true);

@@ -8,6 +8,7 @@ use App\Models\PaymentTerm;
 use App\Models\Project;
 use App\Services\AuditNotificationService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -27,6 +28,7 @@ class ProjectDetail extends Component
     #[On('document-saved')]
     public function refreshProjectData(): void
     {
+        $this->project->refresh();
         $this->project->load(['payments', 'terms', 'milestones', 'documents']);
     }
 
@@ -43,9 +45,13 @@ class ProjectDetail extends Component
         } elseif ($user->role === 'Manager') {
             $downlineIds = $user->getDownlineUserIds();
             $allowed = ($project->coordinator_id && in_array($project->coordinator_id, $downlineIds, true))
-                || ($project->sales_person_id && in_array($project->sales_person_id, $downlineIds, true));
+                || ($project->sales_person_id && in_array($project->sales_person_id, $downlineIds, true))
+                || ($project->tech_person_id && in_array($project->tech_person_id, $downlineIds, true))
+                || ($project->created_by && in_array($project->created_by, $downlineIds, true));
         } elseif ($user->role === 'Sales') {
-            $allowed = ($project->sales_person_id === $user->id);
+            $allowed = ($project->sales_person_id === $user->id || $project->created_by === $user->id);
+        } elseif ($user->isTechPerson()) {
+            $allowed = ($project->tech_person_id === $user->id);
         } else {
             $allowed = ($project->coordinator_id === $user->id);
         }
@@ -54,7 +60,11 @@ class ProjectDetail extends Component
             abort(403, 'Unauthorized access to unassigned project.');
         }
 
-        if ($user->role === 'Sales' && in_array($this->activeTab, ['schedule', 'payments'])) {
+        if ((! $user->hasPermission('schedules', 'view') || $user->role === 'Sales') && $this->activeTab === 'schedule') {
+            $this->activeTab = 'overview';
+        }
+
+        if ((! $user->hasPermission('payments', 'view') || $user->role === 'Sales') && $this->activeTab === 'payments') {
             $this->activeTab = 'overview';
         }
 
@@ -63,8 +73,14 @@ class ProjectDetail extends Component
 
     public function updatedActiveTab(string $value): void
     {
-        if (auth()->user()?->role === 'Sales' && in_array($value, ['schedule', 'payments'])) {
-            $this->activeTab = 'overview';
+        $user = auth()->user();
+        if ($user) {
+            if ((! $user->hasPermission('schedules', 'view') || $user->role === 'Sales') && $value === 'schedule') {
+                $this->activeTab = 'overview';
+            }
+            if ((! $user->hasPermission('payments', 'view') || $user->role === 'Sales') && $value === 'payments') {
+                $this->activeTab = 'overview';
+            }
         }
     }
 
@@ -87,11 +103,30 @@ class ProjectDetail extends Component
         );
 
         $this->project->load('milestones');
+
+        if ($milestone->done && auth()->user()?->hasPermission('payments', 'add')) {
+            $pendingTerm = PaymentTerm::where('project_id', $this->project->id)
+                ->where('status', '!=', 'Paid')
+                ->orderBy('seq')
+                ->first();
+
+            if ($pendingTerm) {
+                $balance = max(0, (float) $pendingTerm->amount - (float) $pendingTerm->received - (float) $pendingTerm->tds);
+                $this->dispatch('prompt-milestone-payment', [
+                    'milestoneName' => $milestone->name,
+                    'termLabel' => $pendingTerm->label,
+                    'termSeq' => $pendingTerm->seq,
+                    'balance' => $balance,
+                    'projectId' => $this->project->id,
+                    'termId' => $pendingTerm->id,
+                ]);
+            }
+        }
     }
 
     public function deleteTerm(int $termId): void
     {
-        if (auth()->user()?->role === 'Sales') {
+        if (! auth()->user()?->hasPermission('schedules', 'delete')) {
             abort(403, 'Unauthorized.');
         }
 
@@ -120,7 +155,7 @@ class ProjectDetail extends Component
 
     public function deletePayment(int $paymentId): void
     {
-        if (auth()->user()?->role === 'Sales') {
+        if (! auth()->user()?->hasPermission('payments', 'delete')) {
             abort(403, 'Unauthorized.');
         }
 
@@ -132,14 +167,7 @@ class ProjectDetail extends Component
 
         if ($termId) {
             $term = PaymentTerm::find($termId);
-            if ($term) {
-                $remPaid = (float) Payment::where('term_id', $termId)->sum('amount');
-                $remTds = (float) Payment::where('term_id', $termId)->sum('tds');
-                $term->received = $remPaid;
-                $term->tds = $remTds;
-                $term->status = ($remPaid + $remTds >= $term->amount - 0.01) ? 'Paid' : ($remPaid > 0 ? 'Partial' : 'Pending');
-                $term->save();
-            }
+            $term?->recalculateStatus();
         }
 
         app(AuditNotificationService::class)->log(
@@ -157,12 +185,22 @@ class ProjectDetail extends Component
 
     public function deleteDocument(int $docId): void
     {
+        $user = auth()->user();
         $doc = $this->project->documents()->findOrFail($docId);
-        $docName = $doc->file_name;
-        if (Storage::disk('uploads')->exists($doc->stored_as)) {
-            Storage::disk('uploads')->delete($doc->stored_as);
+
+        if ($user->role !== 'Admin' && $doc->uploaded_by !== $user->id) {
+            $this->dispatch('toast', ['msg' => 'You can only remove files you uploaded.', 'type' => 'err']);
+
+            return;
         }
-        Storage::disk('public')->delete($doc->stored_as);
+
+        $docName = $doc->file_name;
+        if (Storage::disk('documents')->exists($doc->stored_as)) {
+            Storage::disk('documents')->delete($doc->stored_as);
+        }
+        if (Storage::disk('public')->exists($doc->stored_as)) {
+            Storage::disk('public')->delete($doc->stored_as);
+        }
         $doc->delete();
 
         app(AuditNotificationService::class)->log(
@@ -175,6 +213,7 @@ class ProjectDetail extends Component
         );
 
         $this->project->load('documents');
+        $this->dispatch('toast', ['msg' => 'Document removed', 'type' => 'ok']);
     }
 
     public function deleteProject(): void
@@ -183,26 +222,132 @@ class ProjectDetail extends Component
             abort(403, 'Only administrators can delete projects.');
         }
 
-        foreach ($this->project->documents as $doc) {
-            Storage::disk('public')->delete($doc->stored_as);
-        }
-
         $name = $this->project->name;
         $code = $this->project->code;
         $id = $this->project->id;
 
-        $this->project->delete();
+        $filesToDelete = $this->project->documents->pluck('stored_as')->filter()->values()->all();
+        $auditService = app(AuditNotificationService::class);
 
-        app(AuditNotificationService::class)->log(
-            auth()->id(),
-            'Deleted Project',
-            'Project',
-            $id,
-            $code,
-            "Deleted project {$name} and associated records"
-        );
+        DB::transaction(function () use ($id, $code, $name, $auditService, $filesToDelete) {
+            $auditService->notifyProjectStakeholders(
+                $this->project,
+                'Project Deleted',
+                "Project Deleted: {$name}",
+                "Project {$name} ({$code}) was deleted by ".auth()->user()->name.'.',
+                'project',
+                $id
+            );
+
+            $this->project->delete();
+
+            $auditService->log(
+                auth()->id(),
+                'Deleted Project',
+                'Project',
+                $id,
+                $code,
+                "Deleted project {$name} and associated records"
+            );
+
+            DB::afterCommit(function () use ($filesToDelete) {
+                foreach ($filesToDelete as $storedAs) {
+                    if (Storage::disk('documents')->exists($storedAs)) {
+                        Storage::disk('documents')->delete($storedAs);
+                    }
+                    if (Storage::disk('public')->exists($storedAs)) {
+                        Storage::disk('public')->delete($storedAs);
+                    }
+                }
+            });
+        });
 
         $this->redirect(route('projects.index'), navigate: true);
+    }
+
+    public function approveProject(): void
+    {
+        $user = auth()->user();
+        if (! $this->project->canBeApprovedBy($user)) {
+            abort(403, 'Unauthorized to approve this project.');
+        }
+
+        $this->project->update([
+            'approval_status' => 'Approved',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'rejection_reason' => null,
+        ]);
+
+        $auditService = app(AuditNotificationService::class);
+
+        $auditService->log(
+            $user->id,
+            'Approved Project',
+            'Project',
+            $this->project->id,
+            $this->project->code,
+            "Approved project {$this->project->name}"
+        );
+
+        $creatorId = $this->project->created_by ?: $this->project->sales_person_id;
+        if ($creatorId && (int) $creatorId !== (int) $user->id) {
+            $auditService->notify(
+                $creatorId,
+                'Project Approved',
+                "Project Approved: {$this->project->name}",
+                "Your submitted project {$this->project->name} ({$this->project->code}) was approved by {$user->name}.",
+                'project',
+                $this->project->id
+            );
+        }
+
+        $this->refreshProjectData();
+        $this->dispatch('toast', ['msg' => 'Project approved successfully.', 'type' => 'ok']);
+    }
+
+    public function rejectProject(?string $reason = null): void
+    {
+        $user = auth()->user();
+        if (! $this->project->canBeApprovedBy($user)) {
+            abort(403, 'Unauthorized to reject this project.');
+        }
+
+        $cleanReason = trim((string) $reason);
+
+        $this->project->update([
+            'approval_status' => 'Rejected',
+            'approved_by' => $user->id,
+            'approved_at' => now(),
+            'rejection_reason' => $cleanReason !== '' ? $cleanReason : null,
+        ]);
+
+        $auditService = app(AuditNotificationService::class);
+        $reasonText = $cleanReason !== '' ? " (Reason: {$cleanReason})" : '';
+
+        $auditService->log(
+            $user->id,
+            'Rejected Project',
+            'Project',
+            $this->project->id,
+            $this->project->code,
+            "Rejected project {$this->project->name}{$reasonText}"
+        );
+
+        $creatorId = $this->project->created_by ?: $this->project->sales_person_id;
+        if ($creatorId && (int) $creatorId !== (int) $user->id) {
+            $auditService->notify(
+                $creatorId,
+                'Project Rejected',
+                "Project Rejected: {$this->project->name}",
+                "Your submitted project {$this->project->name} ({$this->project->code}) was rejected by {$user->name}.".($cleanReason !== '' ? " Reason: {$cleanReason}" : ''),
+                'project',
+                $this->project->id
+            );
+        }
+
+        $this->refreshProjectData();
+        $this->dispatch('toast', ['msg' => 'Project rejected.', 'type' => 'warning']);
     }
 
     public function render()
@@ -212,19 +357,19 @@ class ProjectDetail extends Component
         $rec = (float) $money['received'];
         $collectionRate = $sched > 0 ? min(100, round(($rec / $sched) * 100)) : 0;
 
-        $today = Carbon::today()->toDateString();
+        $today = Carbon::today()->startOfDay();
         $daysLate = 0;
         if ($this->project->delivery_date && $this->project->status !== 'Delivered') {
-            $diff = Carbon::parse($today)->diffInDays(Carbon::parse($this->project->delivery_date), false);
+            $diff = $today->diffInDays(Carbon::parse($this->project->delivery_date)->startOfDay(), false);
             if ($diff < 0) {
-                $daysLate = abs($diff);
+                $daysLate = (int) round(abs($diff));
             }
         }
 
         return view('livewire.projects.project-detail', [
-            'terms' => $this->project->terms()->orderBy('seq')->get(),
-            'milestones' => $this->project->milestones()->orderBy('sort_order')->get(),
-            'payments' => $this->project->payments()->orderByDesc('paid_on')->get(),
+            'terms' => $this->project->terms()->with('milestone')->orderBy('seq')->get(),
+            'milestones' => $this->project->milestones()->with('paymentTerms')->orderBy('sort_order')->get(),
+            'payments' => $this->project->payments()->with(['term.milestone', 'enteredBy', 'document'])->orderByDesc('paid_on')->get(),
             'documents' => $this->project->documents()->orderByDesc('id')->get(),
             'r' => $collectionRate,
             'daysLate' => $daysLate,

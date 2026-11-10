@@ -72,8 +72,8 @@ class CustomErrorPagesTest extends TestCase
             'role' => 'Sales',
         ]);
 
-        // Attempting to access Reports index which is restricted to Admin/Manager
-        $response = $this->actingAs($salesUser)->get(route('reports.index'));
+        // Attempting to access Users index which is restricted
+        $response = $this->actingAs($salesUser)->get(route('users.index'));
 
         $response->assertStatus(403);
         $response->assertSee('403 · Access Restricted');

@@ -18,6 +18,8 @@ return new class extends Migration
             $table->enum('status', ['Pending', 'In Progress', 'Done', 'Blocked'])->default('Pending');
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->text('notes')->nullable();
+            $table->text('chase_notes')->nullable();
+            $table->date('next_chase_date')->nullable();
             $table->timestamps();
         });
     }

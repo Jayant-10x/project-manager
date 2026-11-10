@@ -22,7 +22,7 @@ class DocumentUploadModal extends Component
 
     public ?int $project_id = null;
 
-    public string $category = 'Contract';
+    public string $category = '';
 
     public string $title = '';
 
@@ -31,7 +31,7 @@ class DocumentUploadModal extends Component
     {
         $this->resetValidation();
         $this->reset(['file', 'title']);
-        $this->category = 'Contract';
+        $this->category = '';
         $this->customer_id = $customerId;
         $this->project_id = $projectId;
 
@@ -106,17 +106,14 @@ class DocumentUploadModal extends Component
         $ext = strtolower($this->file->getClientOriginalExtension());
         $storedName = "{$slug}_{$timestamp}.{$ext}";
 
-        if (Storage::disk('uploads')->exists($storedName) || Storage::disk('public')->exists($storedName)) {
+        if (Storage::disk('documents')->exists($storedName) || Storage::disk('public')->exists($storedName)) {
             $storedName = "{$slug}_{$timestamp}_".bin2hex(random_bytes(3)).".{$ext}";
         }
 
-        // Store directly to public uploads directory for simple, symlink-free web access
-        $this->file->storeAs('', $storedName, 'uploads');
+        // Store directly to private documents storage disk
+        $this->file->storeAs('', $storedName, 'documents');
 
-        // Also store explicitly to the public storage disk root (storage/app/public)
-        $this->file->storeAs('', $storedName, 'public');
-
-        $doc = Document::create([
+        $document = Document::create([
             'customer_id' => $this->customer_id,
             'project_id' => $this->project_id,
             'category' => $this->category,
@@ -128,14 +125,41 @@ class DocumentUploadModal extends Component
             'uploaded_by' => auth()->id(),
         ]);
 
-        app(AuditNotificationService::class)->log(
+        $auditService = app(AuditNotificationService::class);
+        $auditService->log(
             auth()->id(),
             'Uploaded Document',
             'Document',
-            $doc->id,
+            $document->id,
             '',
-            "Uploaded {$doc->title} ({$doc->file_name})"
+            "Uploaded {$document->title} ({$document->file_name})"
         );
+
+        if ($this->project_id) {
+            $project = Project::find($this->project_id);
+            if ($project) {
+                $auditService->notifyProjectStakeholders(
+                    $project,
+                    'Document Uploaded',
+                    "New Document: {$document->title}",
+                    auth()->user()->name." uploaded document '{$document->title}' ({$document->category}) for project {$project->name}.",
+                    'project',
+                    $project->id
+                );
+            }
+        } elseif ($this->customer_id) {
+            $customer = Customer::find($this->customer_id);
+            if ($customer) {
+                $auditService->notifyCustomerStakeholders(
+                    $customer,
+                    'Document Uploaded',
+                    "New Document: {$document->title}",
+                    auth()->user()->name." uploaded document '{$document->title}' ({$document->category}) for customer {$customer->display_name}.",
+                    'customer',
+                    $customer->id
+                );
+            }
+        }
 
         $this->reset(['file', 'title', 'category', 'customer_id', 'project_id']);
         $this->dispatch('document-saved');
@@ -156,11 +180,11 @@ class DocumentUploadModal extends Component
         $user = auth()->user();
 
         return view('livewire.documents.document-upload-modal', [
-            'customers' => Customer::orderByRaw('COALESCE(NULLIF(company, ""), contact_name) ASC')->get(),
+            'customers' => Customer::where('status', 'Active')->orderByRaw('COALESCE(NULLIF(company, ""), contact_name) ASC')->get(),
             'projects' => $this->customer_id
                 ? Project::forUser($user)->where('customer_id', $this->customer_id)->orderBy('name')->get()
                 : Project::forUser($user)->orderBy('name')->get(),
-            'categories' => ['Contract', 'KYC/GST', 'Invoice', 'Proposal', 'Quotation', 'Delivery Proof', 'AMC', 'Other'],
+            'categories' => ['Contract', 'KYC/GST', 'Invoice', 'Proposal', 'Quotation', 'Delivery Proof', 'Other'],
         ]);
     }
 }

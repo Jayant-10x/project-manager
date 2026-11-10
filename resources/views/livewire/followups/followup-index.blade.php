@@ -19,14 +19,14 @@
     <!-- Pending / Overdue Follow-ups Notice Banner -->
     @if($dueList->isNotEmpty())
         <div class="notice warn mb-4">
-            <svg viewBox="0 0 24 24" class="w-4 h-4 flex-shrink-0 mt-0.5">
+            <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0 mt-0.5">
                 <circle cx="12" cy="12" r="9"/>
                 <path d="M12 8v5M12 16.5v.5"/>
             </svg>
             <div class="text-xs">
                 <b>{{ $dueList->count() }} follow-ups are pending.</b><br>
                 @foreach($dueList->take(4) as $d)
-                    <div>{{ $d->customer?->display_name }} — {{ $d->next_note ?: $d->summary }}
+                    <div>{{ $d->customer?->display_name }} — {{ $d->detail ?: ($d->next_note ?: $d->summary) }}
                         ({{ $d->next_date?->format('d M') }})
                     </div>
                 @endforeach
@@ -48,8 +48,8 @@
 
                 <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
                     <option value="">All customers</option>
-                    @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
+                    @foreach($customers as $customer)
+                        <option value="{{ $customer->id }}">{{ $customer->display_name }}</option>
                     @endforeach
                 </select>
 
@@ -62,15 +62,15 @@
                     <option value="Note">Note</option>
                 </select>
 
-                <div class="flex items-center gap-1.5 text-xs text-[#8894ac]">
-                    <span>From</span>
-                    <input type="date" wire:model.live="date_from" class="i" style="width:auto; padding: 4px 8px; font-size: 12px;">
-                    <span>To</span>
-                    <input type="date" wire:model.live="date_to" class="i" style="width:auto; padding: 4px 8px; font-size: 12px;">
+                <div class="filter-date-group">
+                    <span class="filter-date-label">From</span>
+                    <input type="date" wire:model.live="date_from" class="filter-date-input">
+                    <span class="filter-date-label">To</span>
+                    <input type="date" wire:model.live="date_to" class="filter-date-input">
                 </div>
 
                 @if($search !== '' || $type !== '' || $customer_id !== '' || $date_from !== '' || $date_to !== '')
-                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                    <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
                         </svg>
@@ -98,7 +98,7 @@
                 @endphp
                 <div
                     class="fu flex items-start gap-3 p-3.5 border-b last:border-b-0 border-[#eef2f9] hover:bg-slate-50 transition">
-                    <span class="fu-ico flex-shrink-0" style="background: {{ $badgeColor }}1a; color: {{ $badgeColor }}">
+                    <span class="fu-ico shrink-0" style="background: {{ $badgeColor }}1a; color: {{ $badgeColor }}">
                         @if($followup->type === 'Meeting')
                             <svg viewBox="0 0 24 24" class="w-4 h-4"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle
                                     cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>
@@ -151,7 +151,7 @@
                     </div>
 
                     <button type="button"
-                            class="mini-btn danger flex-shrink-0"
+                            class="btn btn-outline-danger btn-xs shrink-0"
                             @click="$dispatch('confirm-dialog', {
                                 title: 'Remove Follow-up?',
                                 message: 'Are you sure you want to remove this follow-up entry?',

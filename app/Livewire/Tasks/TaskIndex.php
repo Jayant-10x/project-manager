@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Tasks;
 
+use App\Models\Followup;
+use App\Models\Milestone;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
@@ -48,7 +50,7 @@ class TaskIndex extends Component
     public function mount(): void
     {
         $this->assigned_to = auth()->id();
-        $this->due_date = now()->toDateString();
+        $this->due_date = null;
     }
 
     /**
@@ -86,7 +88,7 @@ class TaskIndex extends Component
     protected function messages(): array
     {
         return [
-            'assigned_to.in' => 'You can only assign tasks to yourself or team members in your downline.',
+            'assigned_to.in' => 'You can only assign tasks to yourself or reporting team members.',
         ];
     }
 
@@ -121,6 +123,17 @@ class TaskIndex extends Component
             '',
             ($task->done ? 'Marked task as done: ' : 'Reopened task: ').$task->title
         );
+
+        if ($task->done && $task->created_by && $task->created_by !== auth()->id()) {
+            app(AuditNotificationService::class)->notify(
+                $task->created_by,
+                'Task Completed',
+                "Task Completed: {$task->title}",
+                auth()->user()->name." completed task '{$task->title}'.",
+                'tasks',
+                $task->id
+            );
+        }
 
         $this->dispatch('task-updated');
     }
@@ -183,7 +196,8 @@ class TaskIndex extends Component
             'done' => false,
         ]);
 
-        app(AuditNotificationService::class)->log(
+        $auditService = app(AuditNotificationService::class);
+        $auditService->log(
             $currentUser->id,
             'Created Task',
             'Task',
@@ -192,13 +206,47 @@ class TaskIndex extends Component
             "Created task: {$task->title}"
         );
 
+        if ($task->assigned_to !== $currentUser->id) {
+            $assignedUser = User::find($task->assigned_to);
+            $auditService->notify(
+                $task->assigned_to,
+                'Task Assigned',
+                "New Task: {$task->title}",
+                "{$currentUser->name} assigned you a {$task->priority} priority task: {$task->title}",
+                'tasks',
+                $task->id
+            );
+            if ($assignedUser) {
+                $auditService->notifyUplines(
+                    $assignedUser,
+                    'Task Assigned',
+                    "Task Assigned: {$task->title}",
+                    "{$currentUser->name} assigned task '{$task->title}' to {$assignedUser->name}.",
+                    'tasks',
+                    $task->id,
+                    includeAdmins: false,
+                    excludeUserIds: [$task->assigned_to]
+                );
+            }
+        } else {
+            $auditService->notifyUplines(
+                $currentUser,
+                'Task Created',
+                "New Task: {$task->title}",
+                "{$currentUser->name} created a task: {$task->title}",
+                'tasks',
+                $task->id,
+                includeAdmins: false
+            );
+        }
+
         $this->dispatch('task-saved');
         $this->dispatch('close-modal', 'add-task-modal');
         $this->dispatch('toast', ['msg' => 'Task added successfully', 'type' => 'ok']);
 
         $this->reset(['title', 'project_id']);
         $this->priority = 'Medium';
-        $this->due_date = now()->toDateString();
+        $this->due_date = null;
         $this->assigned_to = auth()->id();
         $this->resetValidation();
     }
@@ -216,6 +264,7 @@ class TaskIndex extends Component
             ->when($this->filterAssignedTo, fn ($taskQuery) => $taskQuery->where('assigned_to', $this->filterAssignedTo))
             ->when($this->filterStatus === 'open', fn ($taskQuery) => $taskQuery->where('done', false))
             ->when($this->filterStatus === 'done', fn ($taskQuery) => $taskQuery->where('done', true))
+            ->when($this->filterStatus === 'overdue', fn ($taskQuery) => $taskQuery->where('done', false)->whereNotNull('due_date')->where('due_date', '<', $today))
             ->when($this->filterSearch, function ($searchQuery) {
                 $term = '%'.trim($this->filterSearch).'%';
                 $searchQuery->where(function ($subQuery) use ($term) {
@@ -234,6 +283,36 @@ class TaskIndex extends Component
             ->get();
         $openCount = $baseTasks->where('done', false)->count();
         $doneCount = $baseTasks->where('done', true)->count();
+        $urgentCount = $baseTasks->where('done', false)->whereIn('priority', ['Urgent', 'High'])->count();
+        $overdueCount = $baseTasks->where('done', false)
+            ->filter(fn ($task) => ! empty($task->due_date) && Carbon::parse($task->due_date)->lt(Carbon::parse($today)))
+            ->count();
+
+        // Milestone chases due within 14 days (vital for Coordinator & Delivery managers)
+        $milestoneChases = collect();
+        if (in_array($currentUser->role, ['Coordinator', 'Manager', 'Admin'], true)) {
+            $projectIds = Project::query()->forUser($currentUser)->pluck('id');
+            $milestoneChases = Milestone::query()
+                ->whereIn('project_id', $projectIds)
+                ->whereNotNull('next_chase_date')
+                ->where('next_chase_date', '<=', Carbon::today()->addDays(14)->toDateString())
+                ->where('done', false)
+                ->with(['project.customer'])
+                ->orderBy('next_chase_date')
+                ->get();
+        }
+
+        // Follow-up calls due within 7 days
+        $followups = Followup::query()
+            ->whereNotNull('next_date')
+            ->where('next_date', '<=', Carbon::today()->addDays(7)->toDateString())
+            ->when($currentUser->role !== 'Admin', function ($followupQuery) use ($currentUser) {
+                $followupQuery->where('created_by', $currentUser->id)
+                    ->orWhereHas('customer', fn ($customerQuery) => $customerQuery->forUser($currentUser));
+            })
+            ->with(['customer', 'project'])
+            ->orderBy('next_date')
+            ->get();
 
         $projects = Project::query()->forUser($currentUser)->orderBy('name')->get();
         $users = User::whereIn('id', $this->getAllowedAssigneeIds())->orderBy('name')->get();
@@ -242,6 +321,10 @@ class TaskIndex extends Component
             'tasks' => $tasks,
             'openCount' => $openCount,
             'doneCount' => $doneCount,
+            'urgentCount' => $urgentCount,
+            'overdueCount' => $overdueCount,
+            'milestoneChases' => $milestoneChases,
+            'followups' => $followups,
             'projects' => $projects,
             'users' => $users,
             'today' => $today,

@@ -62,7 +62,7 @@ class DynamicCounter extends Component
         }
 
         return match ($this->type) {
-            'customers' => Customer::count(),
+            'customers' => Customer::forUser($user)->count(),
             'projects' => Project::forUser($user)->count(),
             'tasks' => Task::where('assigned_to', $user->id)->where('done', false)->count(),
             'today' => $this->getTodayCount($user),

@@ -5,9 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
-    <title>{{ config('app.name', '10X Agency CRM') }}</title>
+    @php
+        $pageTitle = trim($__env->yieldContent('title'));
+        if (empty($pageTitle)) {
+            $pageTitle = $title ?? ($header ?? null);
+        }
+        $appName = config('app.name', 'Project Manager 10X Agency');
+        if ($pageTitle && str_contains($pageTitle, $appName)) {
+            $fullTitle = $pageTitle;
+        } else {
+            $fullTitle = $pageTitle ? "{$pageTitle} | {$appName}" : $appName;
+        }
+    @endphp
+    <title>{{ $fullTitle }}</title>
 
     <link rel="icon" type="image/png" href="{{ asset('assets/logo.png') }}">
+
+    <script>
+        (function() {
+            try {
+                var isSaved = localStorage.getItem('pjt_sidebar_collapsed');
+                var isCookie = document.cookie.indexOf('pjt_sidebar_collapsed=true') !== -1;
+                var shouldCollapse = window.innerWidth > 860 && (isSaved === 'true' || (isSaved === null && isCookie));
+                if (shouldCollapse) {
+                    document.documentElement.classList.add('sidebar-collapsed-init');
+                }
+            } catch (e) {}
+        })();
+    </script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="stylesheet" href="{{ asset('css/crm-style.css') }}">
@@ -23,7 +48,11 @@
                     localStorage.setItem('pjt_cur', this.cur);
                 },
                 format(val, short = false) {
+                    if (typeof val === 'string') {
+                        val = val.replace(/,/g, '');
+                    }
                     let n = Number(val || 0);
+                    if (isNaN(n)) n = 0;
                     if (this.cur === 'USD') {
                         n = n / this.rate;
                         if (short && Math.abs(n) >= 1000) return '$' + (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'K';
@@ -34,23 +63,246 @@
                 }
             });
         });
+
+        window.ModalManager = {
+            openModals: new Set(),
+            open(id) {
+                if (id) this.openModals.add(id);
+                document.body.classList.add('overflow-hidden');
+            },
+            close(id) {
+                if (id) this.openModals.delete(id);
+                if (this.openModals.size === 0) {
+                    document.body.classList.remove('overflow-hidden');
+                }
+                setTimeout(() => this.sync(), 120);
+            },
+            sync() {
+                const visibleModals = Array.from(document.querySelectorAll('[data-modal], [data-confirm-modal]')).filter(el => {
+                    if (!el.isConnected) return false;
+                    if (el.style.display === 'none') return false;
+                    try {
+                        if (window.getComputedStyle(el).display === 'none') return false;
+                    } catch (e) {}
+                    if (el._x_dataStack && el._x_dataStack[0] && el._x_dataStack[0].show === false) return false;
+                    return true;
+                });
+
+                if (visibleModals.length === 0) {
+                    this.openModals.clear();
+                    document.body.classList.remove('overflow-hidden');
+                } else {
+                    document.body.classList.add('overflow-hidden');
+                }
+            }
+        };
+
+        window.addEventListener('livewire:navigated', () => {
+            window.ModalManager.openModals.clear();
+            document.body.classList.remove('overflow-hidden');
+        });
+
+        window.addEventListener('close-modal', (e) => {
+            const name = e.detail?.name || (Array.isArray(e.detail) ? e.detail[0] : e.detail);
+            if (name) {
+                window.ModalManager.close(name);
+            } else {
+                window.ModalManager.openModals.clear();
+                document.body.classList.remove('overflow-hidden');
+            }
+            setTimeout(() => window.ModalManager.sync(), 100);
+        });
+
+        // First Error Field Auto-Scroll & Focus Engine
+        window.scrollToFirstError = function(scope) {
+            let root = (typeof scope === 'string' ? document.querySelector(scope) : scope) || null;
+            if (!root || !root.isConnected) {
+                const activeModal = Array.from(document.querySelectorAll('[data-modal], [data-confirm-modal], .modal')).find(el => {
+                    if (!el.isConnected) return false;
+                    if (el.style.display === 'none') return false;
+                    try {
+                        if (window.getComputedStyle(el).display === 'none') return false;
+                    } catch (e) {}
+                    if (el._x_dataStack && el._x_dataStack[0] && el._x_dataStack[0].show === false) return false;
+                    return true;
+                });
+
+                const activeDrawer = document.querySelector('.drawer.open, [data-drawer].open');
+                root = activeModal || activeDrawer || document;
+            }
+
+            const candidates = Array.from(root.querySelectorAll(
+                'input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]'
+            ));
+
+            let firstErrorField = null;
+
+            for (const input of candidates) {
+                const classStr = input.className || '';
+                const isDirectlyInvalid = input.getAttribute('aria-invalid') === 'true' ||
+                    classStr.includes('border-red') ||
+                    classStr.includes('is-invalid') ||
+                    classStr.includes('bg-red');
+
+                if (isDirectlyInvalid) {
+                    firstErrorField = input;
+                    break;
+                }
+
+                const parent = input.closest('label, .f, .form-group, .form-row, td, tr');
+                if (parent) {
+                    const errorEl = Array.from(parent.querySelectorAll('[class*="text-red"], .err, .invalid-feedback, [role="alert"]')).find(el => {
+                        const txt = el.textContent.trim();
+                        return txt.length > 0 && txt !== '*' && txt !== '•' && !el.closest('span:has(> input)');
+                    });
+                    if (errorEl) {
+                        firstErrorField = input;
+                        break;
+                    }
+                }
+            }
+
+            if (!firstErrorField) {
+                const errorSpans = Array.from(root.querySelectorAll(
+                    '.err, [class*="text-red-500"], [class*="text-red-600"], .invalid-feedback, [role="alert"]'
+                )).filter(el => {
+                    const txt = el.textContent.trim();
+                    return txt.length > 0 && txt !== '*' && txt !== '•';
+                });
+
+                if (errorSpans.length > 0) {
+                    const firstMsg = errorSpans[0];
+                    const container = firstMsg.closest('label, .f, .form-group, .form-row, td, tr, div');
+                    if (container) {
+                        firstErrorField = container.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])') || firstMsg;
+                    } else {
+                        firstErrorField = firstMsg;
+                    }
+                }
+            }
+
+            if (firstErrorField) {
+                if (firstErrorField.offsetParent === null) {
+                    const hiddenTab = firstErrorField.closest('[data-tab-content], [data-tab-pane], [id^="tab-"]');
+                    if (hiddenTab) {
+                        const tabId = hiddenTab.getAttribute('data-tab') || hiddenTab.id;
+                        const trigger = document.querySelector(`[data-tab-target="${tabId}"], button[href="#${tabId}"]`);
+                        if (trigger) trigger.click();
+                    }
+                }
+
+                firstErrorField.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                    inline: 'nearest'
+                });
+
+                setTimeout(() => {
+                    if (typeof firstErrorField.focus === 'function') {
+                        try {
+                            firstErrorField.focus({ preventScroll: true });
+                        } catch (e) {
+                            firstErrorField.focus();
+                        }
+                    }
+
+                    firstErrorField.classList.add('error-focused');
+                    setTimeout(() => {
+                        firstErrorField.classList.remove('error-focused');
+                    }, 1000);
+                }, 100);
+
+                return true;
+            }
+
+            return false;
+        };
+
+        let isFormSubmitting = false;
+
+        document.addEventListener('submit', () => {
+            isFormSubmitting = true;
+            setTimeout(() => {
+                window.scrollToFirstError();
+            }, 80);
+        }, true);
+
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[type="submit"], button[wire\\:click*="save"], button[wire\\:click*="submit"], button[wire\\:click*="store"], button[wire\\:click*="update"], button[wire\\:click*="import"], button.btn-primary');
+            if (btn) {
+                isFormSubmitting = true;
+            }
+        }, true);
+
+        function setupLivewireErrorScroller() {
+            if (!window.Livewire || typeof window.Livewire.hook !== 'function') return;
+
+            window.Livewire.hook('commit', ({ component, commit, respond, succeed, fail }) => {
+                const hasFormAction = Array.isArray(commit.calls) && commit.calls.some(c => {
+                    const m = (c.method || '').toLowerCase();
+                    return m.includes('save') || m.includes('submit') || m.includes('store') || m.includes('update') || m.includes('create') || m.includes('import');
+                });
+
+                if (isFormSubmitting || hasFormAction) {
+                    succeed(() => {
+                        isFormSubmitting = false;
+                        requestAnimationFrame(() => {
+                            setTimeout(() => {
+                                window.scrollToFirstError(component?.el);
+                            }, 70);
+                        });
+                    });
+                }
+            });
+
+            window.Livewire.hook('morph.updated', ({ el, component }) => {
+                if (isFormSubmitting) {
+                    requestAnimationFrame(() => {
+                        setTimeout(() => {
+                            window.scrollToFirstError(component?.el || el);
+                        }, 70);
+                    });
+                }
+            });
+        }
+
+        if (window.Livewire) {
+            setupLivewireErrorScroller();
+        } else {
+            document.addEventListener('livewire:init', setupLivewireErrorScroller);
+        }
+
+        window.addEventListener('scroll-to-first-error', (e) => {
+            const targetScope = e.detail?.scope || (typeof e.detail === 'string' ? document.querySelector(e.detail) : null);
+            window.scrollToFirstError(targetScope);
+        });
     </script>
 </head>
+@php
+    $isServerSidebarCollapsed = (isset($_COOKIE['pjt_sidebar_collapsed']) && $_COOKIE['pjt_sidebar_collapsed'] === 'true');
+@endphp
 <body class="bg-[#f5f7fb] text-[#0d1b34] font-sans antialiased"
       x-data="{
-          collapsed: window.innerWidth > 860 ? (localStorage.getItem('pjt_sidebar_collapsed') === 'true') : false,
+          collapsed: window.innerWidth > 860 ? (localStorage.getItem('pjt_sidebar_collapsed') !== null ? (localStorage.getItem('pjt_sidebar_collapsed') === 'true') : {{ $isServerSidebarCollapsed ? 'true' : 'false' }}) : false,
           mobileOpen: false,
           toggleSidebar() {
               if (window.innerWidth <= 860) {
                   this.mobileOpen = !this.mobileOpen;
               } else {
                   this.collapsed = !this.collapsed;
-                  localStorage.setItem('pjt_sidebar_collapsed', this.collapsed);
+                  try {
+                      localStorage.setItem('pjt_sidebar_collapsed', this.collapsed);
+                      document.cookie = 'pjt_sidebar_collapsed=' + this.collapsed + '; path=/; max-age=31536000; SameSite=Lax';
+                  } catch (e) {}
               }
           }
       }"
       @notification-updated.window="if ($event.detail && typeof $event.detail.unreadCount !== 'undefined') $store.notifications.setCount($event.detail.unreadCount)"
       x-init="
+        setTimeout(() => {
+            document.documentElement.classList.remove('sidebar-collapsed-init');
+        }, 120);
+
         Alpine.store('currency', {
             cur: localStorage.getItem('pjt_cur') || 'INR',
             rate: {{ app(\App\Services\CurrencyRateService::class)->getUsdInrRate() }},
@@ -59,7 +311,11 @@
                 localStorage.setItem('pjt_cur', this.cur);
             },
             format(val, short = false) {
+                if (typeof val === 'string') {
+                    val = val.replace(/,/g, '');
+                }
                 let n = Number(val || 0);
+                if (isNaN(n)) n = 0;
                 if (this.cur === 'USD') {
                     n = n / this.rate;
                     if (short && Math.abs(n) >= 1000) return '$' + (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'K';
@@ -110,24 +366,26 @@
             </div>
 
             <div class="top-actions">
-                <livewire:components.global-search/>
                 <livewire:components.notification-bell/>
 
                 <button type="button"
-                        class="btn btn-ghost btn-sm"
+                        class="btn btn-outline-secondary btn-sm font-bold"
                         @click="$store.currency.toggle()"
                         x-text="$store.currency.cur"
                         title="Currency Toggle">
                 </button>
 
-                <button type="button"
-                        class="btn btn-primary"
-                        @click="$dispatch('open-customer-modal', { id: null })">
-                    <svg viewBox="0 0 24 24" class="w-4 h-4">
-                        <path d="M12 5v14M5 12h14"/>
-                    </svg>
-                    <span class="btn-lbl">New Customer</span>
-                </button>
+                @if(auth()->user()?->hasPermission('customers', 'add'))
+                    <button type="button"
+                            class="btn btn-primary"
+                            @click="$dispatch('open-customer-modal', { id: null })"
+                            title="Add Customer">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        <span class="btn-lbl">Add Customer</span>
+                    </button>
+                @endif
             </div>
         </header>
 
@@ -142,31 +400,53 @@
 <!-- Global Slide-Over Notification Drawer -->
 <livewire:components.notification-drawer/>
 
+<!-- Global Profile Slide-Over Drawer -->
+@auth
+    <livewire:profile.profile-drawer/>
+@endauth
+
 <!-- Global Application Modals -->
-<livewire:customers.customer-modal/>
-<livewire:projects.project-modal/>
-<livewire:payments.payment-modal/>
-<livewire:followups.followup-modal/>
+@if(auth()->check() && auth()->user()->role === 'Admin')
+    <livewire:settings.user-modal/>
+@endif
+
+@if(auth()->check() && (auth()->user()->hasPermission('customers', 'add') || auth()->user()->hasPermission('customers', 'edit')))
+    <livewire:customers.customer-modal/>
+@endif
+
+@if(auth()->check() && (auth()->user()->hasPermission('projects', 'add') || auth()->user()->hasPermission('projects', 'edit')))
+    <livewire:projects.project-modal/>
+@endif
+
+@if(auth()->check() && (auth()->user()->hasPermission('payments', 'add') || auth()->user()->hasPermission('payments', 'edit')))
+    <livewire:payments.payment-modal/>
+@endif
+
+@if(auth()->check() && auth()->user()->hasPermission('payments', 'view'))
+    <livewire:projects.milestone-chase-modal/>
+@endif
+
 <livewire:documents.document-preview-modal/>
-<livewire:settings.user-modal/>
+<livewire:followups.followup-modal/>
 <x-confirm-modal/>
+<x-toast-container/>
 
 @livewireScripts
 
-<!-- Native Desktop Browser Notification Poller -->
-<div x-data="browserNotifier({{ auth()->id() }})" x-init="initNotifier()"></div>
-
+@auth
 <script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('browserNotifier', (userId) => ({
-            pollInterval: 5000, // 30 seconds
+    window.browserNotifier = function(userId) {
+        return {
+            pollInterval: 30000, // 30 seconds
             timer: null,
             storageKey: `crm_last_seen_notif_${userId}`,
             lastSeenId: 0,
             alertedIds: new Set(),
+            isInitialized: false,
 
             initNotifier() {
                 const stored = localStorage.getItem(this.storageKey);
+                this.isInitialized = stored !== null;
                 this.lastSeenId = stored !== null ? parseInt(stored, 10) : 0;
 
                 if ('Notification' in window && Notification.permission === 'default') {
@@ -179,7 +459,12 @@
 
             async poll() {
                 try {
-                    const response = await fetch(`{{ route('api.notifications.poll') }}?after_id=${this.lastSeenId}`, {
+                    let url = `{{ route('api.notifications.poll') }}?after_id=${this.lastSeenId}`;
+                    if (!this.isInitialized) {
+                        url += '&init=1';
+                    }
+
+                    const response = await fetch(url, {
                         headers: {
                             'Accept': 'application/json',
                             'X-Requested-With': 'XMLHttpRequest'
@@ -200,9 +485,12 @@
                     // If backend instructs cursor reset (first load or cleared database)
                     if (data.reset_cursor) {
                         this.lastSeenId = data.latest_id;
+                        this.isInitialized = true;
                         localStorage.setItem(this.storageKey, this.lastSeenId);
                         return;
                     }
+
+                    this.isInitialized = true;
 
                     // Process new unread notifications
                     if (data.items && data.items.length > 0) {
@@ -245,18 +533,23 @@
                 notification.onclick = () => {
                     window.focus();
                     notification.close();
-
-                    if (item.link_type === 'project' && item.link_id) {
-                        window.location.href = `/project/${item.link_id}`;
-                    } else if (item.link_type === 'customer' && item.link_id) {
-                        window.location.href = `/customer/${item.link_id}`;
-                    } else {
-                        window.location.href = `/notifications/${item.id}`;
-                    }
+                    window.location.href = `/notifications/${item.id}`;
                 };
             }
-        }));
-    });
+        };
+    };
+
+    if (window.Alpine) {
+        window.Alpine.data('browserNotifier', window.browserNotifier);
+    } else {
+        document.addEventListener('alpine:init', () => {
+            window.Alpine.data('browserNotifier', window.browserNotifier);
+        });
+    }
 </script>
+
+<!-- Native Desktop Browser Notification Poller -->
+<div x-data="browserNotifier({{ auth()->id() }})" x-init="initNotifier()"></div>
+@endauth
 </body>
 </html>

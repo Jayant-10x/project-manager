@@ -21,6 +21,8 @@ return new class extends Migration
             $table->date('delivery_date')->nullable()->default(null);
             $table->date('actual_end')->nullable()->default(null);
             $table->enum('status', ['Onboarding', 'In Progress', 'On Hold', 'Delivered', 'Cancelled'])->default('Onboarding');
+            $table->enum('approval_status', ['Pending', 'Approved', 'Rejected'])->default('Pending');
+            $table->string('rejection_reason', 255)->nullable()->default(null);
             $table->enum('health', ['On Track', 'At Risk', 'Delayed', 'Completed'])->default('On Track');
             $table->string('delay_reason', 200)->nullable()->default(null);
             $table->boolean('amc_required')->default(false);
@@ -33,7 +35,10 @@ return new class extends Migration
             $table->text('notes')->nullable()->default(null);
             $table->foreignId('coordinator_id')->nullable()->default(null)->constrained('users')->nullOnDelete();
             $table->foreignId('sales_person_id')->nullable()->default(null)->constrained('users')->nullOnDelete();
+            $table->foreignId('tech_person_id')->nullable()->default(null)->constrained('users')->nullOnDelete();
+            $table->foreignId('approved_by')->nullable()->default(null)->constrained('users')->nullOnDelete();
             $table->foreignId('created_by')->nullable()->default(null)->constrained('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable()->default(null);
             $table->timestamps();
         });
     }

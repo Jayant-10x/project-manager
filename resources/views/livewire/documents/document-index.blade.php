@@ -26,16 +26,16 @@
 
                 <select wire:model.live="customer_id" class="i" style="width:auto; max-width: 180px;">
                     <option value="">All customers</option>
-                    @foreach($customers as $c)
-                        <option value="{{ $c->id }}">{{ $c->display_name }}</option>
+                    @foreach($customers as $customer)
+                        <option value="{{ $customer->id }}">{{ $customer->display_name }}</option>
                     @endforeach
                 </select>
 
                 @if($projects->isNotEmpty())
                     <select wire:model.live="project_id" class="i" style="width:auto; max-width: 180px;">
                         <option value="">All projects</option>
-                        @foreach($projects as $p)
-                            <option value="{{ $p->id }}">{{ $p->code ?? $p->project_code }} — {{ $p->name }}</option>
+                        @foreach($projects as $project)
+                            <option value="{{ $project->id }}">{{ $project->code ?? $project->project_code }} — {{ $project->name }}</option>
                         @endforeach
                     </select>
                 @endif
@@ -48,7 +48,7 @@
                 </select>
 
                 @if($search !== '' || $category !== '' || $customer_id !== '' || $project_id !== '')
-                    <button type="button" class="btn btn-ghost btn-sm" wire:click="clearFilters">
+                    <button type="button" class="btn btn-outline-danger btn-sm" wire:click="clearFilters">
                         <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
                         </svg>
@@ -76,13 +76,11 @@
                         'Other'          => '#8894ac',
                     ];
                     $col = $catColors[$doc->category] ?? '#8894ac';
-                    $fileUrl = file_exists(public_path('uploads/' . $doc->stored_as))
-                        ? asset('uploads/' . $doc->stored_as)
-                        : asset('storage/' . $doc->stored_as);
+                    $fileUrl = route('documents.preview', $doc->id, absolute: false);
                 @endphp
                 <div
                     class="doc flex items-center gap-3 p-3.5 border-b last:border-b-0 border-[#eef2f9] hover:bg-slate-50 transition">
-                    <span class="doc-ico flex-shrink-0" style="background: {{ $col }}1a; color: {{ $col }}">
+                    <span class="doc-ico shrink-0" style="background: {{ $col }}1a; color: {{ $col }}">
                         {{ substr($ext, 0, 4) }}
                     </span>
 
@@ -103,53 +101,55 @@
                         </div>
                     </div>
 
-                    <span class="pill flex-shrink-0">{{ $doc->category }}</span>
+                    <span class="pill shrink-0">{{ $doc->category }}</span>
 
-                    <button type="button"
-                            class="mini-btn flex-shrink-0"
-                            @click="Livewire.dispatch('open-document-preview', {
-                                data: {
-                                    title: '{{ addslashes($doc->title) }}',
-                                    name: '{{ addslashes($doc->file_name) }}',
-                                    sizeKb: '{{ $doc->size_kb }}',
-                                    category: '{{ $doc->category }}',
-                                    url: '{{ $fileUrl }}',
-                                    downloadUrl: '{{ route('documents.download', $doc->id, absolute: false) }}',
-                                    mime: '{{ $doc->mime }}'
-                                }
-                            })"
-                            title="Preview">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
-                            <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                    </button>
+                    <div class="row-actions flex items-center justify-end gap-1.5 shrink-0">
+                        <button type="button"
+                                class="btn btn-outline-primary btn-xs"
+                                @click="Livewire.dispatch('open-document-preview', {
+                                    data: {
+                                        title: '{{ addslashes($doc->title) }}',
+                                        name: '{{ addslashes($doc->file_name) }}',
+                                        sizeKb: '{{ $doc->size_kb }}',
+                                        category: '{{ $doc->category }}',
+                                        url: '{{ $fileUrl }}',
+                                        downloadUrl: '{{ route('documents.download', $doc->id, absolute: false) }}',
+                                        mime: '{{ $doc->mime }}'
+                                    }
+                                })"
+                                title="Preview document">
+                            <svg viewBox="0 0 24 24" class="w-3 h-3">
+                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
 
-                    <a class="mini-btn flex-shrink-0" href="{{ route('documents.download', $doc->id, absolute: false) }}" download="{{ $doc->file_name }}"
-                       title="Download">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                        </svg>
-                    </a>
+                        <a class="btn btn-outline-secondary btn-xs" href="{{ route('documents.download', $doc->id, absolute: false) }}" download="{{ $doc->file_name }}"
+                           title="Download document">
+                            <svg viewBox="0 0 24 24" class="w-3 h-3">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                            </svg>
+                        </a>
 
-                    <button type="button"
-                            class="mini-btn danger flex-shrink-0"
-                            @click="$dispatch('confirm-dialog', {
-                                title: 'Remove Document?',
-                                message: 'Are you sure you want to remove {{ addslashes($doc->file_name) }}? The file will be permanently deleted.',
-                                confirmText: 'Remove Document',
-                                cancelText: 'Cancel',
-                                danger: true,
-                                wire: $wire,
-                                action: 'deleteDocument',
-                                params: {{ $doc->id }}
-                            })"
-                            title="Remove">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5">
-                            <path
-                                d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-                        </svg>
-                    </button>
+                        <button type="button"
+                                class="btn btn-outline-danger btn-xs"
+                                @click="$dispatch('confirm-dialog', {
+                                    title: 'Remove Document?',
+                                    message: 'Are you sure you want to remove {{ addslashes($doc->file_name) }}? The file will be permanently deleted.',
+                                    confirmText: 'Remove Document',
+                                    cancelText: 'Cancel',
+                                    danger: true,
+                                    wire: $wire,
+                                    action: 'deleteDocument',
+                                    params: {{ $doc->id }}
+                                })"
+                                title="Remove document">
+                            <svg viewBox="0 0 24 24" class="w-3 h-3">
+                                <path
+                                    d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             @empty
                 <div class="empty">

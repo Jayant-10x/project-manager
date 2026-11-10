@@ -28,6 +28,7 @@ class Project extends Model
         'cost' => 'decimal:2',
         'amc_amount' => 'decimal:2',
         'renew_alert_days' => 'integer',
+        'approved_at' => 'datetime',
     ];
 
     /**
@@ -50,12 +51,21 @@ class Project extends Model
 
             return $query->where(function ($subQuery) use ($downlineIds) {
                 $subQuery->whereIn('coordinator_id', $downlineIds)
-                    ->orWhereIn('sales_person_id', $downlineIds);
+                    ->orWhereIn('sales_person_id', $downlineIds)
+                    ->orWhereIn('tech_person_id', $downlineIds)
+                    ->orWhereIn('created_by', $downlineIds);
             });
         }
 
         if ($user->role === 'Sales') {
-            return $query->where('sales_person_id', $user->id);
+            return $query->where(function ($subQuery) use ($user) {
+                $subQuery->where('sales_person_id', $user->id)
+                    ->orWhere('created_by', $user->id);
+            });
+        }
+
+        if ($user->isTechPerson()) {
+            return $query->where('tech_person_id', $user->id);
         }
 
         return $query->where('coordinator_id', $user->id);
@@ -71,9 +81,53 @@ class Project extends Model
         return $this->belongsTo(User::class, 'coordinator_id');
     }
 
+    public function techPerson(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'tech_person_id');
+    }
+
     public function salesPerson(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sales_person_id')->where('role', 'Sales');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function isPendingApproval(): bool
+    {
+        return $this->approval_status === 'Pending';
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->approval_status === 'Approved' || empty($this->approval_status);
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->approval_status === 'Rejected';
+    }
+
+    public function canBeApprovedBy(?User $user): bool
+    {
+        if (! $user || ! $this->isPendingApproval()) {
+            return false;
+        }
+
+        // Submitter cannot approve their own item
+        if ($user->id === (int) $this->sales_person_id || $user->id === (int) $this->created_by) {
+            return false;
+        }
+
+        // Approval can be done by Admin, Manager, Coordinator
+        if (in_array($user->role, ['Admin', 'Manager', 'Coordinator'], true)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function terms(): HasMany
@@ -104,15 +158,19 @@ class Project extends Model
     public function getMoneyAttribute(): array
     {
         $scheduled = (float) $this->terms->where('status', '!=', 'Cancelled')->sum('amount');
-        $received = (float) $this->payments->sum('amount');
+        $cash = (float) $this->payments->sum('amount');
         $tds = (float) $this->payments->sum('tds');
+        $settled = round($cash + $tds, 2);
+        $due = round(max(0, $scheduled - $cash - $tds), 2);
         $overdue = (float) $this->terms->where('status', 'Overdue')->sum(fn ($term) => max(0, $term->amount - $term->received - $term->tds));
 
         return [
             'scheduled' => $scheduled,
-            'received' => $received,
+            'received' => $settled, // Option B: Gross Realized Revenue (Cash Received + TDS Deducted)
+            'settled' => $settled,
+            'cash' => $cash,
             'tds' => $tds,
-            'due' => round(max(0, $scheduled - $received - $tds), 2),
+            'due' => $due,
             'overdue' => $overdue,
         ];
     }

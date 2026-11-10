@@ -19,8 +19,7 @@ class DocumentUploadTest extends TestCase
 
     public function test_document_upload_modal_accepts_valid_csv_file(): void
     {
-        Storage::fake('public');
-        Storage::fake('uploads');
+        Storage::fake('documents');
 
         $user = User::factory()->create(['role' => 'Coordinator']);
         $customer = Customer::create([
@@ -37,8 +36,7 @@ class DocumentUploadTest extends TestCase
             'value' => 50000,
         ]);
 
-        $csvContent = "name,email\nAlice,alice@example.com\nBob,bob@example.com";
-        $csvFile = UploadedFile::fake()->createWithContent('client_data.csv', $csvContent);
+        $csvFile = UploadedFile::fake()->create('client_data.csv', 10, 'text/csv');
 
         Livewire::actingAs($user)
             ->test(DocumentUploadModal::class)
@@ -60,20 +58,23 @@ class DocumentUploadTest extends TestCase
 
         $doc = Document::where('file_name', 'client_data.csv')->first();
         $this->assertNotNull($doc);
-        Storage::disk('public')->assertExists($doc->stored_as);
-        Storage::disk('uploads')->assertExists($doc->stored_as);
+        Storage::disk('documents')->assertExists($doc->stored_as);
         $this->assertMatchesRegularExpression('/^client-data_\d{8}_\d{6}\.csv$/', $doc->stored_as);
 
         // Test download route with original filename
         $response = $this->actingAs($user)->get(route('documents.download', $doc->id));
         $response->assertOk();
         $this->assertStringContainsString('filename=client_data.csv', $response->headers->get('content-disposition'));
+
+        // Test preview route
+        $previewResponse = $this->actingAs($user)->get(route('documents.preview', $doc->id));
+        $previewResponse->assertOk();
+        $this->assertStringContainsString('inline', $previewResponse->headers->get('content-disposition'));
     }
 
     public function test_document_download_returns_404_when_file_not_found(): void
     {
-        Storage::fake('public');
-        Storage::fake('uploads');
+        Storage::fake('documents');
 
         $user = User::factory()->create(['role' => 'Coordinator']);
         $doc = Document::create([
